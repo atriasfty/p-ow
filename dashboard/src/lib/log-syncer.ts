@@ -88,10 +88,22 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             return
         }
 
-        await prisma.shift.create({
-            data: { userId: member.userId, serverId, startTime: new Date() }
-        })
-        await client.executeCommand(`:pm ${playerName} [POW] Shift started on ${serverName}.`).catch(() => { })
+        try {
+            await prisma.$transaction(async (tx) => {
+                const existing = await tx.shift.findFirst({
+                    where: { userId: member.userId, serverId, endTime: null }
+                })
+                if (existing) throw new Error("Shift already active")
+                
+                await tx.shift.create({
+                    data: { userId: member.userId, serverId, startTime: new Date() }
+                })
+            })
+            await client.executeCommand(`:pm ${playerName} [POW] Shift started on ${serverName}.`).catch(() => { })
+        } catch (e: any) {
+            // If the transaction fails because a shift became active in the meantime, we ignore it.
+            // The first request will have successfully sent the start message.
+        }
 
     } else if (subcommand === "end") {
         const activeShift = await prisma.shift.findFirst({

@@ -45,11 +45,21 @@ async function syncAllServerRoles(client: Client, prisma: PrismaClient) {
                 include: { role: true }
             })
 
-            // OPTIMIZATION: Batch fetch all active shifts for this server
+            // Get all active shifts for this server, OR any server in the same guild
+            // that shares the same on-duty role. This prevents flickering roles
+            // for members of multiple servers in the same community.
             const activeShifts = await prisma.shift.findMany({
                 where: {
-                    serverId: server.id,
-                    endTime: null
+                    endTime: null,
+                    OR: [
+                        { serverId: server.id },
+                        ...(server.onDutyRoleId ? [{
+                            server: {
+                                discordGuildId: server.discordGuildId,
+                                onDutyRoleId: server.onDutyRoleId
+                            }
+                        }] : [])
+                    ]
                 }
             })
             const activeShiftUserIds = new Set(activeShifts.map((s: any) => s.userId))

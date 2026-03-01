@@ -36,7 +36,7 @@ export default async function VisionAuthPage({ searchParams }: Props) {
     }
 
     // Look up and validate the handshake code
-    const handshake = handshakeCodes.get(handshakeCode)
+    const handshake = await handshakeCodes.get(handshakeCode)
 
     if (!handshake) {
         return <AccessDenied message="Invalid or expired code. Please try again from POW Vision." />
@@ -44,12 +44,12 @@ export default async function VisionAuthPage({ searchParams }: Props) {
 
     // Check expiry
     if (Date.now() > handshake.expiresAt) {
-        handshakeCodes.delete(handshakeCode)
+        await handshakeCodes.delete(handshakeCode)
         return <AccessDenied message="This code has expired. Please try again from POW Vision." />
     }
 
     // Consume the code (one-time use)
-    handshakeCodes.delete(handshakeCode)
+    await handshakeCodes.delete(handshakeCode)
 
     // Generate the token
     const token = await new SignJWT({

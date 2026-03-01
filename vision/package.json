@@ -84,7 +84,7 @@
         },
         "publish": {
             "provider": "github",
-            "owner": "ciankellyy",
+            "owner": "atriasfty",
             "repo": "p-ow"
         }
     }

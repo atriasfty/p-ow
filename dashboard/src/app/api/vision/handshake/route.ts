@@ -3,16 +3,6 @@ import crypto from "crypto"
 import { verifyVisionSignature, visionCorsHeaders } from "@/lib/vision-auth"
 import { handshakeCodes } from "@/lib/handshake-store"
 
-// Cleanup expired codes periodically
-function cleanupExpired() {
-    const now = Date.now()
-    for (const [code, data] of handshakeCodes.entries()) {
-        if (now > data.expiresAt) {
-            handshakeCodes.delete(code)
-        }
-    }
-}
-
 // Handle preflight requests
 export async function OPTIONS() {
     return NextResponse.json({}, { headers: visionCorsHeaders })
@@ -31,13 +21,14 @@ export async function POST(req: Request) {
             )
         }
 
-        cleanupExpired()
+        // Cleanup expired codes (optional, could be a cron)
+        await handshakeCodes.cleanup()
 
         // Generate a random code
         const code = crypto.randomBytes(32).toString('hex')
 
         // Store with 5 minute expiry
-        handshakeCodes.set(code, {
+        await handshakeCodes.set(code, {
             expiresAt: Date.now() + 5 * 60 * 1000 // 5 minutes
         })
 
@@ -48,11 +39,9 @@ export async function POST(req: Request) {
     }
 }
 
-// Validate and consume a handshake code
+// Validate a handshake code (DO NOT consume here, consumption happens on login page)
 export async function GET(req: Request) {
     try {
-        cleanupExpired()
-
         const url = new URL(req.url)
         const code = url.searchParams.get("code")
 
@@ -60,19 +49,20 @@ export async function GET(req: Request) {
             return NextResponse.json({ valid: false }, { headers: visionCorsHeaders })
         }
 
-        const handshake = handshakeCodes.get(code)
+        const handshake = await handshakeCodes.get(code)
 
         if (!handshake) {
             return NextResponse.json({ valid: false }, { headers: visionCorsHeaders })
         }
 
         if (Date.now() > handshake.expiresAt) {
-            handshakeCodes.delete(code)
+            await handshakeCodes.delete(code)
             return NextResponse.json({ valid: false, error: "expired" }, { headers: visionCorsHeaders })
         }
 
-        // Consume the code (one-time use)
-        handshakeCodes.delete(code)
+        // We do NOT consume the code here anymore to prevent DoS attacks 
+        // that could invalidate a legitimate user's session before they can use it.
+        // The code is consumed in vision-auth/page.tsx.
 
         return NextResponse.json({ valid: true }, { headers: visionCorsHeaders })
     } catch (error) {
@@ -81,5 +71,4 @@ export async function GET(req: Request) {
     }
 }
 
-// Export the map for the vision-auth page to use
 export { handshakeCodes }

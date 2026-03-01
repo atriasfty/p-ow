@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useState, useEffect } from "react"
 
 const GREETINGS = [
     "What's up",
@@ -26,10 +26,11 @@ const GREETINGS = [
 ]
 
 export function RandomGreeting({ username }: { username: string }) {
-    // Pick a random greeting - memoized so it doesn't change on re-renders
-    const greeting = useMemo(() => {
+    const [greeting, setGreeting] = useState("Welcome")
+
+    useEffect(() => {
         const randomIndex = Math.floor(Math.random() * GREETINGS.length)
-        return GREETINGS[randomIndex]
+        setGreeting(GREETINGS[randomIndex])
     }, [])
 
     return (

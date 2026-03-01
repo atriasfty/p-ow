@@ -18,6 +18,8 @@ export async function getGlobalConfig<T extends GlobalConfigKey>(key: T): Promis
             const val = parseInt(dbConfig.value)
             if (!isNaN(val)) return val
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error(`[CONFIG] Error fetching global config for key ${key}:`, e)
+    }
     return GLOBAL_DEFAULTS[key]
 }

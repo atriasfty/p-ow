@@ -17,15 +17,15 @@ export async function handlePunishCommand(interaction: ChatInputCommandInteracti
 }
 
 async function handleLogPunishment(interaction: ChatInputCommandInteraction) {
+    // Defer immediately
+    await interaction.deferReply({ ephemeral: true })
+
     const serverId = await resolveServer(interaction)
     if (!serverId) return interaction.editReply({ content: "❌ You must specify a server or run this within a registered Guild." })
     const username = interaction.options.getString("username", true)
     const type = interaction.options.getString("type", true)
     const reason = interaction.options.getString("reason", true)
     const discordId = interaction.user.id
-
-    // Defer immediately before Clerk lookup
-    await interaction.deferReply({ ephemeral: true })
 
     // Find member using Clerk
     const member = await findMemberByDiscordId(prisma, discordId, serverId)
@@ -66,14 +66,14 @@ async function handleLogPunishment(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleLogView(interaction: ChatInputCommandInteraction) {
+    // Defer immediately
+    await interaction.deferReply({ ephemeral: true })
+
     const serverId = await resolveServer(interaction)
     if (!serverId) return interaction.editReply({ content: "❌ You must specify a server or run this within a registered Guild." })
     const username = interaction.options.getString("username", true)
     const logType = interaction.options.getString("type", true)
     const discordId = interaction.user.id
-
-    // Defer immediately
-    await interaction.deferReply({ ephemeral: true })
 
     // Find member using Clerk (verify access)
     const member = await findMemberByDiscordId(prisma, discordId, serverId)

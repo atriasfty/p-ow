@@ -14,8 +14,10 @@ import { deployCommands } from "./deploy-commands"
 client.once(Events.ClientReady, async (c: any) => {
     console.log(`Ready! Logged in as ${c.user?.tag || 'Bot'}`)
 
-    // Sync slash commands with Discord
-    await deployCommands()
+    // Sync slash commands with Discord if requested
+    if (process.env.DEPLOY_COMMANDS === "true") {
+        await deployCommands()
+    }
 
     // Start auto role sync service
     startAutoRoleSync(client, prisma)

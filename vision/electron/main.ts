@@ -1,4 +1,4 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, desktopCapturer, screen, shell } from 'electron'
+import { app, BrowserWindow, globalShortcut, ipcMain, desktopCapturer, screen, shell, safeStorage } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import * as path from 'path'
 import crypto from 'crypto'
@@ -273,14 +273,36 @@ ipcMain.handle('set-settings', (_event, settings: { hotkey?: string; toggleHotke
     return true
 })
 
-// Auth token storage (using Electron's safe storage)
+// Auth token storage (using Electron's safe storage for encryption at rest)
 ipcMain.handle('store-auth-token', (_event, token: string) => {
-    store.set('authToken', token)
-    return true
+    try {
+        if (safeStorage.isEncryptionAvailable()) {
+            const encrypted = safeStorage.encryptString(token)
+            store.set('authToken', encrypted.toString('base64'))
+        } else {
+            // Fallback for systems where encryption is not available (rare)
+            store.set('authToken', token)
+        }
+        return true
+    } catch (e) {
+        console.error('Failed to encrypt/store auth token:', e)
+        return false
+    }
 })
 
 ipcMain.handle('get-auth-token', () => {
-    return store.get('authToken') || null
+    const stored = store.get('authToken')
+    if (!stored) return null
+
+    try {
+        if (safeStorage.isEncryptionAvailable()) {
+            return safeStorage.decryptString(Buffer.from(stored, 'base64'))
+        }
+        return stored
+    } catch (e) {
+        console.error('Failed to decrypt auth token:', e)
+        return null
+    }
 })
 
 ipcMain.handle('clear-auth-token', () => {
@@ -304,9 +326,29 @@ ipcMain.handle('generate-signature', () => {
     return `${timestamp}:${SESSION_INSTANCE_ID}:${signature}`
 })
 
-// Open URL in system default browser
-ipcMain.handle('open-external', async (_event, url: string) => {
-    await shell.openExternal(url)
+// Open URL in system default browser - with security allowlist
+const ALLOWED_ORIGINS = [
+    'https://pow.ciankelly.xyz',
+    'http://localhost:3000', // Local dev dashboard
+    'https://github.com/ciankelly' // Project links
+]
+
+ipcMain.handle('open-external', async (_event, urlString: string) => {
+    try {
+        const url = new URL(urlString)
+        const isAllowed = ALLOWED_ORIGINS.some(origin => {
+            const originUrl = new URL(origin)
+            return url.protocol === originUrl.protocol && url.hostname === originUrl.hostname
+        })
+
+        if (isAllowed) {
+            await shell.openExternal(urlString)
+        } else {
+            console.warn(`[Security] Blocked attempt to open external URL: ${urlString}`)
+        }
+    } catch (e) {
+        console.error('Failed to open external URL:', e)
+    }
 })
 
 // Hide overlay (for X button in UI)

@@ -8,15 +8,16 @@ export async function handleServerCommand(interaction: ChatInputCommandInteracti
     const subcommand = interaction.options.getSubcommand()
 
     if (subcommand === "status") {
+        // Defer immediately
+        await interaction.deferReply({ ephemeral: true })
+
         const serverId = await resolveServer(interaction)
         if (!serverId) return interaction.editReply({ content: "❌ You must specify a server or run this within a registered Guild." })
 
         const server = await prisma.server.findUnique({ where: { id: serverId } })
         if (!server) {
-            return interaction.reply({ content: "Server not found", ephemeral: true })
+            return interaction.editReply({ content: "Server not found" })
         }
-
-        await interaction.deferReply({ ephemeral: true })
 
         try {
             // Fetch server info from PRC API

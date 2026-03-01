@@ -43,6 +43,8 @@ export function verifyVisionSignature(header: string | null): boolean {
 }
 
 export const visionCorsHeaders = {
+    // Note: Desktop app origins can vary (file://, http://localhost, etc.)
+    // For maximum security in production, this should be restricted to known origins
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Vision-Sig"

@@ -35,18 +35,20 @@ async function processQueue(client: Client, prisma: PrismaClient) {
 
     if (pendingItems.length === 0) return
 
-    const itemIds = pendingItems.map((i: { id: string }) => i.id)
-
-    // Mark these items as PROCESSING
-    await prisma.botQueue.updateMany({
-        where: { id: { in: itemIds }, status: "PENDING" },
-        data: { status: "PROCESSING" }
-    })
-
-    // Re-fetch only the ones we successfully marked
-    const itemsToProcess = await prisma.botQueue.findMany({
-        where: { id: { in: itemIds }, status: "PROCESSING" }
-    })
+    const itemsToProcess: any[] = []
+    for (const item of pendingItems) {
+        // updateMany allows conditional updates on non-unique fields
+        const result = await prisma.botQueue.updateMany({
+            where: { id: item.id, status: "PENDING" },
+            data: { status: "PROCESSING" }
+        })
+        
+        // If count > 0, THIS worker successfully locked the item
+        if (result.count > 0) {
+            const lockedItem = await prisma.botQueue.findUnique({ where: { id: item.id } })
+            if (lockedItem) itemsToProcess.push(lockedItem)
+        }
+    }
 
     // Process items in parallel but with a small concurrency to avoid rate limits
     await Promise.all(itemsToProcess.map(async (item: any) => {

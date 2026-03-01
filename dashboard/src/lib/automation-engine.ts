@@ -133,7 +133,9 @@ export class AutomationEngine {
                             serverInfo = await prcClient.getServer()
                         }
                         await this.executeAction(action, context, prcClient, serverInfo)
-                    } catch (e) {}
+                    } catch (e) {
+                        console.error(`[AUTOMATION] Error executing action ${action.type}:`, e)
+                    }
                 }
 
                 await prisma.automation.update({
@@ -247,7 +249,9 @@ export class AutomationEngine {
                         headers: { "Content-Type": "application/json" },
                         body: content
                     })
-                } catch (e) {}
+                } catch (e) {
+                    console.error("[AUTOMATION] Webhook action failed:", e)
+                }
                 break
             case "DELAY":
                 await new Promise(resolve => setTimeout(resolve, parseInt(content) || 1000))
