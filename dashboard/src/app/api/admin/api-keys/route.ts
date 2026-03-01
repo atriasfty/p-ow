@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db"
 import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import crypto from "crypto"
 
 export async function GET(req: Request) {
@@ -28,6 +29,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     const session = await getSession()
     const { name, serverId } = await req.json()
     
@@ -54,6 +58,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     const session = await getSession()
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")
@@ -73,6 +80,9 @@ export async function DELETE(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     const session = await getSession()
     const { id, serverId, enabled, rateLimit, dailyLimit } = await req.json()
     

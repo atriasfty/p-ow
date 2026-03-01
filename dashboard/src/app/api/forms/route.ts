@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin, isServerMember } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // GET /api/forms?serverId=xxx - List forms for a server
 export async function GET(request: NextRequest) {
@@ -75,6 +76,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/forms - Create new form
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     try {
         const session = await getSession()
         if (!session) {

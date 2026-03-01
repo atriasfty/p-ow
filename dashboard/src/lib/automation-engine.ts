@@ -126,6 +126,12 @@ export class AutomationEngine {
 
                 if (!conditionsMet) continue
 
+                // Update lastRunAt BEFORE executing actions to prevent race conditions (especially with DELAY)
+                await prisma.automation.update({
+                    where: { id: automation.id },
+                    data: { lastRunAt: new Date() }
+                }).catch(() => {})
+
                 const actions = JSON.parse(automation.actions)
                 for (const action of actions) {
                     try {
@@ -137,15 +143,31 @@ export class AutomationEngine {
                         console.error(`[AUTOMATION] Error executing action ${action.type}:`, e)
                     }
                 }
-
-                await prisma.automation.update({
-                    where: { id: automation.id },
-                    data: { lastRunAt: new Date() }
-                }).catch(() => {})
             }
         } catch (e) {
             console.error(`[AUTOMATION] Error processing trigger ${type}: `, e)
         }
+    }
+
+    private static isPrivateIp(hostname: string): boolean {
+        const host = hostname.toLowerCase()
+        if (host === "localhost" || host === "::1" || host.endsWith(".local")) return true
+
+        // Check for common private IP patterns (IPv4)
+        // 127.0.0.1/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+        const privateIpv4Regex = /^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|169\.254\.)/
+        if (privateIpv4Regex.test(host)) return true
+
+        // Basic check for IPv6 private/link-local (fc00::/7, fe80::/10)
+        if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe8")) return true
+
+        return false
+    }
+
+    private static sanitizeCommandArg(text: string): string {
+        // PRC commands use spaces as delimiters, so wrap in quotes and escape internal quotes
+        // We only want to escape double quotes since that's what we use for wrapping
+        return text.replace(/"/g, '\\"')
     }
 
     private static async evaluateGroup(group: any, context: AutomationContext, serverData: any): Promise<boolean> {
@@ -183,8 +205,10 @@ export class AutomationEngine {
     }
 
     private static async executeAction(action: any, context: AutomationContext, prcClient: PrcClient, serverInfo: any) {
-        const content = this.replaceVariables(action.content || "", context, serverInfo)
-        const target = this.replaceVariables(action.target || "", context, serverInfo)
+        // For PRC commands, we want to sanitize variables to prevent injection
+        const isPrcAction = ["PRC_COMMAND", "KICK_PLAYER", "BAN_PLAYER", "ANNOUNCEMENT", "TELEPORT_PLAYER", "KILL_PLAYER"].includes(action.type)
+        const content = this.replaceVariables(action.content || "", context, serverInfo, isPrcAction)
+        const target = this.replaceVariables(action.target || "", context, serverInfo, isPrcAction)
 
         switch (action.type) {
             case "DISCORD_MESSAGE":
@@ -231,19 +255,29 @@ export class AutomationEngine {
             case "KILL_PLAYER":
                 let command = content
                 const pid = context.player?.id || context.player?.name || ""
-                const quotedPid = pid.includes(" ") ? `"${pid}"` : pid
+                // Use sanitized name/id for command construction
+                const safePid = this.sanitizeCommandArg(pid)
+                const quotedPid = safePid.includes(" ") ? `"${safePid}"` : safePid
+                
                 if (action.type === "KICK_PLAYER") command = `:kick ${quotedPid} ${content}`
                 else if (action.type === "BAN_PLAYER") command = `:ban ${quotedPid} ${content}`
                 else if (action.type === "ANNOUNCEMENT") command = `:m ${content}`
-                else if (action.type === "TELEPORT_PLAYER") command = `:tp ${quotedPid} ${target}` 
+                else if (action.type === "TELEPORT_PLAYER") {
+                    const safeTarget = this.sanitizeCommandArg(target)
+                    const quotedTarget = safeTarget.includes(" ") ? `"${safeTarget}"` : safeTarget
+                    command = `:tp ${quotedPid} ${quotedTarget}` 
+                }
                 else if (action.type === "KILL_PLAYER") command = `:kill ${quotedPid}`
+                
                 await prcClient.executeCommand(command)
                 break
             case "HTTP_REQUEST":
                 try {
                     const url = new URL(target)
-                    const hostname = url.hostname.toLowerCase()
-                    if (hostname === "localhost" || hostname === "127.0.0.1") break
+                    if (this.isPrivateIp(url.hostname)) {
+                        console.warn(`[AUTOMATION] Blocked SSRF attempt to private hostname: ${url.hostname}`)
+                        break
+                    }
                     await fetch(target, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -259,29 +293,31 @@ export class AutomationEngine {
         }
     }
 
-    private static replaceVariables(text: string, context: AutomationContext, serverData: any): string {
+    private static replaceVariables(text: string, context: AutomationContext, serverData: any, sanitize: boolean = false): string {
+        const wrap = (val: string) => sanitize ? this.sanitizeCommandArg(val) : val
+
         let result = text
         if (context.player) {
-            result = result.replace(/{player_name}/g, context.player.name)
-            result = result.replace(/{player_id}/g, context.player.id)
-            result = result.replace(/{player_team}/g, context.player.team || "Unknown")
-            result = result.replace(/{player_vehicle}/g, context.player.vehicle || "None")
-            result = result.replace(/{player_callsign}/g, context.player.callsign || "None")
-            result = result.replace(/%player%/g, context.player.name)
-            result = result.replace(/%id%/g, context.player.id)
+            result = result.replace(/{player_name}/g, wrap(context.player.name))
+            result = result.replace(/{player_id}/g, wrap(context.player.id))
+            result = result.replace(/{player_team}/g, wrap(context.player.team || "Unknown"))
+            result = result.replace(/{player_vehicle}/g, wrap(context.player.vehicle || "None"))
+            result = result.replace(/{player_callsign}/g, wrap(context.player.callsign || "None"))
+            result = result.replace(/%player%/g, wrap(context.player.name))
+            result = result.replace(/%id%/g, wrap(context.player.id))
         }
-        result = result.replace(/{server_id}/g, context.serverId)
+        result = result.replace(/{server_id}/g, wrap(context.serverId))
         if (serverData) {
-            result = result.replace(/{server_name}/g, serverData.Name || "Unknown Server")
+            result = result.replace(/{server_name}/g, wrap(serverData.Name || "Unknown Server"))
             result = result.replace(/{player_count}/g, String(serverData.CurrentPlayers || 0))
             result = result.replace(/{max_players}/g, String(serverData.MaxPlayers || 0))
-            result = result.replace(/{join_key}/g, serverData.JoinKey || "")
+            result = result.replace(/{join_key}/g, wrap(serverData.JoinKey || ""))
         }
         if (context.punishment) {
-            result = result.replace(/{punishment_type}/g, context.punishment.type)
-            result = result.replace(/{punishment_reason}/g, context.punishment.reason)
-            result = result.replace(/{punishment_issuer}/g, context.punishment.issuer)
-            result = result.replace(/{punishment_target}/g, context.punishment.target)
+            result = result.replace(/{punishment_type}/g, wrap(context.punishment.type))
+            result = result.replace(/{punishment_reason}/g, wrap(context.punishment.reason))
+            result = result.replace(/{punishment_issuer}/g, wrap(context.punishment.issuer))
+            result = result.replace(/{punishment_target}/g, wrap(context.punishment.target))
         }
         return result.replace(/{timestamp}/g, new Date().toISOString())
     }

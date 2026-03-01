@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Helper to check form access
 async function canEditForm(userId: string, formId: string): Promise<boolean> {
@@ -78,6 +79,9 @@ export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ formId: string }> }
 ) {
+    if (!verifyCsrf(request)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     try {
         const session = await getSession()
         if (!session) {
@@ -152,6 +156,9 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ formId: string }> }
 ) {
+    if (!verifyCsrf(request)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     try {
         const session = await getSession()
         if (!session) {

@@ -15,6 +15,7 @@ import { UpsellBanner } from "@/components/subscription/upsell-banner"
 
 import { performAutoJoin } from "@/lib/auto-join"
 import { getUserPlan } from "@/lib/subscription"
+import { sanitizeUrl } from "@/lib/auth-permissions"
 
 // Helper to fetch stats SAFELY on server
 async function fetchServerStats(apiUrl: string) {
@@ -42,17 +43,36 @@ export default async function ServerSelectorPage() {
     }
 
     // Tenant Isolation: Only show servers the user is specifically a Member of
+    // Data Overexposure Prevention: Only select necessary fields for the UI
     const memberships = await prisma.member.findMany({
         where: { userId: session.user.id },
-        include: { server: true }
+        select: {
+            server: {
+                select: {
+                    id: true,
+                    name: true,
+                    customName: true,
+                    bannerUrl: true,
+                    apiUrl: true, // Needed for fetchServerStats but we won't pass it to the client
+                    subscriptionPlan: true
+                }
+            }
+        }
     })
 
-    let servers = memberships.map(m => m.server)
+    const servers = memberships.map(m => m.server)
 
     // Parallel fetch for all stats
     const serversWithStats = await Promise.all(servers.map(async (s: any) => {
         const stats = await fetchServerStats(s.apiUrl)
-        return { ...s, stats }
+        return {
+            id: s.id,
+            name: s.name,
+            customName: s.customName,
+            bannerUrl: sanitizeUrl(s.bannerUrl), // XSS Prevention
+            subscriptionPlan: s.subscriptionPlan,
+            stats
+        }
     }))
 
     // Check if user has a paid subscription but hasn't linked it
@@ -136,7 +156,7 @@ export default async function ServerSelectorPage() {
                                     <div key={server.id} className="group relative overflow-hidden rounded-2xl bg-[#1a1a1a] shadow-lg transition-all hover:bg-[#1f1f1f]">
                                         {/* Banner Image with Gradient */}
                                         <div className="h-32 w-full relative group bg-zinc-800">
-                                            {server.bannerUrl ? (
+                                            {server.bannerUrl && server.bannerUrl !== "about:blank" ? (
                                                 <img src={server.bannerUrl} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                             ) : (
                                                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-zinc-800 group-hover:from-indigo-500 group-hover:via-purple-500 group-hover:to-zinc-700 transition-colors duration-500"></div>

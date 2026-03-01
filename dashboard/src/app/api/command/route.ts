@@ -3,11 +3,16 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { getUserPermissions } from "@/lib/admin"
-import { verifyPermissionOrError } from "@/lib/auth-permissions"
+import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
 import { withMetrics } from "@/lib/api-metrics"
 import { NextResponse } from "next/server"
 
 export const POST = withMetrics("/api/command", async (req: Request) => {
+    // 0. Verify CSRF
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

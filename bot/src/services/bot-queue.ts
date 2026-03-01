@@ -19,6 +19,18 @@ export function startBotQueueService(client: Client, prisma: PrismaClient) {
 }
 
 async function processQueue(client: Client, prisma: PrismaClient) {
+    // 0. Reset items that have been stuck in PROCESSING for too long (e.g. worker crashed)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+    await prisma.botQueue.updateMany({
+        where: {
+            status: "PROCESSING",
+            updatedAt: { lt: fiveMinutesAgo }
+        },
+        data: {
+            status: "PENDING"
+        }
+    })
+
     // 1. Mark PENDING items as PROCESSING atomically
     // We update up to 10 PENDING items to PROCESSING and retrieve them
     // This prevents other instances from picking up the same items

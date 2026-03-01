@@ -4,13 +4,15 @@ import { prisma } from "../client"
 export async function handleQuotaCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand()
 
-    // Get week start (Monday)
+    // Get week start (Monday) in a timezone-independent way (UTC)
     const now = new Date()
-    const day = now.getDay()
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-    const weekStart = new Date(now)
-    weekStart.setDate(diff)
-    weekStart.setHours(0, 0, 0, 0)
+    const day = now.getUTCDay()
+    // Calculate days to subtract to get to last Monday
+    // getUTCDay: 0=Sun, 1=Mon, ..., 6=Sat
+    // If today is Monday(1), diff is 0. If Sunday(0), diff is -6.
+    const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
+    
+    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), diff, 0, 0, 0, 0))
 
     if (subcommand === "status") {
         const discordId = interaction.user.id

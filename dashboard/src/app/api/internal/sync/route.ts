@@ -2,13 +2,14 @@ import { prisma } from "@/lib/db"
 import { fetchAndSaveLogs } from "@/lib/log-syncer"
 import { trackSyncCycle } from "@/lib/metrics"
 import { NextResponse } from "next/server"
+import crypto from "crypto"
 
 const INTERNAL_SECRET = process.env.INTERNAL_SYNC_SECRET!
 
 export async function POST(req: Request) {
     const authHeader = req.headers.get("x-internal-secret")
 
-    if (authHeader !== INTERNAL_SECRET) {
+    if (!authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
         return new NextResponse("Unauthorized", { status: 401 })
     }
 

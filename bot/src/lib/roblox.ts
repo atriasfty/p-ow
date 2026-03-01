@@ -10,7 +10,7 @@ interface CachedData<T> {
 
 const cache = new Map<string, CachedData<any>>()
 const FRESH_TTL = 1000 * 60 * 60 * 24 // 24 hours
-const STALE_TTL = 1000 * 60 * 60 * 24 * 7 // 7 days (fallback)
+const STALE_TTL = 1000 * 60 * 60 * 48 // 48 hours (fallback)
 
 function getFromCache<T>(key: string): T | null {
     const cached = cache.get(key)

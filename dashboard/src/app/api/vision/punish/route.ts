@@ -97,16 +97,21 @@ export async function POST(req: Request) {
                 const client = new PrcClient(server.apiUrl)
                 let commandStr = ""
 
+                // Escape double quotes in player name and reason for PRC command safety
+                const safeName = playerUsername.replace(/"/g, '\\"')
+                const safeReason = reason.replace(/"/g, '\\"')
+                const quotedName = safeName.includes(" ") ? `"${safeName}"` : safeName
+
                 switch (type) {
                     case "Warn":
-                        commandStr = `:warn ${playerUsername} ${reason}`
+                        commandStr = `:warn ${quotedName} ${safeReason}`
                         break
                     case "Kick":
-                        commandStr = `:kick ${playerUsername} ${reason}`
+                        commandStr = `:kick ${quotedName} ${safeReason}`
                         break
                     case "Ban":
                     case "Ban Bolo":
-                        commandStr = `:ban ${playerUsername} ${reason}`
+                        commandStr = `:ban ${quotedName} ${safeReason}`
                         break
                 }
 
@@ -119,7 +124,8 @@ export async function POST(req: Request) {
                 // Send PM for warnings
                 if (type === "Warn") {
                     const modName = payload.robloxUsername || payload.username || "Staff"
-                    const pmCommand = `:pm ${playerUsername} You have been warned by ${modName} for ${reason} - Project Overwatch`
+                    const safeModName = modName.replace(/"/g, '\\"')
+                    const pmCommand = `:pm ${quotedName} You have been warned by ${safeModName} for ${safeReason} - Project Overwatch`
                     promises.push(client.executeCommand(pmCommand))
                 }
 
