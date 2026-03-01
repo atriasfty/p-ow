@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from "react"
-import { Save, Loader2, RefreshCw, Bot } from "lucide-react"
+import { Save, Loader2, RefreshCw, Bot, Users } from "lucide-react"
 import { RoleCombobox } from "@/components/admin/role-combobox"
 import { ChannelCombobox } from "@/components/admin/channel-combobox"
 import Link from "next/link"
@@ -26,12 +26,6 @@ interface ServerSettingsFormProps {
     subscriptionPlan?: string | null
     currentMaxUploadSize?: number | null
     currentStaffRequestRateLimit?: number | null
-    currentLogCacheTtl?: number | null
-    currentAutomationCacheTtl?: number | null
-    currentRecruitmentChannelId?: string | null
-    currentCongratsChannelId?: string | null
-    currentApplicationAiThreshold?: number
-    currentAutoStaffRoleId?: string | null
     isOwner?: boolean
     serverMembers?: any[]
 }
@@ -55,12 +49,6 @@ export function ServerSettingsForm({
     subscriptionPlan,
     currentMaxUploadSize,
     currentStaffRequestRateLimit,
-    currentLogCacheTtl,
-    currentAutomationCacheTtl,
-    currentRecruitmentChannelId,
-    currentCongratsChannelId,
-    currentApplicationAiThreshold,
-    currentAutoStaffRoleId,
     isOwner,
     serverMembers
 }: ServerSettingsFormProps) {
@@ -83,11 +71,8 @@ export function ServerSettingsForm({
     const [applicationAiThreshold, setApplicationAiThreshold] = useState(currentApplicationAiThreshold || 70)
     const [autoStaffRoleId, setAutoStaffRoleId] = useState(currentAutoStaffRoleId || "")
 
-    // Advanced Config
     const [maxUploadSize, setMaxUploadSize] = useState(currentMaxUploadSize ? currentMaxUploadSize / 1024 / 1024 : 50)
     const [staffRequestRateLimit, setStaffRequestRateLimit] = useState(currentStaffRequestRateLimit ? currentStaffRequestRateLimit / 1000 / 60 : 5)
-    const [logCacheTtl, setLogCacheTtl] = useState(currentLogCacheTtl ? currentLogCacheTtl / 1000 : 5)
-    const [automationCacheTtl, setAutomationCacheTtl] = useState(currentAutomationCacheTtl ? currentAutomationCacheTtl / 1000 : 10)
 
     // White label bot state
     const [customBotToken, setCustomBotToken] = useState(currentCustomBotToken || "")
@@ -131,9 +116,7 @@ export function ServerSettingsForm({
                     customBotToken: customBotToken || null,
                     customBotEnabled,
                     maxUploadSize: maxUploadSize * 1024 * 1024,
-                    staffRequestRateLimit: staffRequestRateLimit * 1000 * 60,
-                    logCacheTtl: logCacheTtl * 1000,
-                    automationCacheTtl: automationCacheTtl * 1000
+                    staffRequestRateLimit: staffRequestRateLimit * 1000 * 60
                 })
             })
 
@@ -176,7 +159,7 @@ export function ServerSettingsForm({
     }
 
     const handleDeleteServer = async () => {
-        if (deleteConfirm !== name) {
+        if (deleteConfirm.trim() !== name.trim()) {
             alert("Please type the server name correctly to confirm deletion.")
             return
         }
@@ -186,7 +169,11 @@ export function ServerSettingsForm({
         setDangerLoading(true)
         try {
             const res = await fetch(`/api/admin/server/danger?serverId=${serverId}`, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "x-csrf-check": "1" 
+                }
             })
 
             if (res.ok) {
@@ -484,143 +471,6 @@ export function ServerSettingsForm({
                 )}
             </div>
 
-            {/* Recruitment & Staff Section */}
-            <div className="border-t border-[#333] pt-6 mt-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <Users className="h-5 w-5 text-emerald-400" />
-                    Recruitment & Staff Automation
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    {/* Recruitment Channel */}
-                    <div>
-                        <label className="block text-sm font-medium text-emerald-400 mb-2">
-                            Recruitment Review Channel
-                        </label>
-                        <ChannelCombobox
-                            serverId={serverId}
-                            value={recruitmentChannelId}
-                            onChange={(val) => setRecruitmentChannelId(val || "")}
-                            placeholder="Select recruitment channel..."
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Where application submissions are sent for review.</p>
-                    </div>
-
-                    {/* Congrats Channel */}
-                    <div>
-                        <label className="block text-sm font-medium text-indigo-400 mb-2">
-                            Celebration/Congrats Channel
-                        </label>
-                        <ChannelCombobox
-                            serverId={serverId}
-                            value={congratsChannelId}
-                            onChange={(val) => setCongratsChannelId(val || "")}
-                            placeholder="Select congrats channel..."
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Where staff promotions and milestones are announced.</p>
-                    </div>
-
-                    {/* Auto-grant Role */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            Auto-grant Staff Role
-                        </label>
-                        <RoleCombobox
-                            serverId={serverId}
-                            value={autoStaffRoleId}
-                            onChange={(val) => setAutoStaffRoleId(val || "")}
-                            placeholder="Select role to grant..."
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Role automatically granted if/when an application is approved.</p>
-                    </div>
-
-                    {/* AI Threshold */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            AI Pre-screening Threshold (0-100)
-                        </label>
-                        <div className="flex items-center gap-4">
-                            <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={applicationAiThreshold}
-                                onChange={(e) => setApplicationAiThreshold(parseInt(e.target.value))}
-                                className="flex-1 accent-emerald-500"
-                            />
-                            <span className="text-sm font-bold text-emerald-400 w-8">{applicationAiThreshold}</span>
-                        </div>
-                        <p className="text-[10px] text-zinc-600 mt-1">Applications scoring below this will be automatically rejected by AI.</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Advanced & Performance Section */}
-            <div className="border-t border-[#333] pt-6 mt-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <RefreshCw className="h-5 w-5 text-amber-400" />
-                    Advanced & Performance Overrides
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Max Upload Size */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            Max Form Upload Size (MB)
-                        </label>
-                        <input
-                            type="number"
-                            value={maxUploadSize}
-                            onChange={(e) => setMaxUploadSize(parseInt(e.target.value) || 0)}
-                            className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Default: 50MB. Max file size allowed for form submissions.</p>
-                    </div>
-
-                    {/* Staff Request Rate Limit */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            Staff Request Rate Limit (Minutes)
-                        </label>
-                        <input
-                            type="number"
-                            value={staffRequestRateLimit}
-                            onChange={(e) => setStaffRequestRateLimit(parseInt(e.target.value) || 0)}
-                            className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Default: 5m. Cooldown per user for staff requests.</p>
-                    </div>
-
-                    {/* Log Cache TTL */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            Log Browser Cache TTL (Seconds)
-                        </label>
-                        <input
-                            type="number"
-                            value={logCacheTtl}
-                            onChange={(e) => setLogCacheTtl(parseInt(e.target.value) || 0)}
-                            className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Default: 5s. How long log search results are cached in memory.</p>
-                    </div>
-
-                    {/* Automation Cache TTL */}
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
-                            Automation Engine Cache TTL (Seconds)
-                        </label>
-                        <input
-                            type="number"
-                            value={automationCacheTtl}
-                            onChange={(e) => setAutomationCacheTtl(parseInt(e.target.value) || 0)}
-                            className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
-                        />
-                        <p className="text-[10px] text-zinc-600 mt-1">Default: 10s. Reduces DB load during high-frequency events.</p>
-                    </div>
-                </div>
-            </div>
-
             {/* Save Button */}
             <div className="flex items-center gap-4">
                 <button
@@ -695,7 +545,7 @@ export function ServerSettingsForm({
                                     <option value="">Select new owner...</option>
                                     {serverMembers?.map(m => (
                                         <option key={m.userId} value={m.userId}>
-                                            {m.userId} {m.discordId ? `(${m.discordId})` : ""}
+                                            {m.robloxUsername || m.userId} {m.discordId ? `(${m.discordId})` : ""}
                                         </option>
                                     ))}
                                 </select>

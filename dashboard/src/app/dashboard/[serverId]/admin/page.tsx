@@ -28,7 +28,7 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
     // Get all members for owner transfer
     const members = isOwner ? await prisma.member.findMany({
         where: { serverId },
-        select: { userId: true, discordId: true }
+        select: { userId: true, discordId: true, robloxUsername: true }
     }) : []
 
     // Get all admins for this server

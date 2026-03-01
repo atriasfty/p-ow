@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/admin"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Shield, LayoutDashboard, Users, Server as ServerIcon, FileText, AlertTriangle, ArrowRight } from "lucide-react"
+import { Shield, LayoutDashboard, Users, Server as ServerIcon, FileText, AlertTriangle, ArrowRight, ShieldAlert } from "lucide-react"
 import { EnsureDiscordConnection } from "@/components/auth/ensure-discord"
 import { PrcClient } from "@/lib/prc"
 import { RandomGreeting } from "@/components/random-greeting"
@@ -105,7 +105,18 @@ export default async function ServerSelectorPage() {
                                     <p className="text-zinc-400">Welcome to your command center.</p>
                                 </div>
                             </div>
-                            <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "h-10 w-10" } }} />
+                            <div className="flex items-center gap-4">
+                                {isSuperAdmin(session.user as any) && (
+                                    <Link 
+                                        href="/admin/super"
+                                        className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-sm font-semibold rounded-lg transition-colors border border-amber-500/20"
+                                    >
+                                        <ShieldAlert className="h-4 w-4" />
+                                        Superadmin
+                                    </Link>
+                                )}
+                                <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "h-10 w-10" } }} />
+                            </div>
                         </div>
 
                         {/* Global Upsell */}

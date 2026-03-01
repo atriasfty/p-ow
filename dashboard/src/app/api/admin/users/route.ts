@@ -11,13 +11,17 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url)
         const search = searchParams.get("search") || ""
+        const limit = parseInt(searchParams.get("limit") || "50")
+        const offset = parseInt(searchParams.get("offset") || "0")
 
         const client = await clerkClient()
 
-        // Get users - if search query, filter by it
+        // Get users with pagination
         const usersResponse = await client.users.getUserList({
-            limit: 50,
-            query: search || undefined
+            limit,
+            offset,
+            query: search || undefined,
+            orderBy: '-created_at'
         })
 
         const users = usersResponse.data.map(user => {
@@ -44,7 +48,10 @@ export async function GET(req: Request) {
             }
         })
 
-        return NextResponse.json({ users })
+        return NextResponse.json({ 
+            users, 
+            totalCount: usersResponse.totalCount 
+        })
     } catch (e) {
         console.error("Clerk users fetch error:", e)
         return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 })

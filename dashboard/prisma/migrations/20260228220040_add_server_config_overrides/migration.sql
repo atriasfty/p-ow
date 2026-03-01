@@ -11,4 +11,4 @@ ALTER TABLE "Server" ADD COLUMN "maxUploadSize" INTEGER;
 ALTER TABLE "Server" ADD COLUMN "staffRequestRateLimit" INTEGER;
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Log_serverId_type_prcTimestamp_key" ON "Log"("serverId", "type", "prcTimestamp");
+CREATE INDEX "Log_serverId_type_prcTimestamp_key" ON "Log"("serverId", "type", "prcTimestamp");

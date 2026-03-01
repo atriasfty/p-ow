@@ -86,8 +86,6 @@ export async function PATCH(req: Request) {
                 autoStaffRoleId: autoStaffRoleId || null,
                 maxUploadSize: maxUploadSize || null,
                 staffRequestRateLimit: staffRequestRateLimit || null,
-                logCacheTtl: logCacheTtl || null,
-                automationCacheTtl: automationCacheTtl || null,
                 ...(finalBotToken !== undefined && { customBotToken: finalBotToken }),
                 ...(finalBotEnabled !== undefined && { customBotEnabled: finalBotEnabled }),
             }

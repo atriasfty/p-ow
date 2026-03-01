@@ -14,7 +14,7 @@ CREATE TABLE "new_ApiKey" (
     "enabled" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastUsed" DATETIME,
-    "serverId" TEXT NOT NULL,
+    "serverId" TEXT,
     "rateLimit" INTEGER NOT NULL DEFAULT 5,
     "dailyLimit" INTEGER NOT NULL DEFAULT 500,
     "usageCount" INTEGER NOT NULL DEFAULT 0,

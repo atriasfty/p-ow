@@ -43,7 +43,8 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     }
 
     // 2. Daily Quota Check (Based on Server Plan)
-    const plan = apiKey.server.subscriptionPlan || "free"
+    // If not linked to a server (global key), default to pow-max limits
+    const plan = apiKey.server?.subscriptionPlan || (apiKey.serverId ? "free" : "pow-max")
     const limits: Record<string, number> = {
         "free": 100,
         "pow-pro": 5000,

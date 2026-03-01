@@ -95,10 +95,9 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
         return (
             <AutomationEditor
                 serverId={params.serverId}
-                // @ts-ignore
-                initialData={editingAutomation || undefined}
+                automation={editingAutomation || undefined}
                 onSave={handleSave}
-                onCancel={() => {
+                onClose={() => {
                     setIsCreating(false)
                     setEditingAutomation(null)
                 }}

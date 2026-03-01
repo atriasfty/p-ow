@@ -43,8 +43,6 @@ model Server {
   // Custom Server Configuration Overrides
   maxUploadSize         Int?      // In bytes
   staffRequestRateLimit Int?      // In milliseconds
-  logCacheTtl           Int?      // In milliseconds
-  automationCacheTtl    Int?      // In milliseconds
   
   // Recruitment & Staff Features
   recruitmentChannelId   String?   // Where applications go for review
@@ -62,8 +60,24 @@ model Server {
   botQueue        BotQueue[]
   forms           Form[]
   apiKeys         ApiKey[]
+  milestones      StaffMilestone[]
 
   @@index([discordGuildId])
+}
+
+model StaffMilestone {
+  id          String   @id @default(cuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  name        String   // e.g. "Senior Staff"
+  requiredMinutes Int  // Total shift time required
+  rewardRoleId String? // Discord Role ID to grant
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([serverId])
 }
 
 model Log {
@@ -247,8 +261,8 @@ model ApiKey {
   createdAt   DateTime @default(now())
   lastUsed    DateTime?
 
-  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-  serverId    String
+  server      Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId    String?
 
   // Rate Limiting
   rateLimit   Int      @default(5)   // Seconds between requests

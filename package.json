@@ -22,6 +22,7 @@
     },
     "dependencies": {
         "backblaze-b2": "^1.7.1",
-        "dotenv": "^17.2.3"
+        "dotenv": "^17.2.3",
+        "node-fetch": "^3.3.2"
     }
 }

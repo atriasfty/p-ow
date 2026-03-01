@@ -1,9 +1,8 @@
-
 import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin, isSuperAdmin } from "@/lib/admin"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert } from "lucide-react"
+import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert, Trophy, Key, CreditCard } from "lucide-react"
 import { checkConnectionRequirements } from "@/lib/auth-server"
 import { ConnectionRequirementScreen } from "@/components/auth/connection-requirement-screen"
 
@@ -44,6 +43,9 @@ export default async function AdminLayout({
         { name: "General", href: `/dashboard/${serverId}/admin`, icon: Settings },
         { name: "Members", href: `/dashboard/${serverId}/admin/members`, icon: Users },
         { name: "Roles", href: `/dashboard/${serverId}/admin/roles`, icon: Shield },
+        { name: "Milestones", href: `/dashboard/${serverId}/admin/milestones`, icon: Trophy },
+        { name: "API Keys", href: `/dashboard/${serverId}/admin/api-keys`, icon: Key },
+        { name: "Subscription", href: `/dashboard/${serverId}/admin/subscription`, icon: CreditCard },
         { name: "Leave of Absences", href: `/dashboard/${serverId}/admin/loa`, icon: Calendar },
         { name: "Quota", href: `/dashboard/${serverId}/admin/quota`, icon: Clock },
         { name: "Automations", href: `/dashboard/${serverId}/admin/automations`, icon: Zap },

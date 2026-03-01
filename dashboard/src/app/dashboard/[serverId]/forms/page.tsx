@@ -70,13 +70,22 @@ export default async function FormsPage({
                         </p>
                     </div>
                     {isAdmin && (
-                        <Link
-                            href={`/dashboard/${serverId}/forms/create`}
-                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Create Form
-                        </Link>
+                        <div className="flex gap-2">
+                            <Link
+                                href={`/dashboard/${serverId}/forms/settings`}
+                                className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg transition-colors font-medium border border-zinc-700"
+                            >
+                                <Settings className="h-4 w-4" />
+                                Automation Settings
+                            </Link>
+                            <Link
+                                href={`/dashboard/${serverId}/forms/create`}
+                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium"
+                            >
+                                <Plus className="h-4 w-4" />
+                                Create Form
+                            </Link>
+                        </div>
                     )}
                 </div>
 

@@ -20,14 +20,28 @@ export function UpsellBanner({ serverId, plan, feature, title, description, stor
 
     useEffect(() => {
         setMounted(true)
-        const isDismissed = localStorage.getItem(`upsell_${storageKey}_${serverId}`)
-        if (!isDismissed && (!plan || plan === 'free')) {
-            setDismissed(false)
+        const dismissalTime = localStorage.getItem(`upsell_dismissed_${storageKey}_${serverId}`)
+        
+        if (dismissalTime) {
+            const lastDismissed = parseInt(dismissalTime)
+            const twentyFourHours = 24 * 60 * 60 * 1000
+            
+            // If it was dismissed more than 24h ago, show it again
+            if (Date.now() - lastDismissed > twentyFourHours) {
+                if (!plan || plan === 'free') {
+                    setDismissed(false)
+                }
+            }
+        } else {
+            // Never dismissed before
+            if (!plan || plan === 'free') {
+                setDismissed(false)
+            }
         }
     }, [serverId, plan, storageKey])
 
     const handleDismiss = () => {
-        localStorage.setItem(`upsell_${storageKey}_${serverId}`, 'true')
+        localStorage.setItem(`upsell_dismissed_${storageKey}_${serverId}`, Date.now().toString())
         setDismissed(true)
     }
 

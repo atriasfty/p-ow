@@ -3,7 +3,7 @@ import { redirect } from "next/navigation"
 import { isServerAdmin } from "@/lib/admin"
 import { ApiKeysPanel } from "@/components/admin/api-keys-panel"
 
-export default async function ApiKeysPage({
+export default async function AdminApiKeysPage({
     params,
 }: {
     params: Promise<{ serverId: string }>
@@ -14,17 +14,16 @@ export default async function ApiKeysPage({
     const { serverId } = await params
 
     if (!await isServerAdmin(session.user as any, serverId)) {
-        redirect(`/dashboard/${serverId}`)
+        redirect(`/dashboard/${serverId}/mod-panel`)
     }
 
     return (
         <div className="space-y-6 max-w-4xl">
-            <div>
-                <h1 className="text-2xl font-bold text-white">API Keys</h1>
-                <p className="text-zinc-400">Generate and manage API keys for external integrations.</p>
+            <div className="bg-[#1a1a1a] rounded-xl border border-[#222] p-6">
+                <h1 className="text-2xl font-bold text-white mb-2">API Keys</h1>
+                <p className="text-zinc-400 text-sm mb-6">Generate and manage API keys for external integrations.</p>
+                <ApiKeysPanel serverId={serverId} />
             </div>
-
-            <ApiKeysPanel serverId={serverId} />
         </div>
     )
 }

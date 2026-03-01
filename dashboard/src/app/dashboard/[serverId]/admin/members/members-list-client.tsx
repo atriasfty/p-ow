@@ -47,10 +47,26 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
     const [syncing, setSyncing] = useState(false)
     const [updating, setUpdating] = useState<string | null>(null)
     const [search, setSearch] = useState("")
+    const [debouncedSearch, setDebouncedSearch] = useState("")
     const [memberMap, setMemberMap] = useState<Record<string, ExistingMember>>({})
+    
+    // Pagination state
+    const [page, setPage] = useState(1)
+    const [totalCount, setTotalCount] = useState(0)
+    const limit = 50
+    
     const isMounted = useRef(true)
 
-    // Build member map from existing members (indexed by various IDs)
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search)
+            setPage(1) // Reset to first page on search
+        }, 500)
+        return () => clearTimeout(timer)
+    }, [search])
+
+    // Build member map from existing members
     useEffect(() => {
         const map: Record<string, ExistingMember> = {}
         existingMembers.forEach(m => {
@@ -59,16 +75,19 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
         setMemberMap(map)
     }, [existingMembers])
 
-    // Fetch all Clerk users
+    // Fetch Clerk users with pagination and search
     useEffect(() => {
         isMounted.current = true
         
         const fetchUsers = async () => {
+            setLoading(true)
             try {
-                const res = await fetch("/api/admin/users")
+                const offset = (page - 1) * limit
+                const res = await fetch(`/api/admin/users?limit=${limit}&offset=${offset}&search=${encodeURIComponent(debouncedSearch)}`)
                 if (res.ok && isMounted.current) {
                     const data = await res.json()
                     setUsers(data.users)
+                    setTotalCount(data.totalCount || 0)
                 }
             } catch (e) {
                 console.error("Error fetching users:", e)
@@ -84,9 +103,9 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
         return () => {
             isMounted.current = false
         }
-    }, [])
+    }, [page, debouncedSearch])
 
-    // Find member record for a user (try clerk id, discord id, roblox id)
+    // Find member record for a user
     const getMemberForUser = (user: ClerkUser): ExistingMember | null => {
         return memberMap[user.id] ||
             (user.discordId && memberMap[user.discordId]) ||
@@ -96,33 +115,24 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
 
     const handleRoleChange = async (user: ClerkUser, roleId: string | null, isAdmin?: boolean) => {
         setUpdating(user.id)
-
-        // Determine user ID to use (prefer roblox, then discord, then clerk)
         const userId = user.robloxId || user.discordId || user.id
         const member = getMemberForUser(user)
 
         try {
             if (member) {
-                // Update existing member
                 await fetch("/api/admin/members/role", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ memberId: member.id, roleId, isAdmin })
                 })
             } else {
-                // Create new member with role
                 await fetch("/api/admin/members", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ serverId, userId, roleId })
                 })
-                // If making admin on new member, we'd need another call, but typically they need a role first.
-                if (isAdmin !== undefined) {
-                    // refresh first, then update (handled by subsequent interaction)
-                }
             }
 
-            // Refresh member list
             const res = await fetch(`/api/admin/members?serverId=${serverId}`)
             if (res.ok) {
                 const data = await res.json()
@@ -155,24 +165,7 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
         }
     }
 
-    // Filter users by search
-    const filteredUsers = users.filter(u => {
-        const searchLower = search.toLowerCase()
-        return (
-            u.username?.toLowerCase().includes(searchLower) ||
-            u.name?.toLowerCase().includes(searchLower) ||
-            u.discordUsername?.toLowerCase().includes(searchLower) ||
-            u.robloxUsername?.toLowerCase().includes(searchLower)
-        )
-    })
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
-            </div>
-        )
-    }
+    const totalPages = Math.ceil(totalCount / limit)
 
     return (
         <div className="space-y-4">
@@ -184,7 +177,7 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search members..."
+                        placeholder="Search members (server-side)..."
                         className="w-full bg-[#222] border border-[#333] rounded-lg pl-10 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
                     />
                 </div>
@@ -201,7 +194,12 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
             </div>
 
             {/* Members Table */}
-            <div className="bg-[#1a1a1a] rounded-xl border border-[#222] overflow-hidden">
+            <div className="bg-[#1a1a1a] rounded-xl border border-[#222] overflow-hidden relative">
+                {loading && (
+                    <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px] flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                    </div>
+                )}
                 <table className="w-full">
                     <thead>
                         <tr className="border-b border-[#222]">
@@ -213,14 +211,14 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredUsers.length === 0 ? (
+                        {users.length === 0 && !loading ? (
                             <tr>
                                 <td colSpan={5} className="px-4 py-8 text-center text-zinc-500">
                                     No members found
                                 </td>
                             </tr>
                         ) : (
-                            filteredUsers.map(user => {
+                            users.map(user => {
                                 const member = getMemberForUser(user)
                                 return (
                                     <tr key={user.id} className="border-b border-[#222] last:border-0 hover:bg-white/5">
@@ -296,9 +294,31 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                 </table>
             </div>
 
-            <p className="text-xs text-zinc-600 text-center">
-                Showing {filteredUsers.length} of {users.length} registered accounts
-            </p>
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between mt-4">
+                <p className="text-xs text-zinc-500">
+                    Showing {(page - 1) * limit + 1} to {Math.min(page * limit, totalCount)} of {totalCount} members
+                </p>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1 || loading}
+                        className="px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Previous
+                    </button>
+                    <div className="flex items-center px-3 text-xs font-medium text-zinc-400">
+                        Page {page} of {totalPages || 1}
+                    </div>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages || totalPages === 0 || loading}
+                        className="px-3 py-1.5 text-xs font-medium bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
         </div>
     )
 }
