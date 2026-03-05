@@ -152,23 +152,42 @@ model LeaveOfAbsence {
   createdAt   DateTime  @default(now())
   
   @@index([serverId, status])
-  @@index([userId])
-}
+  milestones      StaffMilestone[]
 
-model BotQueue {
+  @@index([discordGuildId])
+  }
+
+  model StaffMilestone {
+  id          String   @id @default(cuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  name        String
+  requiredMinutes Int
+  rewardRoleId String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([serverId])
+  }
+  ...
+  model BotQueue {
   id        String   @id @default(cuid())
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId  String
-  
-  type      String   // MESSAGE, DM
+
+  type      String   @default("MESSAGE") // MESSAGE, DM
   targetId  String   // Channel ID or User ID
   content   String
-  
+
   status    String   @default("PENDING") // PENDING, SENT, FAILED
   error     String?
-  
+
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   processedAt DateTime?
 
   @@index([serverId, status])
-}
+  }
+

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ShieldAlert, Plus, Trash2, Key, Activity, Copy, Check } from "lucide-react"
+import { ShieldAlert, Plus, Trash2, Key, Activity, Copy, Check, AlertTriangle, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export function ApiKeysPanel({ serverId }: { serverId: string }) {
     const [keys, setKeys] = useState<any[]>([])
@@ -9,6 +10,9 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
     const [isCreating, setIsCreating] = useState(false)
     const [newName, setNewName] = useState("")
     const [copiedId, setCopiedId] = useState<string | null>(null)
+    
+    // One-time display state
+    const [createdKey, setCreatedKey] = useState<any | null>(null)
 
     useEffect(() => {
         fetchKeys()
@@ -37,8 +41,10 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
         })
 
         if (res.ok) {
+            const data = await res.json()
             setNewName("")
             setIsCreating(false)
+            setCreatedKey(data) // Store the full key for one-time display
             fetchKeys()
         }
     }
@@ -78,6 +84,51 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                     Generate Key
                 </button>
             </div>
+
+            {/* One-Time Key Display Modal */}
+            {createdKey && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-zinc-900 border border-emerald-500/30 rounded-2xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 text-emerald-400 mb-4">
+                            <Key className="h-6 w-6" />
+                            <h3 className="text-xl font-bold">API Key Generated</h3>
+                        </div>
+                        
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-start gap-3 mb-6">
+                            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                            <p className="text-sm text-amber-200/80">
+                                <strong>Important:</strong> Copy this key now. For security, it will <strong>never be shown again</strong> once you close this window.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 block">
+                                    {createdKey.name}
+                                </label>
+                                <div className="flex items-center gap-2 bg-black border border-zinc-800 rounded-xl p-4 group">
+                                    <code className="text-emerald-400 font-mono text-sm break-all flex-1">
+                                        {createdKey.key}
+                                    </code>
+                                    <button 
+                                        onClick={() => handleCopy(createdKey.key, "new")}
+                                        className="p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-400 hover:text-white"
+                                    >
+                                        {copiedId === "new" ? <Check className="h-5 w-5 text-emerald-400" /> : <Copy className="h-5 w-5" />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <Button 
+                                onClick={() => setCreatedKey(null)}
+                                className="w-full h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl"
+                            >
+                                I have saved this key
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {isCreating && (
                 <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-zinc-900 p-4">
@@ -132,11 +183,11 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                                         {key.usageCount} / {key.dailyLimit} requests today
                                     </div>
                                     <div className="flex items-center gap-1 font-mono">
-                                        {key.key.substring(0, 8)}...{key.key.substring(key.key.length - 4)}
+                                        {key.key}
                                         <button 
                                             onClick={() => handleCopy(key.key, key.id)}
                                             className="ml-1 hover:text-white transition-colors"
-                                            title="Copy full key"
+                                            title="Copy masked key"
                                         >
                                             {copiedId === key.id ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                                         </button>

@@ -55,8 +55,16 @@ export async function GET(
         // If no role gating configured (both arrays empty), skip role checks
         const hasRoleGating = requiredRoles.length > 0 || ignoredRoles.length > 0
 
+        // Enforcement logic
+        if (form.requiresAuth && !session) {
+            return NextResponse.json({
+                error: "Login required to access this form",
+                requiresAuth: true
+            }, { status: 401 })
+        }
+
         if (hasRoleGating) {
-            // Role gating requires login
+            // Role gating ALWAYS requires login
             if (!session) {
                 return NextResponse.json({
                     error: "Login required to access this form",
@@ -133,6 +141,7 @@ export async function GET(
 
         let hasSubmitted = false
         let draftAnswers: Record<string, any> | null = null
+        let draftResponseId: string | null = null
 
         if (session) {
             // Check for completed submissions
@@ -158,6 +167,7 @@ export async function GET(
             })
 
             if (draft) {
+                draftResponseId = draft.id
                 draftAnswers = {}
                 draft.answers.forEach((a: any) => {
                     try {
@@ -187,7 +197,8 @@ export async function GET(
             responseCount: form._count.responses,
             maxResponses: form.maxResponses,
             hasSubmitted,
-            draftAnswers
+            draftAnswers,
+            draftResponseId
         }
 
         return NextResponse.json(formWithParsedData)

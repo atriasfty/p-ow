@@ -28,6 +28,8 @@ export default async function FormSettingsPage({
             customName: true,
             recruitmentChannelId: true,
             congratsChannelId: true,
+            loaChannelId: true,
+            onLoaRoleId: true,
             applicationAiThreshold: true,
             autoStaffRoleId: true,
         }
@@ -64,6 +66,8 @@ export default async function FormSettingsPage({
                         initialData={{
                             recruitmentChannelId: server.recruitmentChannelId || "",
                             congratsChannelId: server.congratsChannelId || "",
+                            loaChannelId: server.loaChannelId || "",
+                            onLoaRoleId: server.onLoaRoleId || "",
                             applicationAiThreshold: server.applicationAiThreshold || 70,
                             autoStaffRoleId: server.autoStaffRoleId || "",
                         }}

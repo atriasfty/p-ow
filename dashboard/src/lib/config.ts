@@ -58,6 +58,11 @@ const SERVER_DEFAULTS = {
 export type ServerConfigKey = keyof typeof SERVER_DEFAULTS
 
 export async function getServerOverride<T extends ServerConfigKey>(serverId: string, key: T): Promise<typeof SERVER_DEFAULTS[T]> {
+    // These keys were removed from the database model, so always return default
+    if (key === "logCacheTtl" || key === "automationCacheTtl") {
+        return SERVER_DEFAULTS[key]
+    }
+
     const server = await prisma.server.findUnique({
         where: { id: serverId },
         select: { [key]: true }

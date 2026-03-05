@@ -33,6 +33,8 @@ interface Form {
     maxResponses: number | null
     responseCount: number
     hasSubmitted: boolean
+    draftResponseId: string | null
+    draftAnswers: Record<string, any> | null
     server: { name: string; customName: string | null; bannerUrl: string | null }
 }
 
@@ -46,6 +48,7 @@ export default function PublicFormPage({
     const { isSignedIn, isLoaded } = useUser()
     const [form, setForm] = useState<Form | null>(null)
     const [answers, setAnswers] = useState<Record<string, any>>({})
+    const [responseId, setResponseId] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState("")
@@ -72,9 +75,11 @@ export default function PublicFormPage({
                 const res = await fetch(`/api/forms/${form.id}/submit`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ answers, saveAsDraft: true })
+                    body: JSON.stringify({ answers, saveAsDraft: true, responseId })
                 })
                 if (res.ok) {
+                    const data = await res.json()
+                    if (data.responseId) setResponseId(data.responseId)
                     setLastSaved(new Date())
                 }
             } catch (err) {
@@ -87,7 +92,7 @@ export default function PublicFormPage({
         return () => {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
         }
-    }, [answers, form, submitted, submitting, isSignedIn])
+    }, [answers, form, submitted, submitting, isSignedIn, responseId])
 
     const loadForm = async () => {
         try {
@@ -104,6 +109,7 @@ export default function PublicFormPage({
                 // Load draft if exists
                 if (data.draftAnswers) {
                     setAnswers(data.draftAnswers)
+                    setResponseId(data.draftResponseId)
                     setLastSaved(new Date()) // It was saved previously
                 }
             }
@@ -119,15 +125,23 @@ export default function PublicFormPage({
         const { questionId, operator, value } = question.conditions.showIf
         const answer = answers[questionId]
 
-        if (answer === undefined) return false
+        if (answer === undefined || answer === null) return false
+
+        const stringAnswer = Array.isArray(answer) ? answer.join(",") : String(answer)
 
         switch (operator) {
             case "equals":
+                if (Array.isArray(answer)) {
+                    return answer.includes(value)
+                }
                 return String(answer) === value
             case "not_equals":
+                if (Array.isArray(answer)) {
+                    return !answer.includes(value)
+                }
                 return String(answer) !== value
             case "contains":
-                return String(answer).includes(value)
+                return stringAnswer.includes(value)
             default:
                 return true
         }
@@ -162,7 +176,7 @@ export default function PublicFormPage({
             const res = await fetch(`/api/forms/${form.id}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ answers })
+                body: JSON.stringify({ answers, responseId })
             })
 
             if (!res.ok) {

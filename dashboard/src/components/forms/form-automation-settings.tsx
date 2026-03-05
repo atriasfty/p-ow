@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Save, Loader2, Users, Trophy, Brain, Bell } from "lucide-react"
+import { Save, Loader2, Users, Trophy, Brain, Bell, Calendar, ShieldCheck } from "lucide-react"
 import { ChannelCombobox } from "@/components/admin/channel-combobox"
 import { RoleCombobox } from "@/components/admin/role-combobox"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,8 @@ interface FormAutomationSettingsProps {
     initialData: {
         recruitmentChannelId: string
         congratsChannelId: string
+        loaChannelId: string
+        onLoaRoleId: string
         applicationAiThreshold: number
         autoStaffRoleId: string
     }
@@ -19,6 +21,8 @@ interface FormAutomationSettingsProps {
 export function FormAutomationSettings({ serverId, initialData }: FormAutomationSettingsProps) {
     const [recruitmentChannelId, setRecruitmentChannelId] = useState(initialData.recruitmentChannelId)
     const [congratsChannelId, setCongratsChannelId] = useState(initialData.congratsChannelId)
+    const [loaChannelId, setLoaChannelId] = useState(initialData.loaChannelId)
+    const [onLoaRoleId, setOnLoaRoleId] = useState(initialData.onLoaRoleId)
     const [applicationAiThreshold, setApplicationAiThreshold] = useState(initialData.applicationAiThreshold)
     const [autoStaffRoleId, setAutoStaffRoleId] = useState(initialData.autoStaffRoleId)
 
@@ -37,6 +41,8 @@ export function FormAutomationSettings({ serverId, initialData }: FormAutomation
                     serverId,
                     recruitmentChannelId: recruitmentChannelId || null,
                     congratsChannelId: congratsChannelId || null,
+                    loaChannelId: loaChannelId || null,
+                    onLoaRoleId: onLoaRoleId || null,
                     applicationAiThreshold,
                     autoStaffRoleId: autoStaffRoleId || null,
                 })
@@ -130,6 +136,40 @@ export function FormAutomationSettings({ serverId, initialData }: FormAutomation
                     </div>
                     <p className="text-xs text-zinc-500">
                         Applications scoring below this will be flagged or automatically rejected by AI analysis.
+                    </p>
+                </div>
+
+                {/* LOA Request Channel */}
+                <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-orange-400 uppercase tracking-wider">
+                        <Calendar className="h-4 w-4" />
+                        LOA Request Channel
+                    </label>
+                    <ChannelCombobox
+                        serverId={serverId}
+                        value={loaChannelId}
+                        onChange={(val) => setLoaChannelId(val || "")}
+                        placeholder="Select channel..."
+                    />
+                    <p className="text-xs text-zinc-500">
+                        Where new Leave of Absence requests will be sent for approval.
+                    </p>
+                </div>
+
+                {/* On-LOA Role */}
+                <div className="space-y-3">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-zinc-400 uppercase tracking-wider">
+                        <ShieldCheck className="h-4 w-4" />
+                        On-LOA Discord Role
+                    </label>
+                    <RoleCombobox
+                        serverId={serverId}
+                        value={onLoaRoleId}
+                        onChange={(val) => setOnLoaRoleId(val || "")}
+                        placeholder="Select role..."
+                    />
+                    <p className="text-xs text-zinc-500">
+                        This role is automatically applied while a user is on an active, approved LOA.
                     </p>
                 </div>
             </div>

@@ -7,6 +7,7 @@ import { Check, X, Clock, Loader2, User, Calendar, Trash2, AlertTriangle } from 
 interface LeaveOfAbsence {
     id: string
     userId: string
+    robloxUsername: string | null
     startDate: Date
     endDate: Date
     reason: string
@@ -171,9 +172,9 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
     }
 
     // User display component
-    const UserDisplay = ({ userId }: { userId: string }) => {
-        const avatar = getUserAvatar(userId)
-        const name = getRobloxUsername(userId)
+    const UserDisplay = ({ loa }: { loa: LeaveOfAbsence }) => {
+        const avatar = getUserAvatar(loa.userId)
+        const name = loa.robloxUsername || getRobloxUsername(loa.userId)
 
         return (
             <div className="flex items-center gap-2">
@@ -184,7 +185,12 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
                         <User className="h-3 w-3 text-zinc-400" />
                     </div>
                 )}
-                <span className="text-sm text-white">{name}</span>
+                <div className="flex flex-col">
+                    <span className="text-sm text-white font-medium">{name}</span>
+                    {loa.userId.startsWith("user_") && (
+                        <span className="text-[10px] text-zinc-500 font-mono">{loa.userId}</span>
+                    )}
+                </div>
             </div>
         )
     }
@@ -220,7 +226,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="mb-2">
-                                            <UserDisplay userId={loa.userId} />
+                                            <UserDisplay loa={loa} />
                                         </div>
                                         <div className="flex items-center gap-2 text-xs text-zinc-500 mb-2">
                                             <Calendar className="h-3 w-3" />
@@ -279,7 +285,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
                                 {active.map(loa => (
                                     <tr key={loa.id} className="border-b border-[#222] last:border-0">
                                         <td className="px-4 py-3">
-                                            <UserDisplay userId={loa.userId} />
+                                            <UserDisplay loa={loa} />
                                         </td>
                                         <td className="px-4 py-3 text-xs text-zinc-400">
                                             {formatDate(loa.startDate)} → {formatDate(loa.endDate)}
@@ -323,7 +329,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
                                 {pastLoas.slice(0, 10).map((loa: LeaveOfAbsence) => (
                                     <tr key={loa.id} className="border-b border-[#222] last:border-0">
                                         <td className="px-4 py-3">
-                                            <UserDisplay userId={loa.userId} />
+                                            <UserDisplay loa={loa} />
                                         </td>
                                         <td className="px-4 py-3 text-xs text-zinc-400">
                                             {formatDate(loa.startDate)} → {formatDate(loa.endDate)}

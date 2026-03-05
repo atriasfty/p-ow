@@ -25,10 +25,15 @@ export async function POST(
             return NextResponse.json({ error: "Access denied" }, { status: 403 })
         }
 
+        const member = await prisma.member.findFirst({
+            where: { serverId: loa.serverId, userId: loa.userId }
+        })
+
         await prisma.leaveOfAbsence.update({
             where: { id },
             data: {
                 status: "approved",
+                robloxUsername: member?.robloxUsername || loa.robloxUsername,
                 reviewedBy: session.user.robloxId || session.user.discordId || session.user.id,
                 reviewedAt: new Date()
             }

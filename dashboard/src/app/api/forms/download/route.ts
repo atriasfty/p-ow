@@ -16,14 +16,36 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Missing formId or file" }, { status: 400 })
         }
         
-        // Tenant Isolation: verify user can access this form's server
+        // Tenant Isolation: verify user can access this form's server or is the respondent
         const session = await getSession()
         if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
         
         const form = await prisma.form.findUnique({ where: { id: formId } })
         if (!form) return NextResponse.json({ error: "Form not found" }, { status: 404 })
         
-        if (!await isServerMember(session.user as any, form.serverId)) {
+        // Check if user is a server member/admin
+        const isStaff = await isServerMember(session.user as any, form.serverId)
+        
+        // Check if user has explicit editor access to this form
+        const hasEditorAccess = await prisma.formEditorAccess.findUnique({
+            where: { formId_userId: { formId, userId: session.user.id } }
+        })
+
+        // Check if user is the respondent who uploaded the file
+        // (This is a bit expensive but necessary for security)
+        const isRespondent = await prisma.formResponse.findFirst({
+            where: {
+                formId,
+                respondentId: session.user.id,
+                answers: {
+                    some: {
+                        value: { contains: filename }
+                    }
+                }
+            }
+        })
+
+        if (!isStaff && !hasEditorAccess && !isRespondent) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 

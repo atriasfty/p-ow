@@ -33,7 +33,8 @@ export async function POST(req: Request) {
         const loa = await prisma.leaveOfAbsence.create({
             data: {
                 serverId,
-                userId: session.user.id, // Consistent with Clerk ID
+                userId: session.user.id,
+                robloxUsername: session.user.robloxUsername || session.user.username || "Unknown",
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
                 reason,
@@ -42,20 +43,40 @@ export async function POST(req: Request) {
         })
 
         // Notify via bot queue if configured
-        if (server.staffRequestChannelId) {
-            const embed = {
+        const notifyChannelId = server.loaChannelId || server.staffRequestChannelId
+        if (notifyChannelId) {
+            const payload = {
                 embeds: [
                     {
-                        title: "New LOA Request",
-                        color: 0xf59e0b, // Amber
+                        title: "📅 New LOA Request",
+                        color: 0x6366f1, // Indigo
                         fields: [
-                            { name: "Staff Member", value: session.user.name || session.user.username || session.user.id, inline: true },
-                            { name: "Start Date", value: startDate, inline: true },
-                            { name: "End Date", value: endDate, inline: true },
+                            { name: "Staff Member", value: session.user.robloxUsername || session.user.username || session.user.id, inline: true },
+                            { name: "Start Date", value: new Date(startDate).toLocaleDateString(), inline: true },
+                            { name: "End Date", value: new Date(endDate).toLocaleDateString(), inline: true },
                             { name: "Reason", value: reason, inline: false }
                         ],
-                        footer: { text: `ID: ${loa.id}` },
+                        footer: { text: `LOA ID: ${loa.id} • Clerk ID: ${session.user.id}` },
                         timestamp: new Date().toISOString()
+                    }
+                ],
+                components: [
+                    {
+                        type: 1, // Action Row
+                        components: [
+                            {
+                                type: 2, // Button
+                                style: 3, // Success (Green)
+                                label: "Accept",
+                                custom_id: `loa_accept:${loa.id}`
+                            },
+                            {
+                                type: 2, // Button
+                                style: 4, // Danger (Red)
+                                label: "Deny",
+                                custom_id: `loa_deny:${loa.id}`
+                            }
+                        ]
                     }
                 ]
             }
@@ -64,8 +85,8 @@ export async function POST(req: Request) {
                 data: {
                     serverId,
                     type: "MESSAGE",
-                    targetId: server.staffRequestChannelId,
-                    content: JSON.stringify(embed)
+                    targetId: notifyChannelId,
+                    content: JSON.stringify(payload)
                 }
             })
         }

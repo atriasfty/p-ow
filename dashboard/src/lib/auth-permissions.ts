@@ -50,30 +50,30 @@ export async function verifyPermissionOrRedirect(
 
 /**
  * Simple CSRF protection for API routes that use session cookies.
- * Verifies the Origin or Referer header against the app's base URL.
+ * Verifies the Origin or Referer header against the current request host.
  */
 export function verifyCsrf(req: Request): boolean {
     const origin = req.headers.get("origin")
     const referer = req.headers.get("referer")
-    
-    // In production, we expect an origin or referer from our own domain
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+    const host = req.headers.get("host") // e.g. pow.ciankelly.xyz
+
+    if (!host) return false
 
     try {
-        const appHost = new URL(appUrl).host
-
         if (origin) {
-            return new URL(origin).host === appHost
+            return new URL(origin).host === host
         }
 
         if (referer) {
-            return new URL(referer).host === appHost
+            return new URL(referer).host === host
         }
     } catch (e) {
         return false
     }
 
+    // Fallback: If it's a browser request with cookies but no origin/referer,
+    // it's likely a standard navigation or a script-less form post.
+    // For our API (fetch), origin is always present in POST/PATCH/DELETE.
     return false
 }
 

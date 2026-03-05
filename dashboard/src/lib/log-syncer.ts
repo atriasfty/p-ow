@@ -11,7 +11,7 @@ async function getAutomationEngine() {
     return AutomationEngine
 }
 
-function logToDbFormat(log: any, serverId: string): Prisma.LogCreateManyInput | null {
+function logToDbFormat(log: any, serverId: string): any {
     if (log._type === "join") {
         return {
             serverId,
@@ -89,7 +89,7 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         }
 
         try {
-            await prisma.$transaction(async (tx) => {
+            await prisma.$transaction(async (tx: any) => {
                 const existing = await tx.shift.findFirst({
                     where: { userId: member.userId, serverId, endTime: null }
                 })
@@ -167,7 +167,7 @@ async function handleShutdownCommand(log: any, serverId: string) {
     })
 
     if (activeShifts.length > 0) {
-        await Promise.all(activeShifts.map(shift => {
+        await Promise.all(activeShifts.map((shift: any) => {
             const duration = Math.floor((now.getTime() - shift.startTime.getTime()) / 1000)
             return prisma.shift.update({
                 where: { id: shift.id },
@@ -223,8 +223,8 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
     if (!punishmentType) return
 
     try {
-        const players = await client.getPlayers().catch(() => [])
-        let matches = players.filter(p => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
+        const players = await client.getPlayers().catch(() => [] as any[])
+        let matches = players.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
         let target: { name: string; id: string } | null = null
 
         if (matches.length === 1) {
@@ -296,7 +296,7 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
 
         if (parsedLogs.length === 0) return { parsedLogs: [], newLogsCount: 0 }
 
-        const dbLogs = parsedLogs.map(l => logToDbFormat(l, serverId)).filter((l): l is Prisma.LogCreateManyInput => l !== null)
+        const dbLogs = parsedLogs.map(l => logToDbFormat(l, serverId)).filter((l): l is any => l !== null)
         
         // Batch create logs - uses the unique constraint to skip duplicates efficiently
         const { count: newLogsCount } = await (prisma.log as any).createMany({

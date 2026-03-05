@@ -47,6 +47,8 @@ model Server {
   // Recruitment & Staff Features
   recruitmentChannelId   String?   // Where applications go for review
   congratsChannelId      String?   // Where celebrations/promotions are announced
+  loaChannelId           String?   // Where LOA requests go for review
+  onLoaRoleId            String?   // Role applied while on LOA
   applicationAiThreshold Int       @default(70) // 0-100 score required
   autoStaffRoleId        String?   // Role to grant on approval
   
@@ -183,6 +185,7 @@ model Member {
   userId    String   // Clerk user ID
   discordId String?  // Discord user ID for bot lookups
   robloxId  String?  // Roblox user ID
+  robloxUsername String? // Roblox username cache
   isAdmin   Boolean  @default(false) // Can access admin panel
   
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
@@ -202,6 +205,7 @@ model Member {
 model LeaveOfAbsence {
   id          String    @id @default(cuid())
   userId      String
+  robloxUsername String?  // Added for consistent display
   serverId    String
   server      Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
   startDate   DateTime
@@ -239,7 +243,7 @@ model BotQueue {
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId  String
   
-  type      String   // MESSAGE, DM
+  type      String   @default("MESSAGE") // MESSAGE, DM
   targetId  String   // Channel ID or User ID
   content   String
   
@@ -247,6 +251,7 @@ model BotQueue {
   error     String?
   
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   processedAt DateTime?
 
   @@index([serverId, status])

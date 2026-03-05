@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Download, Share, Plus, MoreVertical } from "lucide-react"
 import { usePWA } from "@/components/providers/pwa-provider"
+import { usePathname } from "next/navigation"
 
 /**
  * PWA Gate - Forces mobile users to install the app before using it
@@ -12,6 +13,7 @@ export function PWAGate({ children }: { children: React.ReactNode }) {
     // Start with null states to ensure server/client match
     const [isMounted, setIsMounted] = useState(false)
     const { isMobile, isInstalled, isIOS, canInstall, install } = usePWA()
+    const pathname = usePathname()
 
     useEffect(() => {
         setIsMounted(true)
@@ -24,6 +26,17 @@ export function PWAGate({ children }: { children: React.ReactNode }) {
 
     // After mount: Desktop or already installed - show normal content
     if (!isMobile || isInstalled) {
+        return <>{children}</>
+    }
+
+    // EXEMPTIONS: Landing Page, Pricing, Form Filling, and Auth flows
+    const isLandingPage = pathname === "/"
+    const isPricingPage = pathname === "/pricing"
+    const isLoginPage = pathname?.startsWith("/login")
+    const isVisionAuthPage = pathname?.startsWith("/vision-auth")
+    const isFormFillingPage = pathname?.startsWith("/forms/") && !pathname?.startsWith("/forms/editor")
+
+    if (isLandingPage || isPricingPage || isLoginPage || isVisionAuthPage || isFormFillingPage) {
         return <>{children}</>
     }
 

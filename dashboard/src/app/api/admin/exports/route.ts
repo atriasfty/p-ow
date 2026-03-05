@@ -39,24 +39,24 @@ export async function GET(req: Request) {
 
             // Get Discord/Roblox usernames from Clerk (excluding emails/PII)
             const clerk = await clerkClient()
-            const userIds = members.map(m => m.userId)
+            const userIds: string[] = members.map((m: any) => m.userId)
             // Fetch in batches if necessary, but assume small enough for standard Clerk call
             const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
             
-            const userMap = new Map(clerkUsers.data.map(u => {
-                const robloxAccount = u.externalAccounts.find(a => 
+            const userMap = new Map(clerkUsers.data.map((u: any) => {
+                const robloxAccount = u.externalAccounts.find((a: any) => 
                     a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                 )
-                const discordAccount = u.externalAccounts.find(a => a.provider === "oauth_discord")
+                const discordAccount = u.externalAccounts.find((a: any) => a.provider === "oauth_discord")
                 
-                return [u.id, {
+                return [u.id as string, {
                     roblox: robloxAccount?.username || "Unknown",
                     discord: discordAccount?.username || "Unknown"
                 }]
             }))
 
             csvContent = "Roblox Username,Discord Username,Panel Role,Is Admin\n"
-            members.forEach(m => {
+            members.forEach((m: any) => {
                 const names = userMap.get(m.userId) || { roblox: "Unknown", discord: "Unknown" }
                 csvContent += `${names.roblox},${names.discord},${m.role?.name || "None"},${m.isAdmin}\n`
             })
@@ -69,18 +69,18 @@ export async function GET(req: Request) {
             })
 
             const clerk = await clerkClient()
-            const userIds = Array.from(new Set(shifts.map(s => s.userId)))
+            const userIds: string[] = Array.from(new Set(shifts.map((s: any) => s.userId)))
             const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
             
-            const userMap = new Map(clerkUsers.data.map(u => {
-                const robloxAccount = u.externalAccounts.find(a => 
+            const userMap = new Map(clerkUsers.data.map((u: any) => {
+                const robloxAccount = u.externalAccounts.find((a: any) => 
                     a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                 )
-                return [u.id, robloxAccount?.username || "Unknown"]
+                return [u.id as string, robloxAccount?.username || "Unknown"]
             }))
 
             csvContent = "Roblox Username,Start Time,End Time,Duration (Seconds)\n"
-            shifts.forEach(s => {
+            shifts.forEach((s: any) => {
                 const robloxName = userMap.get(s.userId) || "Unknown"
                 csvContent += `${robloxName},${s.startTime.toISOString()},${s.endTime ? s.endTime.toISOString() : "Active"},${s.duration || 0}\n`
             })
@@ -92,7 +92,7 @@ export async function GET(req: Request) {
             })
 
             csvContent = "Role Name,Discord Role ID,Member Count,Can Ban,Can Use Toolbox\n"
-            roles.forEach(r => {
+            roles.forEach((r: any) => {
                 csvContent += `"${r.name}",${r.discordRoleId || "None"},${r._count.members},${r.canBan},${r.canUseToolbox}\n`
             })
 

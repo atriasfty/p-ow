@@ -30,6 +30,12 @@ client.once(Events.ClientReady, async (c: any) => {
 })
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+    if (interaction.isButton()) {
+        const { handleButtonInteraction } = await import("./events/interaction-buttons")
+        await handleButtonInteraction(interaction)
+        return
+    }
+
     // Handle Autocomplete for 'server' option
     if (interaction.isAutocomplete()) {
         try {

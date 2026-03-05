@@ -129,7 +129,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
                         <div key={m.id} className="flex items-center justify-between p-4 bg-[#222] border border-[#333] rounded-xl hover:border-[#444] transition-colors group">
                             <div className="flex items-center gap-4">
                                 <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                                    <Trophy className="h-5 w-5 text-emerald-500" />
+                                    <TrophyIcon className="h-5 w-5 text-emerald-500" />
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white">{m.name}</h4>
@@ -161,7 +161,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
     )
 }
 
-function Trophy(props: any) {
+function TrophyIcon(props: any) {
     return (
         <svg
             {...props}

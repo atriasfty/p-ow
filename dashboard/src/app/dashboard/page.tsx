@@ -60,7 +60,7 @@ export default async function ServerSelectorPage() {
         }
     })
 
-    const servers = memberships.map(m => m.server)
+    const servers = memberships.map((m: any) => m.server)
 
     // Parallel fetch for all stats
     const serversWithStats = await Promise.all(servers.map(async (s: any) => {
@@ -80,8 +80,8 @@ export default async function ServerSelectorPage() {
     const hasUnlinkedSubscription = (userPlan === 'pow-pro-user' || userPlan === 'pow-pro' || userPlan === 'pow-max') && !linkedServerId
 
     // Check if ANY server is free for global upsell
-    const hasFreeServer = servers.some(s => !s.subscriptionPlan || s.subscriptionPlan === 'free')
-    const firstFreeServerId = servers.find(s => !s.subscriptionPlan || s.subscriptionPlan === 'free')?.id
+    const hasFreeServer = servers.some((s: any) => !s.subscriptionPlan || s.subscriptionPlan === 'free')
+    const firstFreeServerId = servers.find((s: any) => !s.subscriptionPlan || s.subscriptionPlan === 'free')?.id
 
     return (
         <EnsureDiscordConnection>

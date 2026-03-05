@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // POST /api/forms/[formId]/submit - Submit form response
 export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ formId: string }> }
 ) {
+    if (!verifyCsrf(request)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
+
     try {
         const { formId } = await params
 
@@ -74,7 +79,7 @@ export async function POST(
 
             const discordId = session.user.discordId
             if (!discordId) {
-                return NextResponse.json({ error: "You must link your Discord account" }, { status: 403 })
+                return NextResponse.json({ error: "You must link your Discord account to submit this form" }, { status: 403 })
             }
 
             const server = await prisma.server.findUnique({
@@ -111,16 +116,46 @@ export async function POST(
         }
 
         const body = await request.json()
-        const { answers, email, saveAsDraft } = body
+        const { answers, email, saveAsDraft, responseId: bodyResponseId } = body
 
         if (!answers || typeof answers !== "object") {
             return NextResponse.json({ error: "answers object is required" }, { status: 400 })
         }
 
+        // Helper to check if a question should be shown based on conditions
+        const shouldShowQuestion = (question: any, currentAnswers: Record<string, any>): boolean => {
+            let conditions: any = {}
+            try {
+                conditions = typeof question.conditions === 'string' ? JSON.parse(question.conditions) : question.conditions
+            } catch { }
+
+            if (!conditions?.showIf) return true
+
+            const { questionId, operator, value } = conditions.showIf
+            const answer = currentAnswers[questionId]
+
+            if (answer === undefined || answer === null) return false
+
+            const stringAnswer = Array.isArray(answer) ? answer.join(",") : String(answer)
+
+            switch (operator) {
+                case "equals":
+                    if (Array.isArray(answer)) return answer.includes(value)
+                    return String(answer) === value
+                case "not_equals":
+                    if (Array.isArray(answer)) return !answer.includes(value)
+                    return String(answer) !== value
+                case "contains":
+                    return stringAnswer.includes(value)
+                default:
+                    return true
+            }
+        }
+
         // Validate that all question IDs belong to this form
         const allQuestions = form.sections.flatMap((s: any) => s.questions)
         const validQuestionIds = new Set(allQuestions.map((q: any) => q.id))
-        
+
         for (const qId of Object.keys(answers)) {
             if (!validQuestionIds.has(qId)) {
                 return NextResponse.json({ error: `Invalid question ID: ${qId}` }, { status: 400 })
@@ -131,20 +166,22 @@ export async function POST(
         if (!saveAsDraft) {
             const requiredQuestions = allQuestions.filter((q: any) => q.required)
             for (const question of requiredQuestions) {
-                const answer = answers[question.id]
-                // TODO: Also check conditional logic here to ensure we don't require hidden questions
-                if (answer === undefined || answer === null || answer === "") {
-                    return NextResponse.json({
-                        error: `Question "${question.label}" is required`,
-                        questionId: question.id
-                    }, { status: 400 })
+                // Only validate if the question should be shown based on conditional logic
+                if (shouldShowQuestion(question, answers)) {
+                    const answer = answers[question.id]
+                    if (answer === undefined || answer === null || answer === "" || (Array.isArray(answer) && answer.length === 0)) {
+                        return NextResponse.json({
+                            error: `Question "${question.label}" is required`,
+                            questionId: question.id
+                        }, { status: 400 })
+                    }
                 }
             }
         }
 
         // Find existing draft (or response if updating)
-        let responseId: string | undefined
-        if (session) {
+        let responseId: string | undefined = bodyResponseId
+        if (!responseId && session) {
             const existing = await prisma.formResponse.findFirst({
                 where: { formId, respondentId: session.user.id, status: "draft" }
             })

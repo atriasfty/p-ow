@@ -1,8 +1,7 @@
-
 "use client"
 
 import { useState } from "react"
-import { Save, Loader2, RefreshCw, Bot, Users } from "lucide-react"
+import { Save, Loader2, RefreshCw, Bot } from "lucide-react"
 import { RoleCombobox } from "@/components/admin/role-combobox"
 import { ChannelCombobox } from "@/components/admin/channel-combobox"
 import Link from "next/link"
@@ -65,12 +64,7 @@ export function ServerSettingsForm({
     const [raidAlertChannelId, setRaidAlertChannelId] = useState(currentRaidAlertChannelId || "")
     const [commandLogChannelId, setCommandLogChannelId] = useState(currentCommandLogChannelId || "")
     
-    // Recruitment state
-    const [recruitmentChannelId, setRecruitmentChannelId] = useState(currentRecruitmentChannelId || "")
-    const [congratsChannelId, setCongratsChannelId] = useState(currentCongratsChannelId || "")
-    const [applicationAiThreshold, setApplicationAiThreshold] = useState(currentApplicationAiThreshold || 70)
-    const [autoStaffRoleId, setAutoStaffRoleId] = useState(currentAutoStaffRoleId || "")
-
+    // Advanced Config
     const [maxUploadSize, setMaxUploadSize] = useState(currentMaxUploadSize ? currentMaxUploadSize / 1024 / 1024 : 50)
     const [staffRequestRateLimit, setStaffRequestRateLimit] = useState(currentStaffRequestRateLimit ? currentStaffRequestRateLimit / 1000 / 60 : 5)
 
@@ -109,10 +103,6 @@ export function ServerSettingsForm({
                     staffRequestChannelId: staffRequestChannelId || null,
                     raidAlertChannelId: raidAlertChannelId || null,
                     commandLogChannelId: commandLogChannelId || null,
-                    recruitmentChannelId: recruitmentChannelId || null,
-                    congratsChannelId: congratsChannelId || null,
-                    applicationAiThreshold,
-                    autoStaffRoleId: autoStaffRoleId || null,
                     customBotToken: customBotToken || null,
                     customBotEnabled,
                     maxUploadSize: maxUploadSize * 1024 * 1024,
@@ -577,7 +567,7 @@ export function ServerSettingsForm({
                                     />
                                     <button
                                         onClick={handleDeleteServer}
-                                        disabled={dangerLoading || deleteConfirm !== name}
+                                        disabled={dangerLoading || deleteConfirm.trim() !== name.trim()}
                                         className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold shadow-lg shadow-red-900/20 transition-all disabled:opacity-50"
                                     >
                                         DELETE SERVER

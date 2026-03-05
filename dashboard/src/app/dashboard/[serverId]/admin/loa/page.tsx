@@ -21,7 +21,12 @@ export default async function AdminLoaPage({ params }: { params: Promise<{ serve
         orderBy: [
             { status: "asc" }, // pending first
             { createdAt: "desc" }
-        ]
+        ],
+        include: {
+            server: {
+                select: { customName: true, name: true }
+            }
+        }
     })
 
     const pending = loas.filter((l: any) => l.status === "pending")

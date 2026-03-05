@@ -26,35 +26,55 @@ export async function getClerkUserByRobloxId(robloxId: string): Promise<{
     try {
         const client = await clerkClient()
 
-        // Search through users to find one with matching Roblox external account
+        // Search through all users to find one with matching Roblox external account
         // Note: Clerk doesn't have a direct lookup by external account ID
-        const usersResponse = await client.users.getUserList({ limit: 100 })
+        // We use pagination to ensure we check all users
+        let offset = 0
+        const limit = 100
+        let hasMore = true
 
-        for (const user of usersResponse.data) {
-            const externalAccounts = user.externalAccounts || []
-            const robloxAccount = externalAccounts.find(
-                (acc: any) => {
-                    const isRoblox = acc.provider === "oauth_custom_roblox" ||
-                        acc.provider === "oauth_roblox" ||
-                        acc.provider === "roblox"
-                    const idMatch = acc.externalId === robloxId ||
-                        acc.providerUserId === robloxId
-                    return isRoblox && idMatch
-                }
-            )
+        while (hasMore) {
+            const usersResponse = await client.users.getUserList({ 
+                limit, 
+                offset,
+                orderBy: '-created_at' // Check newest users first as they are more likely to be active
+            })
 
-            if (robloxAccount) {
-                // Found the user - get Discord ID too
-                const discordAccount = externalAccounts.find(
-                    (acc: any) => acc.provider === "oauth_discord" || acc.provider === "discord"
+            if (usersResponse.data.length === 0) break
+
+            for (const user of usersResponse.data) {
+                const externalAccounts = user.externalAccounts || []
+                const robloxAccount = externalAccounts.find(
+                    (acc: any) => {
+                        const isRoblox = acc.provider === "oauth_custom_roblox" ||
+                            acc.provider === "oauth_roblox" ||
+                            acc.provider === "roblox"
+                        const idMatch = acc.externalId === robloxId ||
+                            acc.providerUserId === robloxId
+                        return isRoblox && idMatch
+                    }
                 )
-                const discordId = (discordAccount as any)?.externalId ||
-                    (discordAccount as any)?.providerUserId || null
 
-                const result = { clerkId: user.id, discordId }
-                robloxToClerkCache.set(robloxId, { ...result, timestamp: Date.now() })
-                return result
+                if (robloxAccount) {
+                    // Found the user - get Discord ID too
+                    const discordAccount = externalAccounts.find(
+                        (acc: any) => acc.provider === "oauth_discord" || acc.provider === "discord"
+                    )
+                    const discordId = (discordAccount as any)?.externalId ||
+                        (discordAccount as any)?.providerUserId || null
+
+                    const result = { clerkId: user.id, discordId }
+                    robloxToClerkCache.set(robloxId, { ...result, timestamp: Date.now() })
+                    return result
+                }
             }
+
+            offset += limit
+            hasMore = usersResponse.data.length === limit
+            
+            // Safety cap: don't loop forever if something goes wrong, 
+            // though usersResponse.data.length check should handle it.
+            if (offset > 10000) break 
         }
 
         // Not found
