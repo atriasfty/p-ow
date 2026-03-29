@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { ChevronRight, Shield, Zap, Users, Clock, FileText, ArrowRight, Bot } from "lucide-react"
 import { useUser } from "@clerk/nextjs"
+import { GitBookFrame } from '@gitbook/embed/react';
 
 export function LandingPage({ showPricing = false }: { showPricing?: boolean }) {
     const [scrollY, setScrollY] = useState(0)
@@ -307,6 +308,13 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
                     </div>
                 </div>
             </footer>
+
+            <GitBookFrame suggestions={[
+                'How do I create a server?',
+                'How do I join a server?',
+                'How do I make roles?',
+                'How do I link a subscription?',
+            ]} />
         </div>
     )
 }

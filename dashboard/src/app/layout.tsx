@@ -9,6 +9,7 @@ import { MaintenanceGate } from "@/components/maintenance-gate";
 import { PWAGate } from "@/components/pwa/PWAGate";
 import { PWARegister } from "@/components/pwa/PWARegister";
 import { PWAProvider } from "@/components/providers/pwa-provider";
+import { GitBookProvider } from "@/components/providers/gitbook-provider";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
 export const metadata: Metadata = {
@@ -57,13 +58,15 @@ export default function RootLayout({
           <MaintenanceGate>
             <CookieConsentProvider>
               <PostHogProvider>
-                <PWAProvider>
-                  <PWARegister />
-                  <PWAGate>
-                    {children}
-                  </PWAGate>
-                  <CookieConsentBanner />
-                </PWAProvider>
+                <GitBookProvider>
+                  <PWAProvider>
+                    <PWARegister />
+                    <PWAGate>
+                      {children}
+                    </PWAGate>
+                    <CookieConsentBanner />
+                  </PWAProvider>
+                </GitBookProvider>
               </PostHogProvider>
             </CookieConsentProvider>
           </MaintenanceGate>
@@ -72,4 +75,3 @@ export default function RootLayout({
     </ClerkProvider>
   );
 }
-

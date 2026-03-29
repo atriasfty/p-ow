@@ -6,12 +6,15 @@ export default async function SuperServersPage() {
     // For simplicity we just fetch all members who are admins, or just the first one.
     const servers = await prisma.server.findMany({
         orderBy: { createdAt: 'desc' },
-        include: {
-            members: {
-                where: { isAdmin: true },
-                select: { userId: true, discordId: true, robloxId: true },
-                take: 1
-            },
+        select: {
+            id: true,
+            name: true,
+            customName: true,
+            apiUrl: true,
+            discordGuildId: true,
+            subscriberUserId: true,
+            subscriptionPlan: true,
+            createdAt: true,
             _count: {
                 select: { members: true, logs: true }
             }
