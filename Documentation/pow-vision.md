@@ -1,9 +1,10 @@
-# POW Vision (Desktop App)
+# POW Vision
 
 **POW Vision** is a companion desktop application designed to run alongside your game. It provides a native, heads-up display of your server's Mod Panel without needing to tab out to a web browser.
 
-> [!INFO] Download POW Vision
-> You can download the latest version of POW Vision directly from the POW Dashboard. It is currently available for Windows.
+{% hint style="info" %}
+You can download the latest version of POW Vision directly from the POW Dashboard. It is currently available for Windows and Mac.
+{% endhint %}
 
 ## 1. Installing POW Vision
 
@@ -29,16 +30,18 @@ POW Vision provides a streamlined version of the Mod Panel, optimized for quick 
 * **Quick Actions:** Execute moderation actions (Warn, Kick, Ban, BOLO) with a few clicks without typing commands.
 * **Player Scanning:** Press the hotkey to scan the screen and instantly pull up a player's profile and punishment history.
 
-> [!WARNING] Keep Your Session Secure
-> POW Vision keeps you logged in. If you are playing on a shared computer, be sure to log out of the desktop app when you are finished!
+> \[!WARNING] Keep Your Session Secure POW Vision keeps you logged in. If you are playing on a shared computer, be sure to log out of the desktop app when you are finished!
 
 ## Troubleshooting
 
 **Error: "Invalid or expired code"**
+
 * **Fix:** Pairing codes expire after a few minutes. If you took too long, simply close and reopen POW Vision to generate a new code, then try again.
 
 **POW Vision isn't showing my servers.**
+
 * **Fix:** Ensure you authenticated with the correct POW account. If your web dashboard doesn't show any servers either, you need to be invited to a server or link your Discord/Roblox accounts first.
 
 **The app is lagging or not updating.**
+
 * **Fix:** Check your internet connection. POW Vision relies on a stable connection to sync with the main POW servers. Try restarting the application.
