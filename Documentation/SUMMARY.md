@@ -1,31 +1,31 @@
 # Table of contents
 
-* [🚀 Getting Started](README.md)
-* [🏁 First Steps](Getting Started.md)
+* [Getting Started](README.md)
+* [First Steps](getting-started.md)
 
-### 🛠 How-to Guides
-* [➕ How to Create a Server](How to Create a Server.md)
-* [🤝 How to Join a Server](How to Join a Server.md)
-* [🎭 How to Make Roles](How to Make Roles.md)
-* [💳 How to Buy and Link Subscriptions](How to Buy and Link Subscriptions.md)
+## How-to Guides
+* [How to Create a Server](how-to-create-a-server.md)
+* [How to Join a Server](how-to-join-a-server.md)
+* [How to Make Roles](how-to-make-roles.md)
+* [How to Buy and Link Subscriptions](how-to-buy-and-link-subscriptions.md)
 
-### 🛡 Moderation
-* [📟 Moderation Panel](Moderation Panel.md)
-* [👤 Player Panel](Player Panel.md)
-* [🚨 Raid Detection](Raid Detection.md)
+## Moderation
+* [Moderation Panel](moderation-panel.md)
+* [Player Panel](player-panel.md)
+* [Raid Detection](raid-detection.md)
 
-### 👥 Staff Management
-* [📊 Staff Management](Staff Management.md)
-* [📝 Forms and Applications](Forms and Applications.md)
-* [🤖 Automations and Roles](Automations and Roles.md)
+## Staff Management
+* [Staff Management](staff-management.md)
+* [Forms and Applications](forms-and-applications.md)
+* [Automations and Roles](automations-and-roles.md)
 
-### 💎 Premium Features
-* [🏷 White Label Bot](White Label Bot.md)
-* [👁 POW Vision](POW Vision.md)
-* [📤 Data Exports](Data Exports.md)
+## Premium Features
+* [White Label Bot](white-label-bot.md)
+* [POW Vision](pow-vision.md)
+* [Data Exports](data-exports.md)
 
-### 📱 Mobile
-* [📱 PWA Mobile App](PWA Mobile App.md)
+## Mobile
+* [PWA Mobile App](pwa-mobile-app.md)
 
-### ❓ Support
-* [❓ Troubleshooting and FAQ](Troubleshooting and FAQ.md)
+## Support
+* [Troubleshooting and FAQ](troubleshooting-and-faq.md)

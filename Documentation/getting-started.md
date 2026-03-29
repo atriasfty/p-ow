@@ -24,7 +24,7 @@ POW uses a **Server Creation Wizard** to help you link your community in minutes
    * **Verify Discord:** Select your Discord server and ensure the POW Bot is invited.
    * **Configure:** Choose your admin roles and log channels.
 
-For a detailed step-by-step walkthrough, see our [**How to Create a Server**](How to Create a Server.md) guide.
+For a detailed step-by-step walkthrough, see our [**How to Create a Server**](how-to-create-a-server.md) guide.
 
 {% hint style="warning" %}
 **Permission Requirement:** You must have **Administrator** or **Manage Server** permissions in the Discord guild to link it to POW.
