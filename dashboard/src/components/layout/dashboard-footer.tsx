@@ -2,7 +2,6 @@
 
 import { useCookieConsent } from '@/components/providers/cookie-consent-context'
 import { Cookie, ExternalLink, FileText } from 'lucide-react'
-import { GitBookFrame } from '@gitbook/embed/react';
 
 const LEGAL_URL = 'https://lacrp.ciankelly.xyz/project-overwatch-legal-documents'
 
@@ -43,13 +42,6 @@ export function DashboardFooter() {
             <p className="text-center text-xs text-zinc-600 mt-4">
                 © {new Date().getFullYear()} Project Overwatch. All rights reserved.
             </p>
-
-            <GitBookFrame suggestions={[
-                'How do I create a server?',
-                'How do I join a server?',
-                'How do I make roles?',
-                'How do I link a subscription?',
-            ]} />
         </div>
     )
 }
