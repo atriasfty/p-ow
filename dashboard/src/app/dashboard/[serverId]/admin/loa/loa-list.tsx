@@ -32,16 +32,17 @@ interface LoaListProps {
     pending: LeaveOfAbsence[]
     active: LeaveOfAbsence[]
     past: LeaveOfAbsence[]
+    initialUsers: ClerkUser[]
 }
 
-export function LoaList({ serverId, pending: initialPending, active: initialActive, past: initialPast }: LoaListProps) {
+export function LoaList({ serverId, pending: initialPending, active: initialActive, past: initialPast, initialUsers }: LoaListProps) {
     const [pending, setPending] = useState(initialPending)
     const [active, setActive] = useState(initialActive)
     const [pastLoas, setPastLoas] = useState(initialPast)
     const [processing, setProcessing] = useState<string | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
-    const [users, setUsers] = useState<ClerkUser[]>([])
-    const [loadingUsers, setLoadingUsers] = useState(true)
+    const [users, setUsers] = useState<ClerkUser[]>(initialUsers)
+    const [loadingUsers, setLoadingUsers] = useState(false)
     const isMounted = useRef(true)
 
     // Confirmation modal state
@@ -52,32 +53,10 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
         userName: string
     } | null>(null)
 
-    // Fetch all Clerk users to map userIds to Roblox usernames
+    // Sync users if they change from parent
     useEffect(() => {
-        isMounted.current = true
-
-        const fetchUsers = async () => {
-            try {
-                const res = await fetch("/api/admin/users")
-                if (res.ok && isMounted.current) {
-                    const data = await res.json()
-                    setUsers(data.users)
-                }
-            } catch (e) {
-                console.error("Error fetching users:", e)
-            } finally {
-                if (isMounted.current) {
-                    setLoadingUsers(false)
-                }
-            }
-        }
-
-        fetchUsers()
-
-        return () => {
-            isMounted.current = false
-        }
-    }, [])
+        setUsers(initialUsers)
+    }, [initialUsers])
 
     // Get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {

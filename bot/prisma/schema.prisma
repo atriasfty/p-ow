@@ -17,9 +17,17 @@ model Server {
   discordGuildId String? // Discord Guild ID for this server
   autoSyncRoles Boolean @default(false) // Auto-sync roles every 10s
   suspendedRoleId  String? // Discord Role ID - blocks mod panel access
-  terminatedRoleId String? // Discord Role ID - triggers account deletion
+  terminatedRoleId String? // Discord Role ID - removes user from server
   staffRoleId      String? // General staff Discord role (viewer access)
   createdAt   DateTime @default(now())
+  
+  // Custom Server Configuration Overrides
+  maxUploadSize         Int?      // In bytes
+  staffRequestRateLimit Int?      // In milliseconds
+  
+  // Staff Features
+  loaChannelId           String?   // Where LOA requests go for review
+  onLoaRoleId            String?   // Role applied while on LOA
   
   logs            Log[]
   punishments     Punishment[]
@@ -28,6 +36,24 @@ model Server {
   members         Member[]
   leaveOfAbsences LeaveOfAbsence[]
   botQueue        BotQueue[]
+  milestones      StaffMilestone[]
+
+  @@index([discordGuildId])
+}
+
+model StaffMilestone {
+  id          String   @id @default(cuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  name        String   // e.g. "Senior Staff"
+  requiredMinutes Int  // Total shift time required
+  rewardRoleId String? // Discord Role ID to grant
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([serverId])
 }
 
 model Log {
@@ -59,9 +85,11 @@ model Log {
   createdAt DateTime @default(now())
   
   @@index([serverId, createdAt])
+  @@index([serverId, type, prcTimestamp])
   @@index([playerId])
   @@index([killerId])
   @@index([victimId])
+  @@unique([serverId, type, prcTimestamp])
 }
 
 model Punishment {
@@ -74,6 +102,8 @@ model Punishment {
   reason      String?
   resolved    Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  @@index([serverId, userId, createdAt])
 }
 
 model Shift {
@@ -85,6 +115,9 @@ model Shift {
   
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId  String
+
+  @@index([userId, startTime])
+  @@index([serverId, startTime])
 }
 
 model Config {
@@ -124,6 +157,8 @@ model Member {
   id        String   @id @default(cuid())
   userId    String   // Clerk user ID
   discordId String?  // Discord user ID for bot lookups
+  robloxId  String?  // Roblox user ID
+  robloxUsername String? // Roblox username cache
   isAdmin   Boolean  @default(false) // Can access admin panel
   
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
@@ -135,12 +170,15 @@ model Member {
   createdAt DateTime @default(now())
 
   @@unique([userId, serverId])
+  @@index([userId])
   @@index([discordId, serverId])
+  @@index([robloxId])
 }
 
 model LeaveOfAbsence {
   id          String    @id @default(cuid())
   userId      String
+  robloxUsername String?
   serverId    String
   server      Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
   startDate   DateTime
@@ -152,42 +190,24 @@ model LeaveOfAbsence {
   createdAt   DateTime  @default(now())
   
   @@index([serverId, status])
-  milestones      StaffMilestone[]
+  @@index([userId])
+}
 
-  @@index([discordGuildId])
-  }
-
-  model StaffMilestone {
-  id          String   @id @default(cuid())
-  serverId    String
-  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
-
-  name        String
-  requiredMinutes Int
-  rewardRoleId String?
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([serverId])
-  }
-  ...
-  model BotQueue {
+model BotQueue {
   id        String   @id @default(cuid())
   server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId  String
-
+  
   type      String   @default("MESSAGE") // MESSAGE, DM
   targetId  String   // Channel ID or User ID
   content   String
-
+  
   status    String   @default("PENDING") // PENDING, SENT, FAILED
   error     String?
-
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   processedAt DateTime?
 
   @@index([serverId, status])
-  }
-
+}

@@ -13,7 +13,7 @@ if (!globalStore._autoJoinCache) {
 }
 
 const autoJoinCache = globalStore._autoJoinCache
-const RATE_LIMIT_MS = 60 * 60 * 1000 // 1 hour
+const RATE_LIMIT_MS = 10 * 60 * 1000 // 10 minutes
 
 /**
  * Automatically joins the user to any POW servers they are in on Discord.
@@ -144,7 +144,7 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                     }
                 }
 
-                // If no best role found but staff role is present, we still create member but with no panel role (viewer)
+                // Check if user is staff or has a role
                 const isStaff = server.staffRoleId && userDiscordRoles.includes(server.staffRoleId)
 
                 if (bestRoleId || isStaff) {
@@ -154,6 +154,8 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                             userId: sessionUser.id,
                             serverId: server.id,
                             discordId: sessionUser.discordId,
+                            robloxId: sessionUser.robloxId,
+                            robloxUsername: sessionUser.robloxUsername,
                             roleId: bestRoleId,
                             isAdmin: false
                         }

@@ -81,18 +81,23 @@ export async function POST(req: Request) {
         const userDiscordRoles: string[] = guildMember.roles || []
 
         // =====================================
-        // 1. CHECK FOR TERMINATED ROLE - DELETE ACCOUNT
+        // 1. CHECK FOR TERMINATED ROLE - REMOVE FROM SERVER
         // =====================================
         if (server.terminatedRoleId && userDiscordRoles.includes(server.terminatedRoleId)) {
             try {
-                const clerk = await clerkClient()
-                await clerk.users.deleteUser(session.user.id)
+                // Remove member from this server's member list
+                await prisma.member.deleteMany({
+                    where: { 
+                        userId: session.user.id,
+                        serverId: server.id
+                    }
+                })
             } catch (e) {
-                console.error("Failed to delete Clerk account:", e)
+                console.error("Failed to remove member for termination:", e)
             }
             return NextResponse.json({
                 terminated: true,
-                message: "Your account has been terminated."
+                message: "Your access to this server has been terminated."
             })
         }
 

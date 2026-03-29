@@ -222,45 +222,38 @@ export async function POST(
         // Send Discord notification only on FINAL submission
         if (!saveAsDraft) {
             // Feature 3: Automated Recruitment Workflow (Manual Review)
-            if (form.isApplication) {
+            if (form.isApplication && form.recruitmentChannelId) {
                 try {
-                    const server = await prisma.server.findUnique({
-                        where: { id: form.serverId },
-                        select: { recruitmentChannelId: true, name: true, customName: true }
-                    })
+                    const appSummary = allQuestions.map((q: any) => ({
+                        question: q.label,
+                        answer: answers[q.id]
+                    }))
 
-                    if (server?.recruitmentChannelId) {
-                        const appSummary = allQuestions.map((q: any) => ({
-                            question: q.label,
-                            answer: answers[q.id]
-                        }))
-
-                        const embed = {
-                            embeds: [
-                                {
-                                    title: "📝 New Staff Application",
-                                    color: 0x5865F2, // Blurple
-                                    description: `**Respondent:** ${session?.user?.name || email || "Anonymous"}\n**User ID:** \`${session?.user?.id || "N/A"}\``,
-                                    fields: appSummary.slice(0, 10).map((a: any) => ({
-                                        name: a.question.substring(0, 256),
-                                        value: String(a.answer).substring(0, 1024) || "_No answer_",
-                                        inline: false
-                                    })),
-                                    footer: { text: `Form: ${form.title} • Review on Dashboard` },
-                                    timestamp: new Date().toISOString()
-                                }
-                            ]
-                        }
-
-                        await prisma.botQueue.create({
-                            data: {
-                                serverId: form.serverId,
-                                type: "MESSAGE",
-                                targetId: server.recruitmentChannelId,
-                                content: JSON.stringify(embed)
+                    const embed = {
+                        embeds: [
+                            {
+                                title: "📝 New Staff Application",
+                                color: 0x5865F2, // Blurple
+                                description: `**Respondent:** ${session?.user?.name || email || "Anonymous"}\n**User ID:** \`${session?.user?.id || "N/A"}\``,
+                                fields: appSummary.slice(0, 10).map((a: any) => ({
+                                    name: a.question.substring(0, 256),
+                                    value: String(a.answer).substring(0, 1024) || "_No answer_",
+                                    inline: false
+                                })),
+                                footer: { text: `Form: ${form.title} • Review on Dashboard` },
+                                timestamp: new Date().toISOString()
                             }
-                        })
+                        ]
                     }
+
+                    await prisma.botQueue.create({
+                        data: {
+                            serverId: form.serverId,
+                            type: "MESSAGE",
+                            targetId: form.recruitmentChannelId,
+                            content: JSON.stringify(embed)
+                        }
+                    })
                 } catch (e) {
                     console.error("[RECRUITMENT NOTIFY ERROR]", e)
                 }

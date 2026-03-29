@@ -31,7 +31,16 @@ export function ServerCreationWizard() {
         serverName: string;
         botInGuild: boolean;
         guildName: string;
+        availableChannels: { id: string, name: string }[];
+        availableRoles: { id: string, name: string, color: number }[];
     } | null>(null)
+
+    // Initial Config state
+    const [config, setConfig] = useState({
+        adminRoleId: "",
+        staffRoleId: "",
+        logChannelId: ""
+    })
 
     // Guilds state
     const [guilds, setGuilds] = useState<EligibleGuild[]>([])
@@ -96,6 +105,11 @@ export function ServerCreationWizard() {
 
     // Handle final creation
     const handleCreate = async () => {
+        if (!config.adminRoleId || !config.staffRoleId || !config.logChannelId) {
+            setError("Please complete all configuration fields.")
+            return
+        }
+
         setLoading(true)
         setError(null)
 
@@ -103,7 +117,11 @@ export function ServerCreationWizard() {
             const res = await fetch("/api/admin/server/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prcApiKey, discordGuildId })
+                body: JSON.stringify({ 
+                    prcApiKey, 
+                    discordGuildId,
+                    initialConfig: config
+                })
             })
 
             const data = await res.json()
@@ -251,42 +269,69 @@ export function ServerCreationWizard() {
                 </div>
             )}
 
-            {/* Step 2: Confirmation */}
+            {/* Step 2: Configuration */}
             {step === 2 && validationResult && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
-                    <h3 className="text-xl font-bold text-white text-center">Verification Successful</h3>
-
-                    <div className="space-y-4">
-                        {/* ERLC Card */}
-                        <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-5 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                    <CheckCircle className="h-5 w-5 text-emerald-500" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-zinc-400">ERLC Server Linked</p>
-                                    <p className="font-bold text-white">{validationResult.serverName}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Discord Card */}
-                        <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-5 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                    <CheckCircle className="h-5 w-5 text-emerald-500" />
-                                </div>
-                                <div>
-                                    <p className="text-sm text-zinc-400">Discord Guild Linked</p>
-                                    <p className="font-bold text-white">{validationResult.guildName}</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="text-center">
+                        <h3 className="text-xl font-bold text-white">Initial Configuration</h3>
+                        <p className="text-sm text-zinc-500 mt-1">Link your Discord roles and channels to get started.</p>
                     </div>
 
-                    <p className="text-center text-sm text-zinc-500 mt-4">
-                        By deploying, you'll be assigned as the Server Owner and a dashboard will be created.
-                    </p>
+                    <div className="space-y-4">
+                        {/* Admin Role */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Dashboard Admin Role</label>
+                            <div className="relative">
+                                <select 
+                                    value={config.adminRoleId}
+                                    onChange={(e) => setConfig({ ...config, adminRoleId: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
+                                >
+                                    <option value="">Select Admin Role...</option>
+                                    {validationResult.availableRoles.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">Members with this role will have full access to this dashboard.</p>
+                        </div>
+
+                        {/* Staff Role */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">General Staff Role</label>
+                            <div className="relative">
+                                <select 
+                                    value={config.staffRoleId}
+                                    onChange={(e) => setConfig({ ...config, staffRoleId: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
+                                >
+                                    <option value="">Select Staff Role...</option>
+                                    {validationResult.availableRoles.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">The primary staff role in your Discord. Used for shift tracking.</p>
+                        </div>
+
+                        {/* Log Channel */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">System Logs Channel</label>
+                            <div className="relative">
+                                <select 
+                                    value={config.logChannelId}
+                                    onChange={(e) => setConfig({ ...config, logChannelId: e.target.value })}
+                                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
+                                >
+                                    <option value="">Select Channel...</option>
+                                    {validationResult.availableChannels.map(c => (
+                                        <option key={c.id} value={c.id}># {c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <p className="text-[10px] text-zinc-500">Where the bot will send moderation and system logs.</p>
+                        </div>
+                    </div>
 
                     <div className="pt-4 flex gap-4">
                         <Button
@@ -300,9 +345,9 @@ export function ServerCreationWizard() {
                         <Button
                             className="w-2/3 h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-lg"
                             onClick={handleCreate}
-                            disabled={loading}
+                            disabled={loading || !config.adminRoleId || !config.staffRoleId || !config.logChannelId}
                         >
-                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "Deploy Server"}
+                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "Deploy & Finish"}
                         </Button>
                     </div>
                 </div>

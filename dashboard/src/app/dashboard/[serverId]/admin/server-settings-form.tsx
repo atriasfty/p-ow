@@ -20,6 +20,8 @@ interface ServerSettingsFormProps {
     currentStaffRequestChannelId: string | null
     currentRaidAlertChannelId: string | null
     currentCommandLogChannelId: string | null
+    currentLoaChannelId?: string | null
+    currentOnLoaRoleId?: string | null
     currentCustomBotToken?: string | null
     currentCustomBotEnabled?: boolean
     subscriptionPlan?: string | null
@@ -43,6 +45,8 @@ export function ServerSettingsForm({
     currentStaffRequestChannelId,
     currentRaidAlertChannelId,
     currentCommandLogChannelId,
+    currentLoaChannelId,
+    currentOnLoaRoleId,
     currentCustomBotToken,
     currentCustomBotEnabled,
     subscriptionPlan,
@@ -63,6 +67,8 @@ export function ServerSettingsForm({
     const [staffRequestChannelId, setStaffRequestChannelId] = useState(currentStaffRequestChannelId || "")
     const [raidAlertChannelId, setRaidAlertChannelId] = useState(currentRaidAlertChannelId || "")
     const [commandLogChannelId, setCommandLogChannelId] = useState(currentCommandLogChannelId || "")
+    const [loaChannelId, setLoaChannelId] = useState(currentLoaChannelId || "")
+    const [onLoaRoleId, setOnLoaRoleId] = useState(currentOnLoaRoleId || "")
     
     // Advanced Config
     const [maxUploadSize, setMaxUploadSize] = useState(currentMaxUploadSize ? currentMaxUploadSize / 1024 / 1024 : 50)
@@ -103,6 +109,8 @@ export function ServerSettingsForm({
                     staffRequestChannelId: staffRequestChannelId || null,
                     raidAlertChannelId: raidAlertChannelId || null,
                     commandLogChannelId: commandLogChannelId || null,
+                    loaChannelId: loaChannelId || null,
+                    onLoaRoleId: onLoaRoleId || null,
                     customBotToken: customBotToken || null,
                     customBotEnabled,
                     maxUploadSize: maxUploadSize * 1024 * 1024,
@@ -319,6 +327,22 @@ export function ServerSettingsForm({
                     </p>
                 </div>
 
+                {/* LOA Requests Channel */}
+                <div className="mb-4 p-4 bg-indigo-500/5 border border-indigo-500/30 rounded-lg">
+                    <label className="block text-sm font-medium text-indigo-400 mb-2">
+                        LOA Requests Channel
+                    </label>
+                    <ChannelCombobox
+                        serverId={serverId}
+                        value={loaChannelId}
+                        onChange={(val) => setLoaChannelId(val || "")}
+                        placeholder="Select LOA Requests channel..."
+                    />
+                    <p className="text-xs text-indigo-400/70 mt-1">
+                        Channel where new Leave of Absence requests will be sent for review.
+                    </p>
+                </div>
+
                 {/* On Duty Role ID */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-zinc-400 mb-2">
@@ -348,6 +372,22 @@ export function ServerSettingsForm({
                     />
                     <p className="text-xs text-emerald-400/70 mt-1">
                         Users with this Discord role get viewer access (can see logs/punishments but can't take actions).
+                    </p>
+                </div>
+
+                {/* On-LOA Role ID */}
+                <div className="mb-4 p-4 bg-blue-500/5 border border-blue-500/30 rounded-lg">
+                    <label className="block text-sm font-medium text-blue-400 mb-2">
+                        On-LOA Role ID
+                    </label>
+                    <RoleCombobox
+                        serverId={serverId}
+                        value={onLoaRoleId}
+                        onChange={(val) => setOnLoaRoleId(val || "")}
+                        placeholder="Select On-LOA role..."
+                    />
+                    <p className="text-xs text-blue-400/70 mt-1">
+                        Staff will receive this role when their Leave of Absence is approved.
                     </p>
                 </div>
 
@@ -398,7 +438,7 @@ export function ServerSettingsForm({
                         placeholder="Select Terminated role..."
                     />
                     <p className="text-xs text-red-400/70 mt-1">
-                        <strong>DANGER:</strong> Users with this Discord role will have their account PERMANENTLY DELETED.
+                        <strong>DANGER:</strong> Users with this Discord role will be removed from this server's member list.
                     </p>
                 </div>
             </div>

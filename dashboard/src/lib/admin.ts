@@ -29,24 +29,24 @@ export interface RolePermissions {
     canUseAdminCommands: boolean
 }
 
-// Default permissions (no permissions)
+// Default permissions (viewer/staff access)
 export const DEFAULT_PERMISSIONS: RolePermissions = {
-    canShift: false,
+    canShift: true,
     canViewOtherShifts: false,
-    canViewLogs: false,
-    canViewPunishments: false,
+    canViewLogs: true,
+    canViewPunishments: true,
     canIssueWarnings: false,
     canKick: false,
     canBan: false,
     canBanBolo: false,
-    canUseToolbox: false,
+    canUseToolbox: true,
     canManageBolos: false,
-    canRequestLoa: false,
-    canViewQuota: false,
+    canRequestLoa: true,
+    canViewQuota: true,
     canUseAdminCommands: false
 }
 
-// All permissions (for superadmin)
+// All permissions (for superadmin and server admins)
 export const ALL_PERMISSIONS: RolePermissions = {
     canShift: true,
     canViewOtherShifts: true,
@@ -94,6 +94,9 @@ export async function isServerAdmin(user: SessionUser | null, serverId: string):
 
     // Superadmin always has access
     if (isSuperAdmin(user)) return true
+
+    // Server owner always has access
+    if (await isServerOwner(user, serverId)) return true
 
     // Build possible user IDs to check (member might be stored with any of these)
     const possibleIds = [user.id]
@@ -157,7 +160,12 @@ export async function getUserPermissions(user: SessionUser | null, serverId: str
         include: { role: true }
     })
 
-    if (!member?.role) return DEFAULT_PERMISSIONS
+    if (!member) return DEFAULT_PERMISSIONS
+
+    // If member is marked as Admin in DB, they get everything
+    if (member.isAdmin) return ALL_PERMISSIONS
+
+    if (!member.role) return DEFAULT_PERMISSIONS
 
     // Return permissions directly from role
     return {

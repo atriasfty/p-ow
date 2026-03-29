@@ -29,10 +29,8 @@ export async function PATCH(req: Request) {
             staffRequestChannelId,
             commandLogChannelId,
             raidAlertChannelId,
-            recruitmentChannelId,
-            congratsChannelId,
-            applicationAiThreshold,
-            autoStaffRoleId,
+            loaChannelId,
+            onLoaRoleId,
             maxUploadSize,
             staffRequestRateLimit,
             logCacheTtl,
@@ -46,7 +44,7 @@ export async function PATCH(req: Request) {
         }
 
         // Check admin access
-        const hasAccess = await isServerAdmin(session.user, serverId)
+        const hasAccess = await isServerAdmin(session.user as any, serverId)
         if (!hasAccess) {
             return NextResponse.json({ error: "Access denied" }, { status: 403 })
         }
@@ -80,10 +78,8 @@ export async function PATCH(req: Request) {
                 staffRequestChannelId: staffRequestChannelId || null,
                 commandLogChannelId: commandLogChannelId || null,
                 raidAlertChannelId: raidAlertChannelId || null,
-                recruitmentChannelId: recruitmentChannelId || null,
-                congratsChannelId: congratsChannelId || null,
-                applicationAiThreshold: applicationAiThreshold ?? 70,
-                autoStaffRoleId: autoStaffRoleId || null,
+                loaChannelId: loaChannelId || null,
+                onLoaRoleId: onLoaRoleId || null,
                 maxUploadSize: maxUploadSize || null,
                 staffRequestRateLimit: staffRequestRateLimit || null,
                 ...(finalBotToken !== undefined && { customBotToken: finalBotToken }),

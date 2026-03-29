@@ -22,7 +22,7 @@ model Server {
   customName  String?  // Display name override
   discordGuildId String? // Discord Guild ID for this server
   suspendedRoleId  String? // Discord Role ID - blocks mod panel access
-  terminatedRoleId String? // Discord Role ID - triggers account deletion
+  terminatedRoleId String? // Discord Role ID - removes user from server
   staffRoleId      String? // General staff Discord role (viewer access)
   permLogChannelId String? // Discord Channel ID for Permission Logs
   staffRequestChannelId String? // Discord Channel ID for Staff Requests
@@ -45,12 +45,8 @@ model Server {
   staffRequestRateLimit Int?      // In milliseconds
   
   // Recruitment & Staff Features
-  recruitmentChannelId   String?   // Where applications go for review
-  congratsChannelId      String?   // Where celebrations/promotions are announced
   loaChannelId           String?   // Where LOA requests go for review
   onLoaRoleId            String?   // Role applied while on LOA
-  applicationAiThreshold Int       @default(70) // 0-100 score required
-  autoStaffRoleId        String?   // Role to grant on approval
   
   logs            Log[]
   punishments     Punishment[]
@@ -258,6 +254,18 @@ model BotQueue {
 }
 
 // SECURITY & API MANAGEMENT
+model UserAiUsage {
+  id        String   @id @default(cuid())
+  userId    String   // Clerk user ID
+  day       Int
+  month     Int      // 0-11
+  year      Int
+  count     Int      @default(0)
+  
+  @@unique([userId, day, month, year])
+  @@index([userId])
+}
+
 model ApiKey {
   id          String   @id @default(cuid())
   name        String   // Name of the tool/integration
@@ -300,18 +308,6 @@ model SecurityLog {
 // CommandQueue model removed - sync feature deprecated
 
 // FORMS FEATURE
-model UserAiUsage {
-  id        String   @id @default(cuid())
-  userId    String   // Clerk user ID
-  day       Int
-  month     Int      // 0-11
-  year      Int
-  count     Int      @default(0)
-  
-  @@unique([userId, day, month, year])
-  @@index([userId])
-}
-
 model Form {
   id          String   @id @default(cuid())
   serverId    String
@@ -333,6 +329,8 @@ model Form {
   // Special Types
   isApplication   Boolean   @default(false)      // If true, trigger recruitment workflow
   acceptedRoleId  String?                        // Discord role to grant on acceptance
+  recruitmentChannelId String?                   // Per-form recruitment review channel
+  congratsChannelId    String?                   // Per-form celebration channel
   
   // Discord Notifications
   notifyChannelId String?                        // Discord channel for notifications

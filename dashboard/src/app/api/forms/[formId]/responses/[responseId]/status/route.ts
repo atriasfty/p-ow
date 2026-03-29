@@ -67,7 +67,7 @@ export async function PATCH(
             }
 
             // 2. Send Congratulations
-            if (form.server.congratsChannelId) {
+            if (form.congratsChannelId) {
                 const message = {
                     content: `🎉 **Congratulations** to <@${discordAccount.externalId}>!`,
                     embeds: [{
@@ -83,7 +83,7 @@ export async function PATCH(
                     data: {
                         serverId: form.serverId,
                         type: "MESSAGE",
-                        targetId: form.server.congratsChannelId,
+                        targetId: form.congratsChannelId,
                         content: JSON.stringify(message)
                     }
                 })

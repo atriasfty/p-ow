@@ -1,24 +1,21 @@
 import { NextResponse } from 'next/server'
-import { PostHog } from 'posthog-node'
-
-// Server-side PostHog client for feature flags
-// This works WITHOUT cookies - checks flag directly with PostHog API
-const posthog = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-    host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://eu.posthog.com',
-})
+import { prisma } from '@/lib/db'
 
 // Force dynamic - no caching
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
     try {
-        // Check the maintenance flag for a generic user
-        // Using a fixed ID since maintenance affects everyone
-        const maintenance = await posthog.isFeatureEnabled('maintenance', 'maintenance-check')
+        // Check the maintenance flag in Prisma config
+        const config = await prisma.config.findUnique({
+            where: { key: 'MAINTENANCE_MODE' }
+        })
+        
+        const maintenance = config?.value === 'true'
 
         // Return with cache-control headers to prevent browser caching
         return NextResponse.json(
-            { maintenance: maintenance === true },
+            { maintenance },
             {
                 headers: {
                     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',

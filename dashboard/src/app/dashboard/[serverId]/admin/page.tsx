@@ -68,6 +68,8 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
                         currentStaffRequestChannelId={server.staffRequestChannelId}
                         currentRaidAlertChannelId={server.raidAlertChannelId}
                         currentCommandLogChannelId={server.commandLogChannelId}
+                        currentLoaChannelId={server.loaChannelId}
+                        currentOnLoaRoleId={server.onLoaRoleId}
                         currentCustomBotToken={server.customBotToken}
                         currentCustomBotEnabled={server.customBotEnabled}
                         subscriptionPlan={server.subscriptionPlan}
