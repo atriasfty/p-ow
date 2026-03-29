@@ -297,6 +297,8 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
                         <div className="flex items-center gap-8">
                             <a href="#features" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Features</a>
                             <a href="#about" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">About</a>
+                            <a href="https://atria.gitbook.io/project-overwatch/legal/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Terms</a>
+                            <a href="https://atria.gitbook.io/project-overwatch/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Privacy</a>
                             <Link href="/login" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Sign In</Link>
                         </div>
                     </div>

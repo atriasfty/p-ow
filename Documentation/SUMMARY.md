@@ -33,6 +33,7 @@
 
 * [PWA Mobile App](pwa-mobile-app.md)
 
-## Support
+## Legal
 
-* [Troubleshooting and FAQ](troubleshooting-and-faq.md)
+* [Terms of Service](legal-terms-of-service.md)
+* [Privacy Policy](legal-privacy-policy.md)
