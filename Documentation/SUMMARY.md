@@ -1,12 +1,13 @@
 # Table of contents
 
 * [Getting Started](README.md)
-* [🚀 First Steps](getting-started.md)
+* [First Steps](getting-started.md)
 
 ## How-to Guides
 
 * [How to Create a Server](how-to-create-a-server.md)
-* [🤝 How to Join a Server](how-to-join-a-server.md)
+* [How to Join a Server](how-to-join-a-server.md)
+
 * [How to Make Roles](how-to-make-roles.md)
 * [How to Buy and Link Subscriptions](how-to-buy-and-link-subscriptions.md)
 

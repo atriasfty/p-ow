@@ -28,5 +28,6 @@ You can manage your billing, change plans, or update your payment method at any 
 - **Option A:** Click on your **Profile > Settings > Billing**.
 - **Option B:** Go to your server's **Admin Panel > Subscription**.
 
-> [!INFO] Switching Servers
-> If you close your community and want to move your Pro/Max subscription to a new server, you must first **Unlink** it from the current server's Admin Panel, then repeat the "Linking" steps above.
+{% hint style="info" %}
+**Switching Servers:** If you close your community and want to move your Pro/Max subscription to a new server, you must first **Unlink** it from the current server's Admin Panel, then repeat the "Linking" steps above.
+{% endhint %}

@@ -24,5 +24,6 @@ Follow these steps to deploy your very own Project Overwatch (POW) command cente
 1. Click **Deploy & Finish**.
 2. POW will set up your database, link your roles, and redirect you to your new **Admin Dashboard**.
 
-> [!TIP] Need to Change Settings?
-> You can always update your API Key, staff roles, and log channels later by going to **Admin Panel > Settings** on your server's dashboard.
+{% hint style="info" %}
+**Need to Change Settings?** You can always update your API Key, staff roles, and log channels later by going to **Admin Panel > Settings** on your server's dashboard.
+{% endhint %}

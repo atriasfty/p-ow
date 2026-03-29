@@ -1,4 +1,4 @@
-# 🤝 How to Join a Server
+# How to Join a Server
 
 Access to Project Overwatch (POW) is fully automatic! You don't need an invite code or a link to your server's dashboard. POW uses your Discord rank to determine which servers you belong to.
 

@@ -1,4 +1,4 @@
-# The Moderation Panel
+# Moderation Panel
 
 The Moderation Panel is the core of Project Overwatch. It is designed to give your staff team real-time visibility into the game server and the tools they need to moderate effectively.
 
@@ -6,8 +6,9 @@ The Moderation Panel is the core of Project Overwatch. It is designed to give yo
 
 When you log into POW, your dashboard will list all the servers you have access to. Click **Mod Panel** on the server you wish to moderate.
 
-> [!WARNING] Permission Denied?
-> If you cannot see the Mod Panel, you may have been suspended (assigned the Suspended Discord Role) or you do not have the required Staff Discord Role. Contact your server owner.
+{% hint style="warning" %}
+**Permission Denied?** If you cannot see the Mod Panel, you may have been suspended (assigned the Suspended Discord Role) or you do not have the required Staff Discord Role. Contact your server owner.
+{% endhint %}
 
 ## 1. Live Logs
 
@@ -36,7 +37,7 @@ Clicking on any player's name will open their **Player Profile**. This provides 
 * Their recent log activity (Joins, Kills, Commands).
 * **AI Risk Assessment:** (Requires POW Pro/Max) A generated summary analyzing their behavior to determine if they are a high-risk player.
 
-For more details, see our guide on **[Player Profiles & Panels](12_Player_Panel.md)**.
+For more details, see our guide on [**Player Profiles & Panels**](player-panel.md).
 
 ## 3. The Toolbox
 
@@ -48,8 +49,9 @@ The **Toolbox** is a utility bar found in the Mod Panel that allows staff to qui
 *   **Run Command:** Opens a terminal window where you can type raw PRC commands (e.g., `:m Hello Server` or `:kick username reason`) and execute them immediately.
 *   **Staff Request:** Sends an urgent alert. Online staff will be PM'd in-game, and a full alert with your reason will be sent to the Discord Staff Request channel.
 
-> [!WARNING] Toolbox Restrictions
-> The Toolbox requires the `canUseToolbox` permission. Additionally, any raw commands executed via "Run Command" are logged in the **Command Log Channel** in your Discord for accountability.
+{% hint style="warning" %}
+**Toolbox Restrictions:** The Toolbox requires the `canUseToolbox` permission. Additionally, any raw commands executed via "Run Command" are logged in the **Command Log Channel** in your Discord for accountability.
+{% endhint %}
 
 ## 4. In-Game Integration
 

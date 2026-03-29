@@ -45,7 +45,8 @@ POW can automatically handle the hiring process for your server.
 4. Configure the following:
    * **Recruitment Review Channel:** Select a Discord channel. Every time an application is submitted, POW will send a summary embed to this channel with a link to review it.
    * **Staff Role to Grant:** Select the Discord role that should be given to the user if they pass the application (e.g., "Trainee Moderator").
-   * **Celebration Channel:** Select a public Discord channel where POW will announce their promotion if accepted!
+   * **Celebration Channel:** Select a public Discord channel where POW will announce their promotion if accepted{% endhint %}
+
 
 ### Reviewing Applications
 1. When a user submits an application, go to the **Forms** page and click **Results** next to your form.
@@ -55,7 +56,8 @@ POW can automatically handle the hiring process for your server.
 **If Accepted:**
 * POW automatically assigns them the "Staff Role to Grant" in your Discord server.
 * POW posts a congratulatory message in the "Celebration Channel".
-* Due to Auto-Join, the user immediately gains access to the Mod Panel based on their new Discord role!
+* Due to Auto-Join, the user immediately gains access to the Mod Panel based on their new Discord role{% endhint %}
+
 
 ## Troubleshooting
 

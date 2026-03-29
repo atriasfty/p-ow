@@ -21,5 +21,6 @@ POW uses a tiered permission system:
 Once you save the role, POW will automatically detect any members who have that Discord rank.
 - **Auto-Sync:** If **Auto Sync Roles** is enabled in your **Admin Settings**, POW will update user permissions within 10 seconds of them receiving or losing a rank in Discord.
 
-> [!IMPORTANT] Bot Position
-> The **Project Overwatch Bot** must be positioned **HIGHER** in your Discord role hierarchy than any role you are trying to sync or manage. If the bot's role is too low, Discord will block it from reading/assigning those ranks.
+{% hint style="danger" %}
+**Bot Position:** The **Project Overwatch Bot** must be positioned **HIGHER** in your Discord role hierarchy than any role you are trying to sync or manage. If the bot's role is too low, Discord will block it from reading/assigning those ranks.
+{% endhint %}

@@ -1,4 +1,4 @@
-# Automations & Roles
+# Automations and Roles
 
 Project Overwatch is designed to reduce the busywork of managing a server. Through Role Sync, Automations, and Milestones, you can put your server management on autopilot.
 
@@ -12,9 +12,11 @@ POW can automatically sync your Discord roles with the permissions granted on th
 3. If they have a specific **Discord Role ID** mapped to a custom **Panel Role** (configured in Admin Panel > Roles), they will receive those specific permissions (e.g., Ban, Kick, Use Toolbox).
 4. **Auto Sync Toggle:** If enabled in Server Settings, POW checks every 10 seconds to ensure the Mod Panel permissions perfectly match the user's current Discord roles. If you remove a Discord role, they lose Mod Panel access almost instantly!
 
-> [!WARNING] Important Roles
-> * **Suspended Role ID:** If a user gets this Discord role, they are completely blocked from the Mod Panel, regardless of their other roles.
-> * **Terminated Role ID:** If a user gets this Discord role, they are permanently removed from the server's member list on POW.
+{% hint style="warning" %}
+**Important Roles:**
+* **Suspended Role ID:** If a user gets this Discord role, they are completely blocked from the Mod Panel, regardless of their other roles.
+* **Terminated Role ID:** If a user gets this Discord role, they are permanently removed from the server's member list on POW.
+{% endhint %}
 
 ## 2. Automations Engine
 

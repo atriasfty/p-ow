@@ -1,4 +1,4 @@
-# Player Profiles & Panels
+# Player Panel
 
 The **Player Panel** is a centralized view for everything related to a specific player on your server. It is the primary place where staff issue punishments and investigate player history.
 
@@ -34,8 +34,9 @@ From the Player Panel, you can issue official punishments that are saved to the 
 3.  Enter a **Reason**. Be as descriptive as possible, as this is logged for admin review.
 4.  Submit the punishment.
 
-> [!INFO] Automation
-> Issuing a punishment through the panel can trigger **Automations** (like sending a webhook to a Discord channel) and will be recorded under your staff profile for quota/activity tracking.
+{% hint style="info" %}
+**Automation:** Issuing a punishment through the panel can trigger **Automations** (like sending a webhook to a Discord channel) and will be recorded under your staff profile for quota/activity tracking.
+{% endhint %}
 
 ## Troubleshooting
 

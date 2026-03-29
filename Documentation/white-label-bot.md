@@ -1,4 +1,4 @@
-# White Label Bot (POW Max Feature)
+# White Label Bot
 
 For communities that want a fully branded experience, POW Max subscribers can enable the **White Label Bot** feature. This allows you to replace the default "Project Overwatch" Discord bot with your very own custom bot.
 

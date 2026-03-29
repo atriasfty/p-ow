@@ -1,9 +1,10 @@
-# Raid Detection & Mitigation
+# Raid Detection
 
 Project Overwatch includes an automated Raid Detection system to protect your server from coordinated attacks or mass rule-breaking events. 
 
-> [!INFO] Requirements
-> Raid Detection requires an active **POW Pro** or **POW Max** subscription.
+{% hint style="info" %}
+**Requirements:** Raid Detection requires an active **POW Pro** or **POW Max** subscription.
+{% endhint %}
 
 ## How it Works
 
@@ -33,5 +34,6 @@ When an alert triggers, your staff should:
 2. Open the **Mod Panel** or **POW Vision**.
 3. Use the **Toolbox (Run Command)** or **Quick Actions** to quickly kick or ban the offending players.
 
-> [!WARNING] False Positives
-> The detector relies on identifying non-staff using commands. If a staff member is *not* registered on the POW dashboard (or hasn't linked their Discord/Roblox correctly), their actions may trigger a false raid alert. Ensure all staff are properly set up!
+{% hint style="warning" %}
+**False Positives:** The detector relies on identifying non-staff using commands. If a staff member is *not* registered on the POW dashboard (or hasn't linked their Discord/Roblox correctly), their actions may trigger a false raid alert. Ensure all staff are properly set up!
+{% endhint %}

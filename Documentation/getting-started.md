@@ -1,4 +1,4 @@
-# 🚀 Getting Started
+# Getting Started
 
 Welcome to Project Overwatch! This guide will walk you through setting up your first server on POW. 
 
