@@ -85,7 +85,7 @@ You have the right to:
 
 ### 9. Contact
 
-**Data Protection Officer:** Cian Kelly **Email:** `legal@atriasafety.org` **Response Time:** Within 30 days.
+**Data Protection Officer:** Cian Kelly **Email:** `cian@atriasafety.org` **Response Time:** Within 30 days.
 
 ### 10. Changes to this Policy
 
