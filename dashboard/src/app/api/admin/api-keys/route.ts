@@ -47,17 +47,46 @@ export async function GET(req: Request) {
         }
     })
 
+    // Calculate Global Server-wide Quota & Usage
+    let serverUsageCount = 0
+    let serverDailyLimit = 250
+
+    if (serverId) {
+        const targetServer = await prisma.server.findUnique({ where: { id: serverId }, select: { subscriptionPlan: true } })
+        const plan = targetServer?.subscriptionPlan || "free"
+        const limits: Record<string, number> = { "free": 250, "pow-pro": 5000, "pow-max": Infinity }
+        serverDailyLimit = limits[plan] || 250
+
+        const quotaConfig = await prisma.config.findUnique({ where: { key: `SERVER_QUOTA_${serverId}` } })
+        if (quotaConfig) {
+            try {
+                const data = JSON.parse(quotaConfig.value)
+                const now = new Date()
+                if (now < new Date(data.resetAt)) {
+                    serverUsageCount = data.usageCount
+                }
+            } catch (e) { }
+        }
+    }
+
     if (searchParams.get("includeAnalytics") === "true") {
         let analytics: { date: string, count: number }[] = []
-        if (keys.length > 0) {
-            const sevenDaysAgo = new Date()
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+        // Define fallback legacy key IDs for older logs before we started grouping by userId
+        const keyMapCondition = keys.length > 0 ? keys.map(k => ({ details: { contains: k.id } })) : []
+        const orConditions = serverId
+            ? [{ userId: serverId }, ...keyMapCondition]
+            : keyMapCondition
+
+        if (orConditions.length > 0) {
             const logs = await prisma.securityLog.findMany({
                 where: {
                     event: { startsWith: 'PUBLIC_' },
                     createdAt: { gte: sevenDaysAgo },
-                    OR: keys.map(k => ({ details: { contains: k.id } }))
+                    OR: orConditions
                 },
                 select: { createdAt: true }
             })
@@ -82,7 +111,7 @@ export async function GET(req: Request) {
             analytics = Object.entries(dailyCounts).map(([date, count]) => ({ date, count }))
         }
 
-        return NextResponse.json({ keys: maskedKeys, analytics })
+        return NextResponse.json({ keys: maskedKeys, analytics, serverUsageCount, serverDailyLimit })
     }
 
     return NextResponse.json(maskedKeys)

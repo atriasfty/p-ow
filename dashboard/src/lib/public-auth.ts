@@ -45,7 +45,6 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     }
 
     // 2. Daily Quota Check (Based on Server Plan)
-    // If not linked to a server (global key), default to pow-max limits
     const plan = apiKey.server?.subscriptionPlan || (apiKey.serverId ? "free" : "pow-max")
     const limits: Record<string, number> = {
         "free": 250,
@@ -54,33 +53,44 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     }
     const maxDaily = limits[plan] || 250
 
-    let usageCount = apiKey.usageCount
-    let resetAt = apiKey.resetAt ? new Date(apiKey.resetAt) : new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    // Enforce GLOBALLY per server instead of per-key
+    const configKey = apiKey.serverId ? `SERVER_QUOTA_${apiKey.serverId}` : `GLOBAL_QUOTA_${apiKey.id}`
+    const quotaConfig = await prisma.config.findUnique({ where: { key: configKey } })
 
-    // Reset usage if 24h passed
-    if (now > resetAt) {
-        usageCount = 0
-        resetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    let usageCount = 0
+    let resetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+
+    if (quotaConfig) {
+        try {
+            const data = JSON.parse(quotaConfig.value)
+            if (now < new Date(data.resetAt)) {
+                usageCount = data.usageCount
+                resetAt = new Date(data.resetAt)
+            }
+        } catch (e) { }
     }
 
     if (usageCount >= maxDaily) {
         return {
             valid: false,
-            error: `Daily request quota exceeded (${usageCount}/${maxDaily}). Upgrade your server plan for higher limits.`,
+            error: `Daily server quota exceeded (${usageCount}/${maxDaily}). Upgrade your server plan for higher limits.`,
             status: 429,
             rateLimitRemaining: 0,
             rateLimitReset: Math.floor(resetAt.getTime() / 1000)
         }
     }
 
-    // Update state
+    // Update global state tracking
+    await prisma.config.upsert({
+        where: { key: configKey },
+        update: { value: JSON.stringify({ usageCount: usageCount + 1, resetAt }) },
+        create: { key: configKey, value: JSON.stringify({ usageCount: usageCount + 1, resetAt }) }
+    }).catch(() => { })
+
+    // Keep individual key frequency tracker active
     await prisma.apiKey.update({
         where: { id: apiKey.id },
-        data: {
-            lastUsed: now,
-            usageCount: usageCount + 1,
-            resetAt: resetAt
-        }
+        data: { lastUsed: now }
     }).catch(() => { })
 
     return {
@@ -114,7 +124,8 @@ export async function logApiAccess(apiKey: any, event: string, details?: string)
         data: {
             event,
             ip,
-            details: details || `Key: ${apiKey.name} (${apiKey.id})`
+            details: details || `Key: ${apiKey.name} (${apiKey.id})`,
+            userId: apiKey.serverId // Store serverId in target userId purely to allow fast graph analytics filtering later seamlessly!
         }
     }).catch(() => { })
 }

@@ -11,6 +11,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
     const [newName, setNewName] = useState("")
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const [analytics, setAnalytics] = useState<{ date: string, count: number }[]>([])
+    const [serverUsage, setServerUsage] = useState({ count: 0, limit: 250 })
 
     // One-time display state
     const [createdKey, setCreatedKey] = useState<any | null>(null)
@@ -26,6 +27,10 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                 const data = await res.json()
                 setKeys(data.keys || data)
                 if (data.analytics) setAnalytics(data.analytics)
+                setServerUsage({
+                    count: data.serverUsageCount || 0,
+                    limit: data.serverDailyLimit || 250
+                })
             }
         } finally {
             setLoading(false)
@@ -95,54 +100,79 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                 </button>
             </div>
 
-            {/* Usage Analytics Graph */}
-            {analytics.length > 0 && keys.length > 0 && (
-                <div className="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-6">
-                    <h3 className="text-sm font-medium text-white mb-6 flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-indigo-400" />
-                        7-Day API Request Volume
-                    </h3>
-                    <div className="h-40 flex items-end gap-2 sm:gap-4 relative mt-4">
-                        {/* Y-axis labels */}
-                        <div className="absolute left-0 top-0 bottom-6 w-8 flex flex-col justify-between text-[10px] text-zinc-500 font-mono text-right pr-2 select-none">
-                            <span>{Math.max(...analytics.map(a => a.count), 10)}</span>
-                            <span>{Math.floor(Math.max(...analytics.map(a => a.count), 10) / 2)}</span>
-                            <span>0</span>
+            {/* Server Global Quota & Usage */}
+            <div className="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-6">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-6 mb-6">
+                    <div className="flex-1">
+                        <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-indigo-400" />
+                            Global Server Rate Limit
+                        </h3>
+                        <p className="text-xs text-zinc-400 mb-4">
+                            API daily limits are enforced globally across all keys under this server workspace.
+                        </p>
+                        <div className="flex items-center justify-between gap-3 mb-1.5">
+                            <div className="font-bold uppercase tracking-wider text-[10px] text-zinc-500">
+                                Requests Today
+                            </div>
+                            <span className="tabular-nums text-white text-xs font-bold">
+                                {serverUsage.count.toLocaleString()} / {serverUsage.limit === Infinity || serverUsage.limit > 100000 ? "Unlimited" : serverUsage.limit.toLocaleString()}
+                            </span>
                         </div>
-
-                        {/* Chart Area */}
-                        <div className="flex-1 ml-8 flex items-end justify-between h-full border-b border-white/10 pb-6 relative">
-                            {/* Horizontal grid lines */}
-                            <div className="absolute inset-x-0 top-0 border-t border-white/5 border-dashed" />
-                            <div className="absolute inset-x-0 top-1/2 border-t border-white/5 border-dashed" />
-
-                            {analytics.map((day, i) => {
-                                const maxCount = Math.max(...analytics.map(a => a.count), 10)
-                                const heightPercent = Math.max((day.count / maxCount) * 100, 1)
-                                return (
-                                    <div key={i} className="flex-1 flex flex-col items-center group relative h-full justify-end z-10">
-                                        {/* Tooltip */}
-                                        <div className="absolute -top-8 bg-zinc-800 border border-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
-                                            {day.count.toLocaleString()} reqs
-                                        </div>
-
-                                        {/* Bar */}
-                                        <div
-                                            className="w-4 sm:w-8 bg-indigo-500/80 hover:bg-indigo-400 transition-all rounded-t decoration-clone border-t border-indigo-300/30"
-                                            style={{ height: `${heightPercent}%` }}
-                                        />
-
-                                        {/* X-axis label */}
-                                        <div className="absolute -bottom-6 text-[10px] text-zinc-500 font-mono">
-                                            {day.date}
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                        <div className="h-2 w-full bg-black border border-white/10 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-indigo-500 transition-all duration-1000"
+                                style={{ width: `${serverUsage.limit === Infinity || serverUsage.limit > 100000 ? 100 : Math.min((serverUsage.count / serverUsage.limit) * 100, 100)}%` }}
+                            />
                         </div>
                     </div>
                 </div>
-            )}
+
+                {/* Usage Analytics Graph */}
+                {analytics.length > 0 && (
+                    <div className="pt-6 border-t border-white/5">
+                        <div className="mt-2 h-40 flex items-end gap-2 sm:gap-4 relative">
+                            {/* Y-axis labels */}
+                            <div className="absolute left-0 top-0 bottom-6 w-8 flex flex-col justify-between text-[10px] text-zinc-500 font-mono text-right pr-2 select-none">
+                                <span>{Math.max(...analytics.map(a => a.count), 10)}</span>
+                                <span>{Math.floor(Math.max(...analytics.map(a => a.count), 10) / 2)}</span>
+                                <span>0</span>
+                            </div>
+
+                            {/* Chart Area */}
+                            <div className="flex-1 ml-8 flex items-end justify-between h-full border-b border-white/10 pb-6 relative">
+                                {/* Horizontal grid lines */}
+                                <div className="absolute inset-x-0 top-0 border-t border-white/5 border-dashed" />
+                                <div className="absolute inset-x-0 top-1/2 border-t border-white/5 border-dashed" />
+
+                                {analytics.map((day, i) => {
+                                    const maxCount = Math.max(...analytics.map(a => a.count), 10)
+                                    const heightPercent = Math.max((day.count / maxCount) * 100, 1)
+                                    return (
+                                        <div key={i} className="flex-1 flex flex-col items-center group relative h-full justify-end z-10">
+                                            {/* Tooltip */}
+                                            <div className="absolute -top-8 bg-zinc-800 border border-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none shadow-xl">
+                                                {day.count.toLocaleString()} reqs
+                                            </div>
+
+                                            {/* Bar */}
+                                            <div
+                                                className="w-4 sm:w-8 bg-indigo-500/80 hover:bg-indigo-400 transition-all rounded-t decoration-clone border-t border-indigo-300/30"
+                                                style={{ height: `${heightPercent}%` }}
+                                            />
+
+                                            {/* X-axis label */}
+                                            <div className="absolute -bottom-6 text-[10px] text-zinc-500 font-mono">
+                                                {day.date}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* One-Time Key Display Modal */}
             {createdKey && (
@@ -237,24 +267,6 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                                     )}
                                 </div>
                                 <div className="flex items-center gap-4 text-xs text-zinc-500 w-full sm:w-auto mt-3 sm:mt-0">
-                                    <div className="flex-1 sm:flex-none">
-                                        <div className="flex items-center justify-between gap-3 mb-1.5">
-                                            <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px]">
-                                                <Activity className="h-3 w-3 text-indigo-400" />
-                                                Daily Usage
-                                            </div>
-                                            <span className="tabular-nums text-white">
-                                                {key.usageCount.toLocaleString()} / {key.dailyLimit === Infinity || key.dailyLimit > 100000 ? "Unlimited" : key.dailyLimit.toLocaleString()}
-                                            </span>
-                                        </div>
-                                        <div className="h-1.5 w-full sm:w-48 bg-black border border-white/10 rounded-full overflow-hidden shrink-0">
-                                            <div
-                                                className="h-full bg-indigo-500 transition-all duration-1000"
-                                                style={{ width: `${key.dailyLimit === Infinity || key.dailyLimit > 100000 ? 100 : Math.min((key.usageCount / key.dailyLimit) * 100, 100)}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="h-6 w-px bg-white/10 hidden sm:block mx-1" />
                                     <div className="flex items-center gap-2 bg-black/50 border border-white/5 py-1.5 px-3 rounded-lg font-mono">
                                         {key.key}
                                         <button
