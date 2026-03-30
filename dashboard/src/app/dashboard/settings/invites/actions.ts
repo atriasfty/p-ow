@@ -7,8 +7,12 @@ import { revalidatePath } from "next/cache"
 
 export async function createInvitation(prevState: any, formData: FormData) {
     const session = await getSession()
-    // TODO: Add role check here (e.g. only Admin can invite)
     if (!session) return { message: "Unauthorized" }
+
+    const { isSuperAdmin } = await import("@/lib/admin")
+    if (!isSuperAdmin(session.user as any)) {
+        return { message: "Only Superadmins can invite users." }
+    }
 
     const email = formData.get("email") as string
     if (!email) return { message: "Email is required" }
@@ -33,6 +37,11 @@ export async function createInvitation(prevState: any, formData: FormData) {
 export async function revokeInvitation(invitationId: string) {
     const session = await getSession()
     if (!session) return { message: "Unauthorized" }
+
+    const { isSuperAdmin } = await import("@/lib/admin")
+    if (!isSuperAdmin(session.user as any)) {
+        return { message: "Only Superadmins can revoke invitations." }
+    }
 
     try {
         const client = await clerkClient()

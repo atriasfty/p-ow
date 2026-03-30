@@ -26,14 +26,64 @@ export async function GET(req: Request) {
 
     const keys = await prisma.apiKey.findMany({
         where: serverId ? { serverId } : {},
-        orderBy: { createdAt: "desc" }
+        orderBy: { createdAt: "desc" },
+        include: { server: { select: { subscriptionPlan: true } } }
     })
 
     // Mask the secret key to prevent exposure in the dashboard after creation
-    const maskedKeys = keys.map(k => ({
-        ...k,
-        key: `${k.key.substring(0, 8)}...${k.key.substring(k.key.length - 4)}`
-    }))
+    const maskedKeys = keys.map(k => {
+        const plan = k.server?.subscriptionPlan || (k.serverId ? "free" : "pow-max")
+        const limits: Record<string, number> = {
+            "free": 250,
+            "pow-pro": 5000,
+            "pow-max": Infinity
+        }
+        const maxDaily = limits[plan] || 250
+
+        return {
+            ...k,
+            dailyLimit: maxDaily, // Override DB fallback value with the dynamically bound plan limit
+            key: `${k.key.substring(0, 8)}...${k.key.substring(k.key.length - 4)}`
+        }
+    })
+
+    if (searchParams.get("includeAnalytics") === "true") {
+        let analytics: { date: string, count: number }[] = []
+        if (keys.length > 0) {
+            const sevenDaysAgo = new Date()
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+            const logs = await prisma.securityLog.findMany({
+                where: {
+                    event: { startsWith: 'PUBLIC_' },
+                    createdAt: { gte: sevenDaysAgo },
+                    OR: keys.map(k => ({ details: { contains: k.id } }))
+                },
+                select: { createdAt: true }
+            })
+
+            // Group by day (MM/DD format)
+            const dailyCounts: Record<string, number> = {}
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date()
+                d.setDate(d.getDate() - i)
+                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`
+                dailyCounts[dateStr] = 0
+            }
+
+            logs.forEach(log => {
+                const d = log.createdAt
+                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`
+                if (dailyCounts[dateStr] !== undefined) {
+                    dailyCounts[dateStr]++
+                }
+            })
+
+            analytics = Object.entries(dailyCounts).map(([date, count]) => ({ date, count }))
+        }
+
+        return NextResponse.json({ keys: maskedKeys, analytics })
+    }
 
     return NextResponse.json(maskedKeys)
 }
@@ -44,7 +94,7 @@ export async function POST(req: Request) {
     }
     const session = await getSession()
     const { name, serverId } = await req.json()
-    
+
     // Check access if serverId is provided
     if (serverId) {
         if (!await isServerAdmin(session?.user as any, serverId)) {
@@ -113,7 +163,7 @@ export async function PATCH(req: Request) {
     }
     const session = await getSession()
     const { id, serverId, enabled, rateLimit, dailyLimit } = await req.json()
-    
+
     if (serverId) {
         if (!await isServerAdmin(session?.user as any, serverId)) {
             return new NextResponse("Unauthorized", { status: 401 })

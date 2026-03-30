@@ -6,6 +6,8 @@ export interface PublicAuthResult {
     apiKey?: any
     error?: string
     status?: number
+    rateLimitRemaining?: number
+    rateLimitReset?: number
 }
 
 /**
@@ -46,14 +48,14 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     // If not linked to a server (global key), default to pow-max limits
     const plan = apiKey.server?.subscriptionPlan || (apiKey.serverId ? "free" : "pow-max")
     const limits: Record<string, number> = {
-        "free": 100,
+        "free": 250,
         "pow-pro": 5000,
         "pow-max": Infinity
     }
-    const maxDaily = limits[plan] || 100
+    const maxDaily = limits[plan] || 250
 
     let usageCount = apiKey.usageCount
-    let resetAt = new Date(apiKey.resetAt)
+    let resetAt = apiKey.resetAt ? new Date(apiKey.resetAt) : new Date(now.getTime() + 24 * 60 * 60 * 1000)
 
     // Reset usage if 24h passed
     if (now > resetAt) {
@@ -62,7 +64,13 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     }
 
     if (usageCount >= maxDaily) {
-        return { valid: false, error: `Daily request quota exceeded (${usageCount}/${maxDaily}). Upgrade your server plan for higher limits.`, status: 429 }
+        return {
+            valid: false,
+            error: `Daily request quota exceeded (${usageCount}/${maxDaily}). Upgrade your server plan for higher limits.`,
+            status: 429,
+            rateLimitRemaining: 0,
+            rateLimitReset: Math.floor(resetAt.getTime() / 1000)
+        }
     }
 
     // Update state
@@ -75,7 +83,12 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
         }
     }).catch(() => { })
 
-    return { valid: true, apiKey }
+    return {
+        valid: true,
+        apiKey,
+        rateLimitRemaining: maxDaily === Infinity ? 999999 : maxDaily - (usageCount + 1),
+        rateLimitReset: Math.floor(resetAt.getTime() / 1000)
+    }
 }
 
 /**
@@ -104,4 +117,17 @@ export async function logApiAccess(apiKey: any, event: string, details?: string)
             details: details || `Key: ${apiKey.name} (${apiKey.id})`
         }
     }).catch(() => { })
+}
+
+/**
+ * Wraps a NextResponse with the appropriate Rate Limit headers.
+ */
+export function withRateLimit(response: any, auth: PublicAuthResult) {
+    if (auth.rateLimitRemaining !== undefined) {
+        response.headers.set("X-RateLimit-Remaining", auth.rateLimitRemaining.toString())
+    }
+    if (auth.rateLimitReset !== undefined) {
+        response.headers.set("X-RateLimit-Reset", auth.rateLimitReset.toString())
+    }
+    return response
 }

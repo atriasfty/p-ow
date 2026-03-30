@@ -64,6 +64,10 @@ export async function POST(req: Request) {
 
         // 4. Determine server - use requested or find user's server membership
         let serverId = requestedServerId
+
+        // Import permissions validation
+        const { isServerMember, getUserPermissions } = await import("@/lib/admin")
+
         if (!serverId) {
             // Find user's first server membership
             const member = await prisma.member.findFirst({
@@ -74,6 +78,27 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: "No server membership found" }, { status: 400, headers: visionCorsHeaders })
             }
             serverId = member.serverId
+        } else {
+            // Explicitly verify the user has access to the requested server
+            const hasAccess = await isServerMember({ id: payload.userId } as any, serverId)
+            if (!hasAccess) {
+                return NextResponse.json({ error: "Forbidden: Not a member of this server" }, { status: 403, headers: visionCorsHeaders })
+            }
+        }
+
+        // Verify action-specific permissions
+        const perms = await getUserPermissions({ id: payload.userId } as any, serverId)
+        if (type === "Warn" && !perms.canIssueWarnings) {
+            return NextResponse.json({ error: "Forbidden: Missing canIssueWarnings permission" }, { status: 403, headers: visionCorsHeaders })
+        }
+        if (type === "Kick" && !perms.canKick) {
+            return NextResponse.json({ error: "Forbidden: Missing canKick permission" }, { status: 403, headers: visionCorsHeaders })
+        }
+        if (type === "Ban" && !perms.canBan) {
+            return NextResponse.json({ error: "Forbidden: Missing canBan permission" }, { status: 403, headers: visionCorsHeaders })
+        }
+        if (type === "Ban Bolo" && !perms.canBanBolo) {
+            return NextResponse.json({ error: "Forbidden: Missing canBanBolo permission" }, { status: 403, headers: visionCorsHeaders })
         }
 
         // 5. Log punishment to database

@@ -24,6 +24,10 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
             })
         }
 
+        if (!member.role || !member.role.canShift) {
+            return interaction.editReply({ content: "You do not have permission to go on shift on this server." })
+        }
+
         // Check if already on shift
         const activeShift = await prisma.shift.findFirst({
             where: { userId: member.userId, serverId, endTime: null }
@@ -105,6 +109,10 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
                 duration
             }
         })
+
+        // Check for milestones
+        const { processMilestones } = await import("../lib/milestones")
+        await processMilestones(member.userId, serverId)
 
         // Remove Discord Role if configured
         if (activeShift.server.onDutyRoleId && interaction.guild) {

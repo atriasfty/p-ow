@@ -3,8 +3,8 @@
 import { useCookieConsent } from '@/components/providers/cookie-consent-context'
 import { Cookie, ExternalLink, FileText, Shield } from 'lucide-react'
 
-const TOS_URL = 'https://atria.gitbook.io/project-overwatch/legal/terms-of-service'
-const PRIVACY_URL = 'https://atria.gitbook.io/project-overwatch/legal/privacy-policy'
+const TOS_URL = 'https://powdocs.atriasafety.org/legal/legal-terms-of-service'
+const PRIVACY_URL = 'https://powdocs.atriasafety.org/legal/legal-privacy-policy'
 
 export function DashboardFooter() {
     const { setShowBanner } = useCookieConsent()

@@ -1,18 +1,18 @@
 import { prisma } from "@/lib/db"
-import { validatePublicApiKey, resolveServer, logApiAccess } from "@/lib/public-auth"
+import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { createClerkClient } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 
 export async function GET(req: Request) {
     const auth = await validatePublicApiKey()
-    if (!auth.valid) return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
+    if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
 
     const { searchParams } = new URL(req.url)
     const serverName = searchParams.get("server")
 
     const server = await resolveServer(auth.apiKey)
     if (!server) {
-        return NextResponse.json({ error: "Server not found" }, { status: 404 })
+        return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
     }
 
     try {
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
             select: { userId: true, startTime: true }
         })
 
-        if (activeShifts.length === 0) return NextResponse.json([])
+        if (activeShifts.length === 0) return withRateLimit(NextResponse.json([]), auth)
 
         const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
         const userIds = activeShifts.map((s: any) => s.userId)
@@ -47,9 +47,9 @@ export async function GET(req: Request) {
         }).filter(Boolean)
 
         await logApiAccess(auth.apiKey, "PUBLIC_STAFF_COLLECTED", `Server: ${server.name}`)
-        return NextResponse.json(staffOnDuty)
+        return withRateLimit(NextResponse.json(staffOnDuty), auth)
     } catch (e) {
         console.error("Public Staff API Error:", e)
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 })
+        return withRateLimit(NextResponse.json({ error: "Internal Error" }, { status: 500 }), auth)
     }
 }

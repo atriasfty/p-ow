@@ -20,6 +20,7 @@ interface ServerSettingsFormProps {
     currentStaffRequestChannelId: string | null
     currentRaidAlertChannelId: string | null
     currentCommandLogChannelId: string | null
+    currentMilestoneChannelId?: string | null
     currentLoaChannelId?: string | null
     currentOnLoaRoleId?: string | null
     currentCustomBotToken?: string | null
@@ -45,6 +46,7 @@ export function ServerSettingsForm({
     currentStaffRequestChannelId,
     currentRaidAlertChannelId,
     currentCommandLogChannelId,
+    currentMilestoneChannelId,
     currentLoaChannelId,
     currentOnLoaRoleId,
     currentCustomBotToken,
@@ -67,6 +69,7 @@ export function ServerSettingsForm({
     const [staffRequestChannelId, setStaffRequestChannelId] = useState(currentStaffRequestChannelId || "")
     const [raidAlertChannelId, setRaidAlertChannelId] = useState(currentRaidAlertChannelId || "")
     const [commandLogChannelId, setCommandLogChannelId] = useState(currentCommandLogChannelId || "")
+    const [milestoneChannelId, setMilestoneChannelId] = useState(currentMilestoneChannelId || "")
     const [loaChannelId, setLoaChannelId] = useState(currentLoaChannelId || "")
     const [onLoaRoleId, setOnLoaRoleId] = useState(currentOnLoaRoleId || "")
     
@@ -109,6 +112,7 @@ export function ServerSettingsForm({
                     staffRequestChannelId: staffRequestChannelId || null,
                     raidAlertChannelId: raidAlertChannelId || null,
                     commandLogChannelId: commandLogChannelId || null,
+                    milestoneChannelId: milestoneChannelId || null,
                     loaChannelId: loaChannelId || null,
                     onLoaRoleId: onLoaRoleId || null,
                     customBotToken: customBotToken || null,
@@ -292,6 +296,22 @@ export function ServerSettingsForm({
                     />
                     <p className="text-xs text-zinc-600 mt-1">
                         Manual commands run via the toolbox will be logged here.
+                    </p>
+                </div>
+
+                {/* Milestone Announcement Channel */}
+                <div className="mb-4 p-4 bg-emerald-500/5 border border-emerald-500/30 rounded-lg">
+                    <label className="block text-sm font-medium text-emerald-400 mb-2">
+                        Milestone Announcement Channel
+                    </label>
+                    <ChannelCombobox
+                        serverId={serverId}
+                        value={milestoneChannelId}
+                        onChange={(val) => setMilestoneChannelId(val || "")}
+                        placeholder="Select Milestone Announcement channel..."
+                    />
+                    <p className="text-xs text-emerald-400/70 mt-1">
+                        Channel where staff milestone achievements will be announced.
                     </p>
                 </div>
 

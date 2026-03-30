@@ -11,7 +11,7 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
     // getUTCDay: 0=Sun, 1=Mon, ..., 6=Sat
     // If today is Monday(1), diff is 0. If Sunday(0), diff is -6.
     const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
-    
+
     const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), diff, 0, 0, 0, 0))
 
     if (subcommand === "status") {
@@ -87,7 +87,19 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
         await interaction.editReply({ embeds: [embed] })
 
     } else if (subcommand === "leaderboard") {
+        const discordId = interaction.user.id
         await interaction.deferReply({ ephemeral: true })
+
+        // Check global view quota permission
+        const authMembers = await prisma.member.findMany({
+            where: { discordId },
+            include: { role: true }
+        })
+
+        const canView = authMembers.some((m: any) => m.isAdmin || (m.role && m.role.canViewQuota))
+        if (!canView) {
+            return interaction.editReply({ content: "You do not have permission to view the global quota leaderboard." })
+        }
 
         // 1. Get all members across ALL servers (include discordId for mentions)
         const members = await prisma.member.findMany({

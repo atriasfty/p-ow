@@ -78,8 +78,14 @@ export async function DELETE(req: Request) {
     const isAdmin = await isServerAdmin(session.user, serverId)
     if (!isAdmin) return new NextResponse("Forbidden", { status: 403 })
 
-    await prisma.staffMilestone.delete({
+    // Verify it belongs to the server first
+    const exists = await prisma.staffMilestone.findFirst({
         where: { id, serverId }
+    })
+    if (!exists) return new NextResponse("Not found", { status: 404 })
+
+    await prisma.staffMilestone.delete({
+        where: { id }
     })
 
     return NextResponse.json({ success: true })

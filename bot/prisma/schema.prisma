@@ -19,6 +19,8 @@ model Server {
   suspendedRoleId  String? // Discord Role ID - blocks mod panel access
   terminatedRoleId String? // Discord Role ID - removes user from server
   staffRoleId      String? // General staff Discord role (viewer access)
+  permLogChannelId String? // Discord Channel ID for Permission Logs
+  milestoneChannelId String? // Discord Channel ID for Milestone Announcements
   createdAt   DateTime @default(now())
   
   // Custom Server Configuration Overrides

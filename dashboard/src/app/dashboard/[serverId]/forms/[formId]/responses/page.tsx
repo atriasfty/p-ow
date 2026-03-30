@@ -29,11 +29,21 @@ interface Analytics {
 }
 
 const renderAnswerValue = (value: any) => {
+    const safeUrl = (url?: string) => {
+        if (!url) return "#"
+        const trimmed = url.trim()
+        const lower = trimmed.toLowerCase()
+        if (lower.startsWith("javascript:") || lower.startsWith("data:") || lower.startsWith("vbscript:")) {
+            return "about:blank"
+        }
+        return trimmed
+    }
+
     // Handle file upload objects (stored as {url, filename})
     if (value && typeof value === "object" && value.url && value.filename) {
         return (
             <a
-                href={value.url}
+                href={safeUrl(value.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 download={value.filename}
@@ -53,7 +63,7 @@ const renderAnswerValue = (value: any) => {
                 {value.map((file, i) => (
                     <a
                         key={i}
-                        href={file.url}
+                        href={safeUrl(file.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         download={file.filename}

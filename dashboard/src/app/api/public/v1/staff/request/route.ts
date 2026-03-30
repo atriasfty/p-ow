@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db"
-import { validatePublicApiKey, resolveServer, logApiAccess } from "@/lib/public-auth"
+import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { PrcClient } from "@/lib/prc"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
     const auth = await validatePublicApiKey()
-    if (!auth.valid) return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
+    if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
 
     const { searchParams } = new URL(req.url)
     const body = await req.json().catch(() => ({}))
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const { reason, requester } = body
 
     const server = await resolveServer(auth.apiKey)
-    if (!server) return NextResponse.json({ error: "Server not found" }, { status: 404 })
+    if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
 
     try {
         const requesterName = requester || auth.apiKey.name || "API Integration"
@@ -66,10 +66,10 @@ export async function POST(req: Request) {
         }
 
         await logApiAccess(auth.apiKey, "PUBLIC_STAFF_REQUEST", `Server: ${server.name}, Reason: ${reason}`)
-        return NextResponse.json({ success: true, staffNotified: staffPlayers.length })
+        return withRateLimit(NextResponse.json({ success: true, staffNotified: staffPlayers.length }), auth)
 
     } catch (error: any) {
         console.error("Public Staff Request Error:", error)
-        return NextResponse.json({ error: "Internal Error" }, { status: 500 })
+        return withRateLimit(NextResponse.json({ error: "Internal Error" }, { status: 500 }), auth)
     }
 }

@@ -16,10 +16,21 @@ export default clerkMiddleware(async (auth, req) => {
     
     if (isDashboardRoute(req) && !isPublicApi(req)) {
         try {
-            const baseUrl = req.nextUrl.origin;
-            const res = await fetch(`${baseUrl}/api/maintenance-check`, {
-                cache: 'no-store',
-            });
+            // Robust internal fetch: try public URL first, then localhost if it fails
+            let res;
+            try {
+                res = await fetch(`${req.nextUrl.origin}/api/maintenance-check`, {
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(2000) // Don't hang middleware
+                });
+            } catch (e) {
+                // Fallback to localhost if public URL fails (common in VPS setups)
+                res = await fetch(`http://localhost:${process.env.PORT || 41729}/api/maintenance-check`, {
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(2000)
+                });
+            }
+            
             const data = await res.json();
 
             if (data.maintenance) {

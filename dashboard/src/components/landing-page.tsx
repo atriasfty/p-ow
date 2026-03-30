@@ -35,6 +35,7 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
                         </div>
                         <div className="hidden md:flex items-center gap-8">
                             <button onClick={() => scrollTo("features")} className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">Features</button>
+                            <a href="https://powdocs.atriasafety.org/" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">Documentation</a>
                             {showPricing && (
                                 <Link href="/pricing" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">Pricing</Link>
                             )}
@@ -58,21 +59,24 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
                             )}
                         </div>
                         {isLoaded && (
-                            isSignedIn ? (
-                                <Link
-                                    href="/dashboard"
-                                    className="md:hidden px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-full"
-                                >
-                                    Dashboard
-                                </Link>
-                            ) : (
-                                <Link
-                                    href="/login"
-                                    className="md:hidden px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-full"
-                                >
-                                    Sign In
-                                </Link>
-                            )
+                            <div className="md:hidden flex items-center gap-4">
+                                <a href="https://powdocs.atriasafety.org/" target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-zinc-600">Docs</a>
+                                {isSignedIn ? (
+                                    <Link
+                                        href="/dashboard"
+                                        className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-full"
+                                    >
+                                        Dashboard
+                                    </Link>
+                                ) : (
+                                    <Link
+                                        href="/login"
+                                        className="px-4 py-2 bg-zinc-900 text-white text-sm font-medium rounded-full"
+                                    >
+                                        Sign In
+                                    </Link>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -297,8 +301,8 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
                         <div className="flex items-center gap-8">
                             <a href="#features" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Features</a>
                             <a href="#about" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">About</a>
-                            <a href="https://atria.gitbook.io/project-overwatch/legal/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Terms</a>
-                            <a href="https://atria.gitbook.io/project-overwatch/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Privacy</a>
+                            <a href="https://powdocs.atriasafety.org/legal/legal-terms-of-service" target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Terms</a>
+                            <a href="https://powdocs.atriasafety.org/legal/legal-privacy-policy" target="_blank" rel="noopener noreferrer" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Privacy</a>
                             <Link href="/login" className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors">Sign In</Link>
                         </div>
                     </div>

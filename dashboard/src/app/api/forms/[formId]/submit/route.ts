@@ -188,6 +188,23 @@ export async function POST(
             responseId = existing?.id
         }
 
+        // Validate client-provided responseId to prevent IDOR
+        if (responseId && responseId !== "new") {
+            const existingResponse = await prisma.formResponse.findUnique({
+                where: { id: responseId }
+            })
+
+            if (!existingResponse) {
+                return NextResponse.json({ error: "Invalid response ID" }, { status: 400 })
+            }
+            if (existingResponse.formId !== formId) {
+                return NextResponse.json({ error: "Response does not belong to this form" }, { status: 400 })
+            }
+            if (session && existingResponse.respondentId && existingResponse.respondentId !== session.user.id) {
+                return NextResponse.json({ error: "Unauthorized to modify this response" }, { status: 403 })
+            }
+        }
+
         // Upsert response
         const status = saveAsDraft ? "draft" : "completed"
 

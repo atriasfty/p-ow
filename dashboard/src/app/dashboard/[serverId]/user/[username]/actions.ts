@@ -21,6 +21,15 @@ export async function submitPunishment(prevState: any, formData: FormData) {
         return { success: false, message: "Missing required fields" }
     }
 
+    // Permission Check
+    const { getUserPermissions } = await import("@/lib/admin")
+    const perms = await getUserPermissions(session.user as any, serverId)
+
+    if (type === "Warn" && !perms.canIssueWarnings) return { success: false, message: "Forbidden: Missing canIssueWarnings" }
+    if (type === "Kick" && !perms.canKick) return { success: false, message: "Forbidden: Missing canKick" }
+    if (type === "Ban" && !perms.canBan) return { success: false, message: "Forbidden: Missing canBan" }
+    if (type === "Ban Bolo" && !perms.canBanBolo) return { success: false, message: "Forbidden: Missing canBanBolo" }
+
     try {
         // 1. Log to DB
         const punishment = await prisma.punishment.create({
@@ -113,9 +122,22 @@ export async function submitPunishment(prevState: any, formData: FormData) {
 
 export async function resolvePunishment(punishmentId: string) {
     const session = await getSession()
-    if (!session) return { success: false } // Should utilize proper auth check
+    if (!session) return { success: false, message: "Unauthorized" }
 
     try {
+        const punishment = await prisma.punishment.findUnique({ where: { id: punishmentId } })
+        if (!punishment) return { success: false, message: "Not found" }
+
+        // Require canViewPunishments basline
+        const { getUserPermissions } = await import("@/lib/admin")
+        const perms = await getUserPermissions(session.user as any, punishment.serverId)
+
+        if (!perms.canViewPunishments) return { success: false, message: "Forbidden: Missing canViewPunishments" }
+
+        if (punishment.type === "Ban Bolo" && !perms.canManageBolos) {
+            return { success: false, message: "Forbidden: Missing canManageBolos" }
+        }
+
         await prisma.punishment.update({
             where: { id: punishmentId },
             data: { resolved: true }

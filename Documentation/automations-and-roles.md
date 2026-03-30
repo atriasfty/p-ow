@@ -46,17 +46,24 @@ Automations allow you to trigger actions in your Discord server based on events 
 
 ## 3. Staff Milestones
 
-Reward your most dedicated staff members automatically based on their shift time.
+Reward your most dedicated staff members automatically based on their activity **each week**.
 
 ### Creating a Milestone
 1. Go to **Admin Panel** > **Milestones**.
 2. Click **Create Milestone**.
-3. **Name:** e.g., "Senior Moderator".
-4. **Required Minutes:** The total, lifetime shift minutes required to achieve this rank (e.g., `6000` for 100 hours).
+3. **Name:** e.g., "Silver Moderator".
+4. **Required Minutes:** The amount of duty minutes required **within a single week** (e.g., `300` for 5 hours per week).
 5. **Reward Role ID:** Select the Discord Role that should be granted.
 
-When a staff member finishes a shift that pushes their total all-time minutes past the requirement, POW will automatically assign them the Reward Role in Discord!
-If you have a **Celebrations Channel** configured in Server Settings, it will also announce their new milestone!
+### Weekly Evaluation
+POW evaluates milestones every time a staff member finishes a shift.
+* **Weekly Calculation:** Only shift time from the current Monday to Sunday is counted towards milestones.
+* **Automatic Rewards:** When a staff member hits the required weekly time, POW will automatically assign them the Reward Role in Discord!
+* **Announcements:** If you have a **Milestone Announcement Channel** configured in Server Settings, it will publicly announce their achievement!
+
+{% hint style="info" %}
+**Roles are Persistent:** Once a staff member earns a milestone role, the bot will not remove it, even if a new week starts. This allows you to track long-term dedication through weekly achievements.
+{% endhint %}
 
 ## Troubleshooting
 

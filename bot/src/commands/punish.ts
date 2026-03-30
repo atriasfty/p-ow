@@ -34,6 +34,16 @@ async function handleLogPunishment(interaction: ChatInputCommandInteraction) {
         return interaction.editReply({ content: "You do not have access to this server." })
     }
 
+    if (!member.role) {
+        return interaction.editReply({ content: "You do not have a role assigned on this server." })
+    }
+
+    // Check permissions
+    if (type === "Warn" && !member.role.canIssueWarnings) return interaction.editReply({ content: "You do not have permission to issue warnings." })
+    if (type === "Kick" && !member.role.canKick) return interaction.editReply({ content: "You do not have permission to issue kicks." })
+    if (type === "Ban" && !member.role.canBan) return interaction.editReply({ content: "You do not have permission to issue bans." })
+    if (type === "Ban Bolo" && !member.role.canBanBolo) return interaction.editReply({ content: "You do not have permission to issue Ban Bolos." })
+
     // Resolve Roblox Username to ID
     const userId = await getRobloxId(username)
     if (!userId) {
@@ -80,6 +90,18 @@ async function handleLogView(interaction: ChatInputCommandInteraction) {
 
     if (!member) {
         return interaction.editReply({ content: "You do not have access to this server." })
+    }
+
+    if (!member.role) {
+        return interaction.editReply({ content: "You do not have a role assigned on this server." })
+    }
+
+    if (logType === "punishment" && !member.role.canViewPunishments) {
+        return interaction.editReply({ content: "You do not have permission to view punishments." })
+    } else if (logType !== "punishment" && logType !== "all" && !member.role.canViewLogs) {
+        return interaction.editReply({ content: "You do not have permission to view connection/command/kill logs." })
+    } else if (logType === "all" && (!member.role.canViewPunishments || !member.role.canViewLogs)) {
+        return interaction.editReply({ content: "You need permission to view both punishments and logs to use the 'all' option." })
     }
 
     // Resolve Roblox Username to ID

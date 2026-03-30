@@ -1,19 +1,19 @@
 import { prisma } from "@/lib/db"
-import { validatePublicApiKey, resolveServer, logApiAccess } from "@/lib/public-auth"
+import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
     const auth = await validatePublicApiKey()
-    if (!auth.valid) return NextResponse.json({ error: auth.error }, { status: 401 })
+    if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
     const { searchParams } = new URL(req.url)
     const body = await req.json().catch(() => ({}))
     const { userId } = body
 
-    if (!userId) return NextResponse.json({ error: "Missing userId" }, { status: 400 })
+    if (!userId) return withRateLimit(NextResponse.json({ error: "Missing userId" }, { status: 400 }), auth)
 
     const server = await resolveServer(auth.apiKey)
-    if (!server) return NextResponse.json({ error: "Server not found" }, { status: 404 })
+    if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
 
     // Use a transaction to prevent race conditions
     const shift = await prisma.$transaction(async (tx) => {
@@ -41,9 +41,9 @@ export async function POST(req: Request) {
     })
 
     if ('error' in shift) {
-        return NextResponse.json({ error: shift.error }, { status: 400 })
+        return withRateLimit(NextResponse.json({ error: shift.error }, { status: 400 }), auth)
     }
 
     await logApiAccess(auth.apiKey, "PUBLIC_SHIFT_STARTED", `User: ${userId}, Server: ${server.name}`)
-    return NextResponse.json({ success: true, shift })
+    return withRateLimit(NextResponse.json({ success: true, shift }), auth)
 }

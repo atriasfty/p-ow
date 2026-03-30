@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     if (securityBlock) return securityBlock
 
     try {
-        const whereClause: any = {}
+        const whereClause: any = { serverId }
         if (userId) whereClause.userId = userId
 
         // Pagination parameters

@@ -23,11 +23,14 @@
 * [Forms and Applications](forms-and-applications.md)
 * [Automations and Roles](automations-and-roles.md)
 
-## Premium Features
+## Advanced Features
 
+* [Advanced Automations & Webhooks](advanced-automations-and-webhooks.md)
 * [White Label Bot](white-label-bot.md)
 * [POW Vision](pow-vision.md)
 * [Data Exports](data-exports.md)
+* [Developer API](developer-api.md)
+
 
 ## Mobile
 

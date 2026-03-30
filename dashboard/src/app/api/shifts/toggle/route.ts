@@ -13,6 +13,11 @@ export async function POST(req: Request) {
         const { serverId } = await req.json()
         if (!serverId) return NextResponse.json({ error: "Missing serverId" }, { status: 400 })
 
+        // Ensure user has permission to shift on this server
+        const { verifyPermissionOrError } = await import("@/lib/auth-permissions")
+        const permError = await verifyPermissionOrError(session.user, serverId, "canShift")
+        if (permError) return permError
+
         // Ensure user doesn't already have an active shift on this server
         const existing = await prisma.shift.findFirst({
             where: {
@@ -68,6 +73,10 @@ export async function PATCH(req: Request) {
                 duration
             }
         })
+
+        // Check for milestones
+        const { processMilestones } = await import("@/lib/milestones")
+        await processMilestones(session.user.id, serverId)
 
         return NextResponse.json(updated)
     } catch (e) {

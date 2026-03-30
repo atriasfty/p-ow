@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db"
-import { validatePublicApiKey, resolveServer, logApiAccess } from "@/lib/public-auth"
+import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { PrcClient } from "@/lib/prc"
 import { parsePrcPlayer } from "@/lib/prc-types"
 import { NextResponse } from "next/server"
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     // 1. Validate API Key
     const auth = await validatePublicApiKey()
     if (!auth.valid) {
-        return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
+        return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
     }
 
     // 2. Get Server Name from Query
@@ -16,13 +16,13 @@ export async function GET(req: Request) {
     const serverName = searchParams.get("server")
 
     if (!serverName) {
-        return NextResponse.json({ error: "Missing 'server' query parameter" }, { status: 400 })
+        return withRateLimit(NextResponse.json({ error: "Missing 'server' query parameter" }, { status: 400 }), auth)
     }
 
     // 3. Find Server
     const server = await resolveServer(auth.apiKey)
     if (!server) {
-        return NextResponse.json({ error: "Server not found" }, { status: 404 })
+        return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
     }
 
     try {
@@ -45,15 +45,15 @@ export async function GET(req: Request) {
         // 5. Log Access
         await logApiAccess(auth.apiKey, "PUBLIC_PLAYERS_COLLECTED", `Server: ${server.name}`)
 
-        return NextResponse.json({
+        return withRateLimit(NextResponse.json({
             serverId: server.id,
             serverName: server.customName || server.name,
             playerCount: players.length,
             players,
             timestamp: new Date().toISOString()
-        })
+        }), auth)
     } catch (e) {
         console.error("Public API Error:", e)
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+        return withRateLimit(NextResponse.json({ error: "Internal Server Error" }, { status: 500 }), auth)
     }
 }

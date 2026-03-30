@@ -81,7 +81,7 @@ Located in `api/forms/[formId]/submit/route.ts`.
 
 ### log-syncer.ts
 This is the heart of the bot's game-to-web bridge.
-- **Rate Limits:** It polls PRC logs. Ensure `skipDuplicates: true` is used in Prisma `createMany` calls to avoid primary key collisions on the unique `(serverId, type, prcTimestamp)` constraint.
+- **Rate Limits:** It polls PRC logs. Because SQLite does not support `skipDuplicates: true` in Prisma, you **must** manually deduplicate logs by fetching existing timestamps before calling `createMany`.
 - **Commands:** The bot parses raw chat logs for triggers like `:log warn`, `:log shift start`, and `:shutdown`.
 
 ### Auto-Join & Sync

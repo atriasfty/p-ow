@@ -28,6 +28,7 @@ model Server {
   staffRequestChannelId String? // Discord Channel ID for Staff Requests
   raidAlertChannelId    String? // Discord Channel ID for Raid Alerts
   commandLogChannelId   String? // Discord Channel ID for Command Logs
+  milestoneChannelId    String? // Discord Channel ID for Milestone Announcements
   onDutyRoleId          String? // Discord Role ID for On Duty staff
   autoSyncRoles         Boolean @default(false) // Whether to auto-sync roles from Discord
   createdAt   DateTime @default(now())
@@ -111,7 +112,6 @@ model Log {
   @@index([playerId])
   @@index([killerId])
   @@index([victimId])
-  @@unique([serverId, type, prcTimestamp]) // Unique constraint for createMany skipDuplicates
 }
 
 model Punishment {

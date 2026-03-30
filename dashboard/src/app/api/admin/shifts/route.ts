@@ -112,6 +112,10 @@ export async function POST(req: NextRequest) {
         }
     })
 
+    // Check for milestones (for the user who was on shift)
+    const { processMilestones } = await import("@/lib/milestones")
+    await processMilestones(activeShift.userId, serverId)
+
     return NextResponse.json({
         message: "Shift ended",
         shift: updatedShift

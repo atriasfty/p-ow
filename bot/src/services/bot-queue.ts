@@ -100,8 +100,12 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                     throw new Error("User not found")
                 }
             } else if (item.type === "ROLE_ADD") {
-                const guild = await client.guilds.fetch(item.serverId).catch(() => null)
-                if (!guild) throw new Error("Guild not found")
+                // item.serverId is the database CUID, we need the Discord Guild ID
+                const server = await prisma.server.findUnique({ where: { id: item.serverId } })
+                if (!server || !server.discordGuildId) throw new Error("Server or Discord Guild ID not found")
+
+                const guild = await client.guilds.fetch(server.discordGuildId).catch(() => null)
+                if (!guild) throw new Error("Guild not found in Discord cache/API")
 
                 const member = await guild.members.fetch(item.targetId).catch(() => null)
                 if (!member) throw new Error("Member not found in guild")

@@ -298,10 +298,32 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
 
         const dbLogs = parsedLogs.map(l => logToDbFormat(l, serverId)).filter((l): l is any => l !== null)
         
-        // Batch create logs - uses the unique constraint to skip duplicates efficiently
-        const { count: newLogsCount } = await (prisma.log as any).createMany({
-            data: dbLogs,
-            skipDuplicates: true
+        // Manual deduplication for SQLite (which doesn't support skipDuplicates: true)
+        // 1. Get all timestamps from the logs we're trying to insert
+        const timestamps = dbLogs.map(l => l.prcTimestamp).filter(t => t !== null) as number[]
+        
+        // 2. Fetch existing logs with those timestamps for this server
+        const existingLogs = await prisma.log.findMany({
+            where: {
+                serverId,
+                prcTimestamp: { in: timestamps }
+            },
+            select: { type: true, prcTimestamp: true, playerId: true, killerId: true, victimId: true }
+        })
+
+        // 3. Create a set of unique keys already in the DB
+        // Fingerprint: type_timestamp_player_killer_victim
+        const getLogKey = (l: any) => `${l.type}_${l.prcTimestamp}_${l.playerId || ''}_${l.killerId || ''}_${l.victimId || ''}`
+        const existingKeys = new Set(existingLogs.map(getLogKey))
+
+        // 4. Filter out logs that already exist
+        const uniqueDbLogs = dbLogs.filter(l => !existingKeys.has(getLogKey(l)))
+
+        if (uniqueDbLogs.length === 0) return { parsedLogs, newLogsCount: 0 }
+
+        // Batch create unique logs
+        const { count: newLogsCount } = await prisma.log.createMany({
+            data: uniqueDbLogs
         })
 
         if (newLogsCount > 0) {
