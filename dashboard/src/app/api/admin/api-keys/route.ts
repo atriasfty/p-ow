@@ -36,7 +36,7 @@ export async function GET(req: Request) {
         const limits: Record<string, number> = {
             "free": 250,
             "pow-pro": 5000,
-            "pow-max": Infinity
+            "pow-max": 1_000_000_000
         }
         const maxDaily = limits[plan] || 250
 
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
     if (serverId) {
         const targetServer = await prisma.server.findUnique({ where: { id: serverId }, select: { subscriptionPlan: true } })
         const plan = targetServer?.subscriptionPlan || "free"
-        const limits: Record<string, number> = { "free": 250, "pow-pro": 5000, "pow-max": Infinity }
+        const limits: Record<string, number> = { "free": 250, "pow-pro": 5000, "pow-max": 1_000_000_000 }
         serverDailyLimit = limits[plan] || 250
 
         const quotaConfig = await prisma.config.findUnique({ where: { key: `SERVER_QUOTA_${serverId}` } })

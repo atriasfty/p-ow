@@ -92,9 +92,7 @@ export async function GET() {
                     summary: "List Online Players",
                     description: "Fetches live player data from the game server.",
                     tags: ["Live Data"],
-                    parameters: [
-                        { name: "server", in: "query", required: true, schema: { type: "string" }, description: "Server custom name or ID" }
-                    ],
+                    parameters: [],
                     responses: {
                         200: {
                             description: "List of online players",
@@ -120,7 +118,6 @@ export async function GET() {
                     description: "Retrieves a history of past punishments.",
                     tags: ["Moderation"],
                     parameters: [
-                        { name: "server", in: "query", required: true, schema: { type: "string" } },
                         { name: "userId", in: "query", required: false, schema: { type: "string" } },
                         { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50, maximum: 100 } },
                         { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } }
@@ -142,9 +139,8 @@ export async function GET() {
                             "application/json": {
                                 schema: {
                                     type: "object",
-                                    required: ["server", "userId", "moderatorId", "type"],
+                                    required: ["userId", "moderatorId", "type"],
                                     properties: {
-                                        server: { type: "string" },
                                         userId: { type: "string" },
                                         moderatorId: { type: "string" },
                                         type: { type: "string", enum: ["Warn", "Kick", "Ban", "Ban Bolo"] },
@@ -165,7 +161,6 @@ export async function GET() {
                     description: "Checks if a specific staff member is currently on duty.",
                     tags: ["Shifts"],
                     parameters: [
-                        { name: "server", in: "query", required: true, schema: { type: "string" } },
                         { name: "userId", in: "query", required: true, schema: { type: "string" } }
                     ],
                     responses: {
@@ -196,9 +191,8 @@ export async function GET() {
                             "application/json": {
                                 schema: {
                                     type: "object",
-                                    required: ["server", "userId"],
+                                    required: ["userId"],
                                     properties: {
-                                        server: { type: "string" },
                                         userId: { type: "string" }
                                     }
                                 }
@@ -218,9 +212,8 @@ export async function GET() {
                             "application/json": {
                                 schema: {
                                     type: "object",
-                                    required: ["server", "userId"],
+                                    required: ["userId"],
                                     properties: {
-                                        server: { type: "string" },
                                         userId: { type: "string" }
                                     }
                                 }
@@ -241,9 +234,8 @@ export async function GET() {
                             "application/json": {
                                 schema: {
                                     type: "object",
-                                    required: ["server", "command"],
+                                    required: ["command"],
                                     properties: {
-                                        server: { type: "string" },
                                         command: { type: "string", description: "e.g. m Hello Server!" }
                                     }
                                 }

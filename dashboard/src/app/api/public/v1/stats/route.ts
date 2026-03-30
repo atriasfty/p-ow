@@ -10,11 +10,6 @@ export async function GET(req: Request) {
 
     // 2. Get Server Name from Query
     const { searchParams } = new URL(req.url)
-    const serverName = searchParams.get("server")
-
-    if (!serverName) {
-        return withRateLimit(NextResponse.json({ error: "Missing 'server' query parameter" }, { status: 400 }), auth)
-    }
 
     // 3. Find Server
     const server = await resolveServer(auth.apiKey)

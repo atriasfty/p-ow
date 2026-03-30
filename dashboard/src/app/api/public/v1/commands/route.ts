@@ -6,11 +6,6 @@ export async function POST(req: Request) {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
-    const { searchParams } = new URL(req.url)
-    const serverName = searchParams.get("server")
-
-    if (!serverName) return withRateLimit(NextResponse.json({ error: "Missing server name" }, { status: 400 }), auth)
-
     const body = await req.json().catch(() => ({}))
     const { command } = body
 

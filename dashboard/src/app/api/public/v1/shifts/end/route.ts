@@ -7,8 +7,7 @@ export async function POST(req: Request) {
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
     const { searchParams } = new URL(req.url)
-    const serverName = searchParams.get("server")
-    const body = await req.json().catch(() => ({}))
+const body = await req.json().catch(() => ({}))
     const { userId } = body
 
     if (!userId) return withRateLimit(NextResponse.json({ error: "Missing userId" }, { status: 400 }), auth)

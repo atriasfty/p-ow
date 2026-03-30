@@ -7,10 +7,7 @@ export async function GET(req: Request) {
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
 
     const { searchParams } = new URL(req.url)
-    const serverName = searchParams.get("server")
     const userId = searchParams.get("userId")
-
-    if (!serverName) return withRateLimit(NextResponse.json({ error: "Missing server name" }, { status: 400 }), auth)
 
     const server = await resolveServer(auth.apiKey)
     if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
@@ -36,11 +33,6 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
-
-    const { searchParams } = new URL(req.url)
-    const serverName = searchParams.get("server")
-
-    if (!serverName) return withRateLimit(NextResponse.json({ error: "Missing server name" }, { status: 400 }), auth)
 
     const body = await req.json().catch(() => ({}))
     const { userId, moderatorId, type, reason } = body

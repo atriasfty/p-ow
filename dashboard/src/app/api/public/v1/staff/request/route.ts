@@ -11,9 +11,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}))
 
     // Check searchParams first, then body
-    const serverName = searchParams.get("server") || body.server || body.serverName
-
-    const { reason, requester } = body
+const { reason, requester } = body
 
     const server = await resolveServer(auth.apiKey)
     if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)

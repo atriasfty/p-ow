@@ -49,7 +49,7 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     const limits: Record<string, number> = {
         "free": 250,
         "pow-pro": 5000,
-        "pow-max": Infinity
+        "pow-max": 1_000_000_000
     }
     const maxDaily = limits[plan] || 250
 
@@ -96,7 +96,7 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     return {
         valid: true,
         apiKey,
-        rateLimitRemaining: maxDaily === Infinity ? 999999 : maxDaily - (usageCount + 1),
+        rateLimitRemaining: maxDaily >= 1_000_000_000 ? 999999 : maxDaily - (usageCount + 1),
         rateLimitReset: Math.floor(resetAt.getTime() / 1000)
     }
 }
