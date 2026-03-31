@@ -124,16 +124,17 @@ export function LimitIndicator({
     max: number
     label: string
 }) {
-    const percentage = max === Infinity ? 0 : (current / max) * 100
-    const isNearLimit = percentage >= 80
-    const isAtLimit = current >= max
+    const isUnlimited = max >= 100_000
+    const percentage = isUnlimited ? 0 : (current / max) * 100
+    const isNearLimit = !isUnlimited && percentage >= 80
+    const isAtLimit = !isUnlimited && current >= max
 
     return (
         <div className="flex items-center gap-2 text-sm bg-zinc-900 px-3 py-1.5 rounded-lg border border-white/5">
             <span className="text-zinc-400">{label}:</span>
             <span className={`font-medium ${isAtLimit ? "text-red-400" : isNearLimit ? "text-yellow-400" : "text-emerald-400"
                 }`}>
-                {current} / {max === Infinity ? "∞" : max}
+                {current} / {isUnlimited ? "Unlimited" : max}
             </span>
         </div>
     )

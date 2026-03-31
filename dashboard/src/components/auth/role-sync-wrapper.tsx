@@ -19,6 +19,7 @@ interface Permissions {
     canRequestLoa: boolean
     canViewQuota: boolean
     canUseAdminCommands: boolean
+    canAccessAdmin: boolean
 }
 
 // Default permissions (all false)
@@ -35,7 +36,8 @@ const DEFAULT_PERMISSIONS: Permissions = {
     canManageBolos: false,
     canRequestLoa: false,
     canViewQuota: false,
-    canUseAdminCommands: false
+    canUseAdminCommands: false,
+    canAccessAdmin: false
 }
 
 // Context for permissions and quota
@@ -144,7 +146,8 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
                     canManageBolos: perms.canManageBolos ?? false,
                     canRequestLoa: perms.canRequestLoa ?? false,
                     canViewQuota: perms.canViewQuota ?? false,
-                    canUseAdminCommands: perms.canUseAdminCommands ?? false
+                    canUseAdminCommands: perms.canUseAdminCommands ?? false,
+                    canAccessAdmin: perms.canAccessAdmin ?? false
                 }
                 setPermissions(finalPermissions)
                 setViewerOnly(data.viewerOnly || false)

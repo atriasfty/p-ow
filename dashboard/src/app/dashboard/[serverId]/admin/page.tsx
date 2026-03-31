@@ -14,9 +14,9 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
 
     const { serverId } = await params
 
-    const server = await prisma.server.findUnique({
+    const server = (await prisma.server.findUnique({
         where: { id: serverId }
-    })
+    })) as any
 
     if (!server) {
         return <div className="text-center text-zinc-500">Server not found</div>
@@ -34,7 +34,13 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
     const admins = await prisma.member.findMany({
         where: { serverId, isAdmin: true }
     })
-    
+
+    // Get all roles for this server
+    const roles = await prisma.role.findMany({
+        where: { serverId },
+        orderBy: { quotaMinutes: 'desc' }
+    })
+
     // Check export feature
     const hasExportAccess = await isServerFeatureEnabled('EXPORTS', serverId)
 
@@ -76,12 +82,17 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
                         subscriptionPlan={server.subscriptionPlan}
                         currentMaxUploadSize={server.maxUploadSize}
                         currentStaffRequestRateLimit={server.staffRequestRateLimit}
+                        featureLoa={server.featureLoa}
+                        featureStaffReq={server.featureStaffReq}
+                        featurePermLog={server.featurePermLog}
+                        currentWebhookUrl={server.webhookUrl}
+                        currentWebhookEvents={server.webhookEvents}
                         isOwner={isOwner}
                         serverMembers={members}
                     />
                 </div>
             </div>
-            
+
             {/* Data Exports */}
             <DataExportsPanel serverId={serverId} hasExportAccess={hasExportAccess} />
 
@@ -100,7 +111,7 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
                         </div>
                     </div>
                     <div className="p-6">
-                        <AdminAccessManager serverId={serverId} admins={admins} />
+                        <AdminAccessManager serverId={serverId} admins={admins} roles={roles} />
                     </div>
                 </div>
             )}

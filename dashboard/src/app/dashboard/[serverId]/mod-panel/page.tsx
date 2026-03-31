@@ -204,11 +204,23 @@ export default async function ModPanelPage({
     )
 
     const ToolboxSection = (
-        <Toolbox serverId={serverId} isOnLoa={isOnLoa} />
+        <Toolbox
+            serverId={serverId}
+            isOnLoa={isOnLoa}
+            featureLoa={server.featureLoa}
+            featureStaffReq={server.featureStaffReq}
+            featurePermLog={server.featurePermLog}
+        />
     )
 
     const MobileToolboxSection = (
-        <MobileToolbox serverId={serverId} isOnLoa={isOnLoa} />
+        <MobileToolbox
+            serverId={serverId}
+            isOnLoa={isOnLoa}
+            featureLoa={server.featureLoa}
+            featureStaffReq={server.featureStaffReq}
+            featurePermLog={server.featurePermLog}
+        />
     )
 
     return (

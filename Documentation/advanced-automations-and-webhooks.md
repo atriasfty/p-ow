@@ -37,9 +37,21 @@ Automations don't have to trigger every time. You can use multiple conditions to
 *   **Action:** `Discord Message`
 *   **Target:** `ADMIN_CHANNEL_ID`
 
-## 3. HTTP Webhooks (Advanced)
+## 3. Server-Wide Webhook Notifications
 
-The `HTTP_REQUEST` action allows you to send data to any external URL using a **POST** request.
+Unlike Automations (which are custom and conditional), **Webhook Notifications** are a global setting that triggers rich Discord embeds for specific server events. These are configured directly in your **Admin Panel → General Settings**.
+
+### Supported Events
+*   **Punishments:** Notifies on every Warning, Kick, Ban, or BOLO created.
+*   **Shift Starts/Ends:** Perfect for a public `#on-duty-logs` channel.
+*   **BOLO Alerts:** Instant notification when a "Be On the Look Out" record is created.
+*   **LOA Requests:** Alerts staff management when a new Leave of Absence is submitted.
+
+To set this up, simply paste a **Discord Webhook URL** into the settings and check the boxes for the events you want to track.
+
+## 4. HTTP Webhooks in Automations (Advanced)
+
+The `HTTP_REQUEST` action in the Automation Engine allows you to send raw data to any external URL using a **POST** request. Use this if you need to connect to a custom database or non-Discord service.
 
 *   **URL:** The destination (e.g., `https://my-custom-app.com/api/webhooks/pow`).
 *   **Body:** You can use JSON format and include variables.
@@ -56,7 +68,7 @@ The `HTTP_REQUEST` action allows you to send data to any external URL using a **
 }
 ```
 
-## 4. Time-Interval Automations
+## 5. Time-Interval Automations
 
 Instead of waiting for a player action, you can set an automation to run at regular intervals (e.g., every 30 minutes).
 
@@ -66,7 +78,7 @@ Instead of waiting for a player action, you can set an automation to run at regu
 *   **Action:** `ANNOUNCEMENT`
 *   **Content:** `Don't forget to join our Discord for community events! Join Key: {join_key}`
 
-## 5. Automation Sequencing (Delays)
+## 6. Automation Sequencing (Delays)
 
 You can chain multiple actions together and use the **Delay** action to space them out.
 

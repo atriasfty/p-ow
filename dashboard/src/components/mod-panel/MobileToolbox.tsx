@@ -7,9 +7,18 @@ import { usePermissions } from "@/components/auth/role-sync-wrapper"
 interface MobileToolboxProps {
     serverId: string
     isOnLoa?: boolean
+    featureLoa?: boolean
+    featureStaffReq?: boolean
+    featurePermLog?: boolean
 }
 
-export function MobileToolbox({ serverId, isOnLoa }: MobileToolboxProps) {
+export function MobileToolbox({
+    serverId,
+    isOnLoa,
+    featureLoa = true,
+    featureStaffReq = true,
+    featurePermLog = true
+}: MobileToolboxProps) {
     const [loaOpen, setLoaOpen] = useState(false)
     const [commandOpen, setCommandOpen] = useState(false)
     const [permLogOpen, setPermLogOpen] = useState(false)
@@ -179,7 +188,7 @@ export function MobileToolbox({ serverId, isOnLoa }: MobileToolboxProps) {
             colorClass: "text-blue-400",
             bgClass: "bg-blue-500/10",
             borderClass: "border-blue-500/20",
-            show: permissions.canUseToolbox,
+            show: permissions.canUseToolbox && featurePermLog,
             onClick: () => setPermLogOpen(true),
         },
         {
@@ -201,7 +210,7 @@ export function MobileToolbox({ serverId, isOnLoa }: MobileToolboxProps) {
             colorClass: isOnLoa ? "text-zinc-500" : "text-orange-400",
             bgClass: isOnLoa ? "bg-zinc-500/10" : "bg-orange-500/10",
             borderClass: isOnLoa ? "border-zinc-500/20" : "border-orange-500/20",
-            show: permissions.canRequestLoa,
+            show: permissions.canRequestLoa && featureLoa,
             onClick: () => !isOnLoa && setLoaOpen(true),
             disabled: isOnLoa,
         },
@@ -213,7 +222,7 @@ export function MobileToolbox({ serverId, isOnLoa }: MobileToolboxProps) {
             colorClass: "text-red-400",
             bgClass: "bg-red-500/10",
             borderClass: "border-red-500/20",
-            show: permissions.canUseToolbox,
+            show: permissions.canUseToolbox && featureStaffReq,
             onClick: () => setStaffRequestOpen(true),
         },
     ]

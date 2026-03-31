@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Save, Loader2, RefreshCw, Bot } from "lucide-react"
 import { RoleCombobox } from "@/components/admin/role-combobox"
 import { ChannelCombobox } from "@/components/admin/channel-combobox"
+import { useDialog } from "@/components/providers/dialog-provider"
 import Link from "next/link"
 
 interface ServerSettingsFormProps {
@@ -28,6 +29,11 @@ interface ServerSettingsFormProps {
     subscriptionPlan?: string | null
     currentMaxUploadSize?: number | null
     currentStaffRequestRateLimit?: number | null
+    featureLoa?: boolean
+    featureStaffReq?: boolean
+    featurePermLog?: boolean
+    currentWebhookUrl?: string | null
+    currentWebhookEvents?: string | null
     isOwner?: boolean
     serverMembers?: any[]
 }
@@ -54,6 +60,11 @@ export function ServerSettingsForm({
     subscriptionPlan,
     currentMaxUploadSize,
     currentStaffRequestRateLimit,
+    featureLoa = true,
+    featureStaffReq = true,
+    featurePermLog = true,
+    currentWebhookUrl,
+    currentWebhookEvents,
     isOwner,
     serverMembers
 }: ServerSettingsFormProps) {
@@ -72,7 +83,7 @@ export function ServerSettingsForm({
     const [milestoneChannelId, setMilestoneChannelId] = useState(currentMilestoneChannelId || "")
     const [loaChannelId, setLoaChannelId] = useState(currentLoaChannelId || "")
     const [onLoaRoleId, setOnLoaRoleId] = useState(currentOnLoaRoleId || "")
-    
+
     // Advanced Config
     const [maxUploadSize, setMaxUploadSize] = useState(currentMaxUploadSize ? currentMaxUploadSize / 1024 / 1024 : 50)
     const [staffRequestRateLimit, setStaffRequestRateLimit] = useState(currentStaffRequestRateLimit ? currentStaffRequestRateLimit / 1000 / 60 : 5)
@@ -80,6 +91,21 @@ export function ServerSettingsForm({
     // White label bot state
     const [customBotToken, setCustomBotToken] = useState(currentCustomBotToken || "")
     const [customBotEnabled, setCustomBotEnabled] = useState(currentCustomBotEnabled || false)
+
+    // Feature Toggles state
+    const [isFeatureLoa, setIsFeatureLoa] = useState(featureLoa)
+    const [isFeatureStaffReq, setIsFeatureStaffReq] = useState(featureStaffReq)
+    const [isFeaturePermLog, setIsFeaturePermLog] = useState(featurePermLog)
+
+    // Webhook state
+    const [webhookUrl, setWebhookUrl] = useState(currentWebhookUrl || "")
+    const [webhookEvents, setWebhookEvents] = useState<string[]>(() => {
+        try {
+            return currentWebhookEvents ? JSON.parse(currentWebhookEvents) : []
+        } catch (e) {
+            return []
+        }
+    })
 
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState("")
@@ -89,6 +115,7 @@ export function ServerSettingsForm({
     const [targetOwnerId, setTargetOwnerId] = useState("")
     const [deleteConfirm, setDeleteConfirm] = useState("")
     const [dangerLoading, setDangerLoading] = useState(false)
+    const { showAlert, showConfirm } = useDialog()
 
     const handleSave = async () => {
         setSaving(true)
@@ -118,7 +145,12 @@ export function ServerSettingsForm({
                     customBotToken: customBotToken || null,
                     customBotEnabled,
                     maxUploadSize: maxUploadSize * 1024 * 1024,
-                    staffRequestRateLimit: staffRequestRateLimit * 1000 * 60
+                    staffRequestRateLimit: staffRequestRateLimit * 1000 * 60,
+                    featureLoa: isFeatureLoa,
+                    featureStaffReq: isFeatureStaffReq,
+                    featurePermLog: isFeaturePermLog,
+                    webhookUrl: webhookUrl || null,
+                    webhookEvents: webhookEvents
                 })
             })
 
@@ -136,8 +168,9 @@ export function ServerSettingsForm({
     }
 
     const handleDangerAction = async (action: string, value?: string) => {
-        if (!confirm(`Are you sure you want to perform this action?`)) return
-        
+        const confirmed = await showConfirm("Confirm Action", "Are you sure you want to perform this action?", "Proceed", "destructive")
+        if (!confirmed) return
+
         setDangerLoading(true)
         try {
             const res = await fetch("/api/admin/server/danger", {
@@ -148,13 +181,13 @@ export function ServerSettingsForm({
 
             const data = await res.json()
             if (res.ok) {
-                alert(data.message || "Action successful")
+                await showAlert("Success", data.message || "Action successful", "success")
                 if (action === "TRANSFER_OWNERSHIP") window.location.href = "/dashboard"
             } else {
-                alert(data.error || "Action failed")
+                await showAlert("Error", data.error || "Action failed", "error")
             }
         } catch (e) {
-            alert("An error occurred")
+            await showAlert("Error", "An error occurred", "error")
         } finally {
             setDangerLoading(false)
         }
@@ -162,19 +195,20 @@ export function ServerSettingsForm({
 
     const handleDeleteServer = async () => {
         if (deleteConfirm.trim() !== name.trim()) {
-            alert("Please type the server name correctly to confirm deletion.")
+            await showAlert("Name Mismatch", "Please type the server name correctly to confirm deletion.", "warning")
             return
         }
 
-        if (!confirm("FINAL WARNING: This will permanently delete all logs, punishments, and data for this server. This cannot be undone. Proceed?")) return
+        const confirmed = await showConfirm("Delete Server", "FINAL WARNING: This will permanently delete all logs, punishments, and data for this server. This cannot be undone. Proceed?", "DELETE", "destructive")
+        if (!confirmed) return
 
         setDangerLoading(true)
         try {
             const res = await fetch(`/api/admin/server/danger?serverId=${serverId}`, {
                 method: "DELETE",
-                headers: { 
+                headers: {
                     "Content-Type": "application/json",
-                    "x-csrf-check": "1" 
+                    "x-csrf-check": "1"
                 }
             })
 
@@ -182,10 +216,10 @@ export function ServerSettingsForm({
                 window.location.href = "/dashboard"
             } else {
                 const data = await res.json()
-                alert(data.error || "Failed to delete server")
+                await showAlert("Error", data.error || "Failed to delete server", "error")
             }
         } catch (e) {
-            alert("An error occurred")
+            await showAlert("Error", "An error occurred", "error")
         } finally {
             setDangerLoading(false)
         }
@@ -241,6 +275,122 @@ export function ServerSettingsForm({
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* Built-in Features Section */}
+            <div className="border-t border-[#333] pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Loader2 className="h-5 w-5 text-indigo-400 opacity-50" />
+                    Feature Toggles
+                </h3>
+
+                <div className="space-y-4">
+                    {/* LOA Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-[#222] border border-[#333] rounded-lg">
+                        <div>
+                            <p className="text-white font-medium">Leave of Absence (LOA)</p>
+                            <p className="text-xs text-zinc-500">Enable the LOA tab so staff can request absences.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsFeatureLoa(!isFeatureLoa)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFeatureLoa ? 'bg-indigo-500' : 'bg-zinc-700'
+                                }`}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFeatureLoa ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                            />
+                        </button>
+                    </div>
+
+                    {/* Staff Requests Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-[#222] border border-[#333] rounded-lg">
+                        <div>
+                            <p className="text-white font-medium">Staff Requests</p>
+                            <p className="text-xs text-zinc-500">Allow users to send a call for moderation support in-game.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsFeatureStaffReq(!isFeatureStaffReq)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFeatureStaffReq ? 'bg-indigo-500' : 'bg-zinc-700'
+                                }`}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFeatureStaffReq ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                            />
+                        </button>
+                    </div>
+
+                    {/* Perm Logs Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-[#222] border border-[#333] rounded-lg">
+                        <div>
+                            <p className="text-white font-medium">Perm Logs</p>
+                            <p className="text-xs text-zinc-500">Enable permission logging tracking tools.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsFeaturePermLog(!isFeaturePermLog)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isFeaturePermLog ? 'bg-indigo-500' : 'bg-zinc-700'
+                                }`}
+                        >
+                            <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isFeaturePermLog ? 'translate-x-6' : 'translate-x-1'
+                                    }`}
+                            />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Webhook Notifications Section */}
+            <div className="border-t border-[#333] pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-indigo-400" />
+                    Webhook Notifications
+                </h3>
+
+                <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-400 mb-2">
+                            Discord Webhook URL
+                        </label>
+                        <input
+                            type="url"
+                            value={webhookUrl}
+                            onChange={(e) => setWebhookUrl(e.target.value)}
+                            className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+                            placeholder="https://discord.com/api/webhooks/..."
+                        />
+                        <p className="text-xs text-zinc-600 mt-1">
+                            Events will be posted as rich embeds to this URL.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {[
+                            { id: "PUNISHMENT_CREATED", name: "Punishments" },
+                            { id: "SHIFT_START", name: "Shift Starts" },
+                            { id: "SHIFT_END", name: "Shift Ends" },
+                            { id: "BOLO_CREATED", name: "BOLO Created" },
+                            { id: "LOA_REQUESTED", name: "LOA Requested" }
+                        ].map((event) => (
+                            <label key={event.id} className="flex items-center gap-3 p-3 bg-[#222] border border-[#333] rounded-lg cursor-pointer hover:bg-white/5 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={webhookEvents.includes(event.id)}
+                                    onChange={(e) => {
+                                        if (e.target.checked) setWebhookEvents([...webhookEvents, event.id])
+                                        else setWebhookEvents(webhookEvents.filter(id => id !== event.id))
+                                    }}
+                                    className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-indigo-500 focus:ring-0 focus:ring-offset-0"
+                                />
+                                <span className="text-sm text-zinc-300">{event.name}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* Discord Integration Section */}

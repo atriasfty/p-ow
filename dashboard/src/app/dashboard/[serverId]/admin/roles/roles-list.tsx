@@ -20,6 +20,7 @@ interface RolePermissions {
     canRequestLoa: boolean
     canViewQuota: boolean
     canUseAdminCommands: boolean
+    canAccessAdmin: boolean
 }
 
 interface Role {
@@ -42,6 +43,7 @@ interface Role {
     canRequestLoa: boolean
     canViewQuota: boolean
     canUseAdminCommands: boolean
+    canAccessAdmin: boolean
     _count: { members: number }
 }
 
@@ -70,7 +72,8 @@ const PERMISSION_DETAILS: Record<keyof RolePermissions, { label: string, descrip
     canManageBolos: { label: "Manage BOLOs", description: "Allows resolving active BOLO statuses." },
     canRequestLoa: { label: "Request LOA", description: "Allows submitting Leave of Absence requests." },
     canViewQuota: { label: "View Quota Stats", description: "Allows the user to see their own weekly quota progress." },
-    canUseAdminCommands: { label: "Use Admin Commands", description: "Allows highly privileged commands (:mod, :admin, :unmod, etc.)" }
+    canUseAdminCommands: { label: "Use Admin Commands", description: "Allows highly privileged commands (:mod, :admin, :unmod, etc.)" },
+    canAccessAdmin: { label: "Admin Panel Access", description: "Grants automatic access to the server dashboard admin panel." }
 }
 
 const DEFAULT_PERMISSIONS: RolePermissions = {
@@ -86,7 +89,8 @@ const DEFAULT_PERMISSIONS: RolePermissions = {
     canManageBolos: true,
     canRequestLoa: true,
     canViewQuota: true,
-    canUseAdminCommands: false
+    canUseAdminCommands: false,
+    canAccessAdmin: false
 }
 
 export function RolesList({ serverId, roles: initialRoles, servers }: RolesListProps) {
@@ -123,7 +127,8 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
                 canManageBolos: role.canManageBolos,
                 canRequestLoa: role.canRequestLoa,
                 canViewQuota: role.canViewQuota,
-                canUseAdminCommands: role.canUseAdminCommands
+                canUseAdminCommands: role.canUseAdminCommands,
+                canAccessAdmin: role.canAccessAdmin
             })
         } else {
             setEditingRole(null)

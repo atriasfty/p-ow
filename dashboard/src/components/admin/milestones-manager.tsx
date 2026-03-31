@@ -5,6 +5,7 @@ import { Plus, Trash2, Loader2, Clock, Shield } from "lucide-react"
 import { RoleCombobox } from "./role-combobox"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Milestone {
     id: string
@@ -24,6 +25,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
     const [newHours, setNewHours] = useState("")
     const [newRoleId, setNewRoleId] = useState("")
     const [loading, setLoading] = useState(false)
+    const { showConfirm } = useDialog()
 
     const handleAdd = async () => {
         if (!newName || !newHours) return
@@ -56,7 +58,8 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this milestone?")) return
+        const confirmed = await showConfirm("Delete Milestone", "Are you sure you want to delete this milestone?", "Delete", "destructive")
+        if (!confirmed) return
 
         try {
             const res = await fetch(`/api/admin/milestones?serverId=${serverId}&id=${id}`, {

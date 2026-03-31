@@ -9,6 +9,13 @@ interface Admin {
     userId: string
 }
 
+interface Role {
+    id: string
+    name: string
+    color: string
+    canAccessAdmin: boolean
+}
+
 interface ClerkUser {
     id: string
     username: string | null
@@ -23,10 +30,12 @@ interface ClerkUser {
 interface AdminAccessManagerProps {
     serverId: string
     admins: Admin[]
+    roles: Role[]
 }
 
-export function AdminAccessManager({ serverId, admins: initialAdmins }: AdminAccessManagerProps) {
+export function AdminAccessManager({ serverId, admins: initialAdmins, roles: initialRoles }: AdminAccessManagerProps) {
     const [admins, setAdmins] = useState(initialAdmins)
+    const [roles, setRoles] = useState(initialRoles)
     const [users, setUsers] = useState<ClerkUser[]>([])
     const [adminUserInfo, setAdminUserInfo] = useState<Map<string, ClerkUser>>(new Map())
     const [search, setSearch] = useState("")
@@ -156,6 +165,22 @@ export function AdminAccessManager({ serverId, admins: initialAdmins }: AdminAcc
         }
     }
 
+    const toggleRoleAdmin = async (roleId: string, currentStatus: boolean) => {
+        try {
+            const res = await fetch("/api/admin/roles", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roleId, canAccessAdmin: !currentStatus })
+            })
+
+            if (res.ok) {
+                setRoles(prev => prev.map(r => r.id === roleId ? { ...r, canAccessAdmin: !currentStatus } : r))
+            }
+        } catch (e) {
+            console.error("Error toggling role admin:", e)
+        }
+    }
+
     // Get display name for an admin (use cached admin info or search results)
     const getAdminDisplayInfo = (admin: Admin): { name: string, avatar?: string, robloxUsername?: string } => {
         // First check the pre-fetched admin user info
@@ -261,10 +286,43 @@ export function AdminAccessManager({ serverId, admins: initialAdmins }: AdminAcc
                         )}
                     </div>
                 )}
+                {/* Dropdown omitted for brevity if nothing chosen */}
             </div>
 
-            {/* Admin List */}
-            <div className="space-y-2">
+            {/* Role-Based Access Section */}
+            <div className="space-y-3 pt-4 border-t border-[#333]">
+                <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Role-Based Access</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {roles.map(role => (
+                        <div
+                            key={role.id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-[#222] border border-[#333] hover:border-zinc-700 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <div
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: role.color }}
+                                />
+                                <span className="text-sm font-medium text-white">{role.name}</span>
+                            </div>
+                            <button
+                                onClick={() => toggleRoleAdmin(role.id, role.canAccessAdmin)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${role.canAccessAdmin ? 'bg-indigo-500' : 'bg-zinc-700'
+                                    }`}
+                            >
+                                <span
+                                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${role.canAccessAdmin ? 'translate-x-5' : 'translate-x-1'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Individual Admin List Section */}
+            <div className="space-y-2 pt-4 border-t border-[#333]">
+                <h4 className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Individual Access</h4>
                 <p className="text-sm text-zinc-500">{admins.length} admin(s)</p>
 
                 {loadingAdminInfo && admins.length > 0 ? (

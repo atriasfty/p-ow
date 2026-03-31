@@ -2,22 +2,24 @@
 
 import { useState } from "react"
 import { Download, Loader2, FileSpreadsheet } from "lucide-react"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: string, hasExportAccess: boolean }) {
     const [downloading, setDownloading] = useState<string | null>(null)
+    const { showAlert } = useDialog()
 
     const handleExport = async (type: string) => {
         if (!hasExportAccess) {
-            alert("This feature requires a POW Pro or POW Max subscription.")
+            await showAlert("Upgrade Required", "This feature requires a POW Pro or POW Max subscription.", "warning")
             return
         }
-        
+
         setDownloading(type)
         try {
             const res = await fetch(`/api/admin/exports?serverId=${serverId}&type=${type}`)
             if (!res.ok) {
-                if (res.status === 403) alert("Subscription upgrade required to export data.")
-                else alert("Failed to export data.")
+                if (res.status === 403) await showAlert("Upgrade Required", "Subscription upgrade required to export data.", "warning")
+                else await showAlert("Export Failed", "Failed to export data.", "error")
                 return
             }
 
@@ -31,7 +33,7 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
             window.URL.revokeObjectURL(url)
             document.body.removeChild(a)
         } catch (e) {
-            alert("An error occurred while exporting.")
+            await showAlert("Export Error", "An error occurred while exporting.", "error")
         } finally {
             setDownloading(null)
         }
@@ -50,15 +52,15 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
                     </div>
                 </div>
             </div>
-            
+
             <div className="p-6">
                 {!hasExportAccess && (
                     <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-sm text-green-400">
                         <strong>Pro Feature:</strong> Upgrade your server subscription to export your members, shifts, and roles to CSV files.
                     </div>
                 )}
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="p-4 bg-[#222] border border-[#333] rounded-lg flex flex-col justify-between">
                         <div>
                             <h3 className="font-semibold text-white mb-1">Members List</h3>
@@ -100,6 +102,21 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
                             className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50"
                         >
                             {downloading === 'roles' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            Export CSV
+                        </button>
+                    </div>
+
+                    <div className="p-4 bg-[#222] border border-[#333] rounded-lg flex flex-col justify-between">
+                        <div>
+                            <h3 className="font-semibold text-white mb-1">Punishment Logs</h3>
+                            <p className="text-xs text-zinc-500 mb-4">Export the last 1,000 punishment records including user/mod usernames, type, reason, and status.</p>
+                        </div>
+                        <button
+                            onClick={() => handleExport('punishments')}
+                            disabled={!hasExportAccess || downloading === 'punishments'}
+                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50"
+                        >
+                            {downloading === 'punishments' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             Export CSV
                         </button>
                     </div>

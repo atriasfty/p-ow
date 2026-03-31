@@ -3,18 +3,21 @@
 import { useState, useEffect } from "react"
 import { ShieldAlert, Plus, Trash2, Key, Activity, Copy, Check, AlertTriangle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 export function ApiKeysPanel({ serverId }: { serverId: string }) {
     const [keys, setKeys] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [isCreating, setIsCreating] = useState(false)
     const [newName, setNewName] = useState("")
+    const [newAllowedIps, setNewAllowedIps] = useState("")
     const [copiedId, setCopiedId] = useState<string | null>(null)
     const [analytics, setAnalytics] = useState<{ date: string, count: number }[]>([])
     const [serverUsage, setServerUsage] = useState({ count: 0, limit: 250 })
 
     // One-time display state
     const [createdKey, setCreatedKey] = useState<any | null>(null)
+    const { showConfirm } = useDialog()
 
     useEffect(() => {
         fetchKeys()
@@ -44,12 +47,13 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
         const res = await fetch("/api/admin/api-keys", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: newName, serverId })
+            body: JSON.stringify({ name: newName, serverId, allowedIps: newAllowedIps })
         })
 
         if (res.ok) {
             const data = await res.json()
             setNewName("")
+            setNewAllowedIps("")
             setIsCreating(false)
             setCreatedKey(data) // Store the full key for one-time display
             fetchKeys()
@@ -57,12 +61,24 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to revoke this API key? This action cannot be undone.")) return
+        const confirmed = await showConfirm("Revoke API Key", "Are you sure you want to revoke this API key? This action cannot be undone.", "Revoke", "destructive")
+        if (!confirmed) return
 
         const res = await fetch(`/api/admin/api-keys?id=${id}&serverId=${serverId}`, {
             method: "DELETE"
         })
 
+        if (res.ok) {
+            fetchKeys()
+        }
+    }
+
+    const handleUpdate = async (id: string, updates: any) => {
+        const res = await fetch("/api/admin/api-keys", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, serverId, ...updates })
+        })
         if (res.ok) {
             fetchKeys()
         }
@@ -220,29 +236,45 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
             )}
 
             {isCreating && (
-                <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-zinc-900 p-4">
-                    <h3 className="mb-4 font-medium text-white">Create New API Key</h3>
-                    <div className="flex gap-3">
-                        <input
-                            type="text"
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            placeholder="e.g., Discord Bot Integration"
-                            className="flex-1 rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                            autoFocus
-                        />
-                        <button
-                            type="submit"
-                            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-zinc-200 transition-colors"
-                        >
-                            Create
-                        </button>
+                <form onSubmit={handleCreate} className="rounded-xl border border-white/10 bg-zinc-900 p-4 space-y-4">
+                    <h3 className="font-medium text-white">Create New API Key</h3>
+                    <div className="space-y-3">
+                        <div>
+                            <label className="text-xs text-zinc-400 block mb-1">Key Name</label>
+                            <input
+                                type="text"
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                placeholder="e.g., Discord Bot Integration"
+                                className="w-full rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                                autoFocus
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-zinc-400 block mb-1">IP Allowlist (Optional)</label>
+                            <input
+                                type="text"
+                                value={newAllowedIps}
+                                onChange={(e) => setNewAllowedIps(e.target.value)}
+                                placeholder="e.g., 192.168.1.1, 10.0.0.0"
+                                className="w-full rounded-lg border border-white/10 bg-zinc-950 px-4 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none"
+                            />
+                            <p className="text-[10px] text-zinc-500 mt-1">Comma-separated IPv4/IPv6 addresses. Leave blank to allow from anywhere.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-3 justify-end pt-2">
                         <button
                             type="button"
                             onClick={() => setIsCreating(false)}
                             className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
                         >
                             Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-zinc-200 transition-colors"
+                        >
+                            Create
                         </button>
                     </div>
                 </form>
@@ -256,18 +288,18 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                     </div>
                 ) : (
                     keys.map((key) => (
-                        <div key={key.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-zinc-900 p-4">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-medium text-white">{key.name}</h3>
-                                    {key.enabled ? (
-                                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">Active</span>
-                                    ) : (
-                                        <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">Disabled</span>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-4 text-xs text-zinc-500 w-full sm:w-auto mt-3 sm:mt-0">
-                                    <div className="flex items-center gap-2 bg-black/50 border border-white/5 py-1.5 px-3 rounded-lg font-mono">
+                        <div key={key.id} className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-white/10 bg-zinc-900 p-4 gap-4">
+                            <div className="space-y-3 flex-1">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-medium text-white">{key.name}</h3>
+                                        {key.enabled ? (
+                                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-400">Active</span>
+                                        ) : (
+                                            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">Disabled</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-black/50 border border-white/5 py-1 px-3 rounded-lg font-mono text-xs w-fit">
                                         {key.key}
                                         <button
                                             onClick={() => handleCopy(key.key, key.id)}
@@ -278,14 +310,27 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                                         </button>
                                     </div>
                                 </div>
+
+                                <div className="max-w-md">
+                                    <input
+                                        type="text"
+                                        defaultValue={key.allowedIps || ""}
+                                        onBlur={(e) => handleUpdate(key.id, { allowedIps: e.target.value })}
+                                        placeholder="Allow any IP (or specify e.g. 192.168.1.1)"
+                                        className="w-full bg-black/50 border border-white/5 rounded-lg px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                                        title="Comma-separated IPv4/IPv6 addresses"
+                                    />
+                                </div>
                             </div>
-                            <button
-                                onClick={() => handleDelete(key.id)}
-                                className="rounded-lg p-2 text-zinc-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                                title="Revoke Key"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="flex items-center self-end sm:self-center">
+                                <button
+                                    onClick={() => handleDelete(key.id)}
+                                    className="rounded-lg p-2 text-zinc-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                                    title="Revoke Key"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}

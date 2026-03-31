@@ -6,6 +6,7 @@ import { ArrowLeft, Shield, Ban, AlertTriangle, Gavel, Calendar, User, History, 
 import { PunishmentForm } from "./punishment-form"
 import { LogViewer } from "@/components/logs/log-viewer"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface RobloxUser {
     id: number
@@ -41,6 +42,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
     const [robloxWarning, setRobloxWarning] = useState("") // Warning for partial panel
     const [playerStatus, setPlayerStatus] = useState<PlayerStatus | null>(null)
     const { permissions } = usePermissions()
+    const { showConfirm } = useDialog()
     // Admin shift management state
     const [isAdmin, setIsAdmin] = useState(false)
     const [weeklyShifts, setWeeklyShifts] = useState<any[]>([])
@@ -171,7 +173,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
         try {
             const res = await fetch('/api/admin/shifts', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'x-csrf-check': '1'
                 },
@@ -199,7 +201,8 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
 
     // Delete a shift
     const handleDeleteShift = async (shiftId: string) => {
-        if (!confirm('Are you sure you want to delete this shift? This will remove it from quota calculations.')) return
+        const confirmed = await showConfirm("Delete Shift", "Are you sure you want to delete this shift? This will remove it from quota calculations.", "Delete", "destructive")
+        if (!confirmed) return
         setShiftLoading(true)
 
         try {
@@ -576,7 +579,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
                                                     <button
                                                         onClick={async () => {
                                                             // Quick client-side update for responsiveness, then refresh
-                                                            await fetch(`/api/resolve-bolo?id=${p.id}`, { 
+                                                            await fetch(`/api/resolve-bolo?id=${p.id}`, {
                                                                 method: 'POST',
                                                                 headers: { 'x-csrf-check': '1' }
                                                             })

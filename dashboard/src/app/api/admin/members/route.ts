@@ -24,10 +24,25 @@ export async function GET(req: Request) {
 
         const members = await prisma.member.findMany({
             where: { serverId },
-            include: { role: true }
+            include: {
+                role: true
+            }
         })
 
-        return NextResponse.json({ members })
+        const membersWithShifts = await Promise.all(members.map(async (m) => {
+            const lastShift = await prisma.shift.findFirst({
+                where: { userId: m.userId, serverId },
+                orderBy: { startTime: 'desc' },
+                select: { startTime: true, endTime: true }
+            })
+
+            return {
+                ...m,
+                shifts: lastShift ? [lastShift] : []
+            }
+        }))
+
+        return NextResponse.json({ members: membersWithShifts })
     } catch (e) {
         console.error("Members fetch error:", e)
         return NextResponse.json({ error: "Failed to fetch members" }, { status: 500 })

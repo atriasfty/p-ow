@@ -108,7 +108,10 @@ export async function isServerAdmin(user: SessionUser | null, serverId: string):
         where: {
             serverId,
             userId: { in: possibleIds },
-            isAdmin: true
+            OR: [
+                { isAdmin: true },
+                { role: { canAccessAdmin: true } }
+            ]
         }
     })
 

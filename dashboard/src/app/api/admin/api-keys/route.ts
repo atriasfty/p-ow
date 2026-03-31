@@ -91,18 +91,18 @@ export async function GET(req: Request) {
                 select: { createdAt: true }
             })
 
-            // Group by day (MM/DD format)
+            // Group by day (DD/MM format)
             const dailyCounts: Record<string, number> = {}
             for (let i = 6; i >= 0; i--) {
                 const d = new Date()
                 d.setDate(d.getDate() - i)
-                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`
+                const dateStr = `${d.getDate()}/${d.getMonth() + 1}`
                 dailyCounts[dateStr] = 0
             }
 
             logs.forEach(log => {
                 const d = log.createdAt
-                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`
+                const dateStr = `${d.getDate()}/${d.getMonth() + 1}`
                 if (dailyCounts[dateStr] !== undefined) {
                     dailyCounts[dateStr]++
                 }
@@ -122,7 +122,7 @@ export async function POST(req: Request) {
         return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
     }
     const session = await getSession()
-    const { name, serverId } = await req.json()
+    const { name, serverId, allowedIps } = await req.json()
 
     // Check access if serverId is provided
     if (serverId) {
@@ -148,7 +148,8 @@ export async function POST(req: Request) {
             name,
             key,
             serverId: serverId || null,
-            enabled: true
+            enabled: true,
+            allowedIps: allowedIps || null
         }
     })
 
@@ -191,7 +192,7 @@ export async function PATCH(req: Request) {
         return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
     }
     const session = await getSession()
-    const { id, serverId, enabled, rateLimit, dailyLimit } = await req.json()
+    const { id, serverId, enabled, rateLimit, dailyLimit, allowedIps } = await req.json()
 
     if (serverId) {
         if (!await isServerAdmin(session?.user as any, serverId)) {
@@ -210,6 +211,7 @@ export async function PATCH(req: Request) {
     if (typeof enabled === "boolean") data.enabled = enabled
     if (typeof rateLimit === "number") data.rateLimit = rateLimit
     if (typeof dailyLimit === "number") data.dailyLimit = dailyLimit
+    if (allowedIps !== undefined) data.allowedIps = allowedIps || null
 
     const apiKey = await prisma.apiKey.updateMany({
         where: { id, ...(serverId ? { serverId } : {}) },

@@ -1,8 +1,9 @@
 import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin, isSuperAdmin } from "@/lib/admin"
+import { prisma } from "@/lib/db"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert, Trophy, Key, CreditCard } from "lucide-react"
+import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert, Trophy, Key, CreditCard, ActivitySquare } from "lucide-react"
 import { checkConnectionRequirements } from "@/lib/auth-server"
 import { ConnectionRequirementScreen } from "@/components/auth/connection-requirement-screen"
 
@@ -37,20 +38,28 @@ export default async function AdminLayout({
         redirect(`/dashboard/${serverId}/mod-panel`)
     }
 
+    const server = await prisma.server.findUnique({
+        where: { id: serverId },
+        select: { featureLoa: true }
+    })
+
     const superAdmin = isSuperAdmin(session.user)
 
     const tabs = [
         { name: "General", href: `/dashboard/${serverId}/admin`, icon: Settings },
+        { name: "Audit Log", href: `/dashboard/${serverId}/admin/audit`, icon: ActivitySquare },
         { name: "Members", href: `/dashboard/${serverId}/admin/members`, icon: Users },
         { name: "Roles", href: `/dashboard/${serverId}/admin/roles`, icon: Shield },
         { name: "Milestones", href: `/dashboard/${serverId}/admin/milestones`, icon: Trophy },
         { name: "API Keys", href: `/dashboard/${serverId}/admin/api-keys`, icon: Key },
         { name: "Subscription", href: `/dashboard/${serverId}/admin/subscription`, icon: CreditCard },
-        { name: "Leave of Absences", href: `/dashboard/${serverId}/admin/loa`, icon: Calendar },
-        { name: "Quota", href: `/dashboard/${serverId}/admin/quota`, icon: Clock },
         { name: "Automations", href: `/dashboard/${serverId}/admin/automations`, icon: Zap },
         { name: "Raid Mitigation", href: `/dashboard/${serverId}/admin/raid-mitigation`, icon: ShieldAlert },
     ]
+
+    if (server?.featureLoa !== false) {
+        tabs.splice(7, 0, { name: "Leave of Absences", href: `/dashboard/${serverId}/admin/loa`, icon: Calendar })
+    }
 
     return (
         <div className="min-h-screen bg-[#111] text-zinc-100 font-sans">

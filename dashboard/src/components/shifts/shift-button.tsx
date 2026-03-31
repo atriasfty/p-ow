@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface ShiftButtonProps {
     isActive: boolean
@@ -13,6 +14,7 @@ interface ShiftButtonProps {
 export function ShiftButton({ isActive, serverId, disabled }: ShiftButtonProps) {
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const { showAlert } = useDialog()
 
     const toggleShift = async () => {
         setLoading(true)
@@ -30,7 +32,7 @@ export function ShiftButton({ isActive, serverId, disabled }: ShiftButtonProps) 
                 router.refresh()
             } else {
                 const data = await res.json()
-                alert(data.error || "Failed to toggle shift")
+                await showAlert("Shift Error", data.error || "Failed to toggle shift", "error")
             }
         } catch (e) {
             console.error("Shift toggle error:", e)
@@ -50,11 +52,10 @@ export function ShiftButton({ isActive, serverId, disabled }: ShiftButtonProps) 
         <button
             onClick={toggleShift}
             disabled={disabled || loading}
-            className={`flex items-center justify-center mx-auto gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50 ${
-                isActive 
-                    ? "bg-red-500 hover:bg-red-600 text-white shadow-red-900/20" 
+            className={`flex items-center justify-center mx-auto gap-2 px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg disabled:opacity-50 ${isActive
+                    ? "bg-red-500 hover:bg-red-600 text-white shadow-red-900/20"
                     : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-900/20"
-            }`}
+                }`}
         >
             {loading && (
                 <Loader2 className="h-5 w-5 animate-spin" />

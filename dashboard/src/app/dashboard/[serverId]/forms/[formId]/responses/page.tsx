@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { ArrowLeft, Download, BarChart3, FileText, Users, Calendar, ChevronDown, ChevronUp, PieChart, Trash2 } from "lucide-react"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Response {
     id: string
@@ -104,6 +105,7 @@ export default function ResponsesPage({
     const [deleting, setDeleting] = useState<string | null>(null)
 
     const [canExport, setCanExport] = useState(false)
+    const { showConfirm } = useDialog()
 
     useEffect(() => {
         params.then(p => {
@@ -144,7 +146,9 @@ export default function ResponsesPage({
     }
 
     const deleteResponse = async (responseId: string) => {
-        if (!resolvedParams || !confirm("Are you sure you want to delete this response?")) return
+        if (!resolvedParams) return
+        const confirmed = await showConfirm("Delete Response", "Are you sure you want to delete this response?", "Delete", "destructive")
+        if (!confirmed) return
         setDeleting(responseId)
         try {
             const res = await fetch(`/api/forms/${resolvedParams.formId}/responses?responseId=${responseId}`, {
@@ -163,7 +167,9 @@ export default function ResponsesPage({
     }
 
     const deleteAllResponses = async () => {
-        if (!resolvedParams || !confirm("Are you sure you want to delete ALL responses? This cannot be undone.")) return
+        if (!resolvedParams) return
+        const confirmed = await showConfirm("Delete All Responses", "Are you sure you want to delete ALL responses? This cannot be undone.", "Delete All", "destructive")
+        if (!confirmed) return
         setDeleting("all")
         try {
             const res = await fetch(`/api/forms/${resolvedParams.formId}/responses?deleteAll=true`, {

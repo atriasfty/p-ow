@@ -25,7 +25,11 @@ Downloads a CSV of the last 500 shift records.
 
 ### 3. Roles Export
 Downloads a CSV of all Panel Roles configured for your server.
-* **Included Data:** Role Name, mapped Discord Role ID, the number of members with the role, and key permissions (like `canBan`, `canUseToolbox`).
+* **Included Data:** Role name, mapped Discord Role ID, the number of members with the role, and key permissions (like `canBan`, `canUseToolbox`).
+
+### 4. Punishment Logs Export
+Downloads a CSV of the last 1,000 recorded punishments.
+* **Included Data:** Roblox Username of the user, Roblox Username of the moderator, Type (Warn/Kick/Ban/BOLO), Reason, Resolution Status, and Created Timestamp.
 
 ## Using the Exported Data
 

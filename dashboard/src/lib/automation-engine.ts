@@ -4,6 +4,7 @@ import { getServerConfig } from "@/lib/server-config"
 import { getServerOverride } from "./config"
 import dns from "dns"
 import { promisify } from "util"
+import { fireWebhook } from "./webhook"
 
 const lookup = promisify(dns.lookup)
 
@@ -112,7 +113,14 @@ export class AutomationEngine {
                 automations = all.filter(a => a.trigger === type)
             }
 
-            if (automations.length === 0) return
+            if (automations.length === 0) {
+                // Even if no automations defined, we still fire the global webhook if configured
+                await this.handleGlobalWebhook(type, context)
+                return
+            }
+
+            // Global Webhook
+            await this.handleGlobalWebhook(type, context)
 
             for (const automation of automations) {
                 let conditionsMet = true
@@ -336,5 +344,40 @@ export class AutomationEngine {
             result = result.replace(/{punishment_target}/g, wrap(context.punishment.target))
         }
         return result.replace(/{timestamp}/g, new Date().toISOString())
+    }
+
+    private static async handleGlobalWebhook(type: TriggerType, context: AutomationContext) {
+        let eventType: any = null
+        if (type === "PUNISHMENT_ISSUED" || type === "BAN_ISSUED" || type === "KICK_ISSUED" || type === "WARN_ISSUED") {
+            eventType = "PUNISHMENT_CREATED"
+        } else if (type === "SHIFT_START") {
+            eventType = "SHIFT_START"
+        } else if (type === "SHIFT_END") {
+            eventType = "SHIFT_END"
+        } else if (type === "BOLO_CREATED") {
+            eventType = "BOLO_CREATED"
+        }
+
+        if (!eventType) return
+
+        const embed: any = {
+            title: `Event: ${eventType.replace(/_/g, " ")}`,
+            fields: []
+        }
+
+        if (context.player) {
+            embed.fields.push({ name: "Player", value: `${context.player.name} (${context.player.id})`, inline: true })
+        }
+
+        if (context.punishment) {
+            embed.description = `**Type:** ${context.punishment.type}\n**Reason:** ${context.punishment.reason}`
+            embed.fields.push({ name: "Issuer", value: context.punishment.issuer, inline: true })
+        }
+
+        if (context.details?.duration) {
+            embed.fields.push({ name: "Duration", value: `${Math.floor(context.details.duration / 60)}m ${context.details.duration % 60}s`, inline: true })
+        }
+
+        await fireWebhook(context.serverId, eventType, embed)
     }
 }

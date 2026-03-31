@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
+import { AutomationEngine } from "@/lib/automation-engine"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
 
@@ -35,6 +36,12 @@ export async function POST(req: Request) {
                 serverId,
                 startTime: new Date()
             }
+        })
+
+        // Trigger Automation
+        await AutomationEngine.trigger("SHIFT_START", {
+            serverId,
+            player: { name: session.user.name || session.user.username || "Unknown", id: session.user.id }
         })
 
         return NextResponse.json(shift)
@@ -77,6 +84,13 @@ export async function PATCH(req: Request) {
         // Check for milestones
         const { processMilestones } = await import("@/lib/milestones")
         await processMilestones(session.user.id, serverId)
+
+        // Trigger Automation
+        await AutomationEngine.trigger("SHIFT_END", {
+            serverId,
+            player: { name: session.user.name || session.user.username || "Unknown", id: session.user.id },
+            details: { duration }
+        })
 
         return NextResponse.json(updated)
     } catch (e) {

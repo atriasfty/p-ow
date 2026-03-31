@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Search, Loader2, History, RotateCcw, Clock } from "lucide-react"
 import { usePostHog } from "posthog-js/react"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface RaidMitigationClientProps {
     serverId: string
@@ -10,6 +11,7 @@ interface RaidMitigationClientProps {
 
 export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
     const posthog = usePostHog()
+    const { showConfirm } = useDialog()
     const [query, setQuery] = useState("")
     const [searching, setSearching] = useState(false)
     const [targetUser, setTargetUser] = useState<{ id: string; name: string } | null>(null)
@@ -65,10 +67,10 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
         setAnalyzing(true)
         try {
             const reversableCommands = [":ban", ":unban", ":unadmin", ":unmod"]
-            const count = logsToAnalyze.filter(l => 
+            const count = logsToAnalyze.filter(l =>
                 l.command && reversableCommands.some(cmd => l.command.toLowerCase().startsWith(cmd))
             ).length
-            
+
             if (count > 0) {
                 setMessage(`Found ${count} potentially reversable actions in recent history.`)
             } else {
@@ -81,15 +83,16 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
 
     const handleRollback = async () => {
         if (!targetUser) return
-        
+
         let confirmMsg = `Are you sure you want to rollback actions for ${targetUser.name}?`
         if (rollbackTime) {
             confirmMsg += ` This will reverse actions taken after ${new Date(rollbackTime).toLocaleString()}.`
         } else {
             confirmMsg += ` This will reverse actions from the last 24 hours.`
         }
-        
-        if (!confirm(confirmMsg)) return
+
+        const confirmed = await showConfirm("Confirm Rollback", confirmMsg, "Rollback", "destructive")
+        if (!confirmed) return
 
         setRollingBack(true)
         try {
@@ -127,18 +130,18 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
                         <div>
                             <label className="block text-xs text-zinc-500 mb-1">Roblox Username or ID</label>
                             <div className="relative">
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
-                                    placeholder="Search user..." 
+                                    placeholder="Search user..."
                                     className="w-full bg-[#222] border border-[#333] rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors"
                                 />
                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
                             </div>
                         </div>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={searching || !query}
                             className="w-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
@@ -150,8 +153,8 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
                         <div className="mt-6 pt-6 border-t border-[#222]">
                             <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 bg-[#222] rounded-full overflow-hidden">
-                                    <img 
-                                        src={`https://www.roblox.com/headshot-thumbnail/image?userId=${targetUser.id}&width=150&height=150&format=png`} 
+                                    <img
+                                        src={`https://www.roblox.com/headshot-thumbnail/image?userId=${targetUser.id}&width=150&height=150&format=png`}
                                         alt={targetUser.name}
                                         className="w-full h-full object-cover"
                                     />
@@ -174,12 +177,12 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
                         <p className="text-zinc-400 text-sm mb-4">
                             Rollback will reverse only: :ban, :unban, :unadmin, :unmod.
                         </p>
-                        
+
                         <div className="mb-4">
                             <label className="block text-xs text-zinc-500 mb-1">Rollback actions after:</label>
                             <div className="relative">
-                                <input 
-                                    type="datetime-local" 
+                                <input
+                                    type="datetime-local"
                                     value={rollbackTime}
                                     onChange={(e) => setRollbackTime(e.target.value)}
                                     className="w-full bg-[#222] border border-[#333] rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-red-500 transition-colors [color-scheme:dark]"
@@ -189,7 +192,7 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
                             <p className="text-[10px] text-zinc-600 mt-1">Leave empty to rollback last 24h</p>
                         </div>
 
-                        <button 
+                        <button
                             onClick={handleRollback}
                             disabled={rollingBack}
                             className="w-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-400 text-sm font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -216,7 +219,7 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
                         {loadingLogs ? "Loading..." : `${logs.length} events found`}
                     </span>
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                     {loadingLogs ? (
                         <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-2">
@@ -226,11 +229,10 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
                     ) : logs.length > 0 ? (
                         logs.map((log) => (
                             <div key={log.id} className="bg-[#222] p-3 rounded-lg border border-[#333] flex items-start gap-3">
-                                <div className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
-                                    [":ban", ":unban", ":unmod", ":unadmin"].some(cmd => log.command?.toLowerCase().startsWith(cmd))
-                                        ? "bg-red-500" 
+                                <div className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${[":ban", ":unban", ":unmod", ":unadmin"].some(cmd => log.command?.toLowerCase().startsWith(cmd))
+                                        ? "bg-red-500"
                                         : "bg-zinc-600"
-                                }`} />
+                                    }`} />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-zinc-300 text-sm font-mono break-all">{log.command}</p>
                                     <p className="text-zinc-600 text-xs mt-1">

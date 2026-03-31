@@ -38,9 +38,9 @@ const SERVER_LIMITS: Record<ServerPlan, PlanLimits> = {
         hasWhiteLabel: false
     },
     'pow-max': {
-        forms: Infinity,
-        automations: Infinity,
-        apiRateLimit: Infinity,
+        forms: 1_000_000_000,
+        automations: 1_000_000_000,
+        apiRateLimit: 1_000_000_000,
         hasRaidDetection: true,
         hasRaidAutoActions: true,
         hasExports: true,
@@ -152,7 +152,7 @@ export async function linkSubscriptionToServer(
     serverId: string,
     plan: 'pow-pro' | 'pow-max'
 ): Promise<{ success: boolean; error?: string }> {
-    
+
     // Check if user is superadmin
     const isSuper = isSuperAdmin({ id: userId } as any)
 

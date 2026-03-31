@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { SuperServerEditModal } from "./super-server-edit-modal"
 import { ConfirmModal } from "@/components/ui/confirm-modal"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 export function SuperServersTable({ initialServers }: { initialServers: any[] }) {
     const [servers, setServers] = useState(initialServers)
@@ -16,6 +17,7 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
     const [editingServer, setEditingServer] = useState<any | null>(null)
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const router = useRouter()
+    const { showAlert } = useDialog()
 
     const filteredServers = servers.filter(s =>
         (s.customName || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -37,10 +39,10 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                 setDeletingId(null)
                 router.refresh()
             } else {
-                alert("Failed to delete server.")
+                await showAlert("Error", "Failed to delete server.", "error")
             }
         } catch (e) {
-            alert("An error occurred.")
+            await showAlert("Error", "An error occurred.", "error")
         } finally {
             setUpdatingId(null)
         }
@@ -113,8 +115,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
                                             <div className={`h-1.5 w-1.5 rounded-full ${server.subscriptionPlan === 'pow-max' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' :
-                                                    server.subscriptionPlan === 'pow-pro' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]' :
-                                                        'bg-zinc-500'
+                                                server.subscriptionPlan === 'pow-pro' ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.4)]' :
+                                                    'bg-zinc-500'
                                                 }`} />
                                             <span className="capitalize text-zinc-300 font-bold text-xs tracking-wide">
                                                 {server.subscriptionPlan || "free"}

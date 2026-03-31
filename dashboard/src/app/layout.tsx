@@ -11,6 +11,7 @@ import { PWARegister } from "@/components/pwa/PWARegister";
 import { PWAProvider } from "@/components/providers/pwa-provider";
 import { GitBookProvider } from "@/components/providers/gitbook-provider";
 import { EnsureConnections } from "@/components/auth/ensure-connections";
+import { DialogProvider } from "@/components/providers/dialog-provider";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
 export const metadata: Metadata = {
@@ -61,12 +62,14 @@ export default function RootLayout({
               <PostHogProvider>
                 <GitBookProvider>
                   <PWAProvider>
-                    <EnsureConnections>
-                      <PWAGate>
-                        {children}
-                      </PWAGate>
-                      <CookieConsentBanner />
-                    </EnsureConnections>
+                    <DialogProvider>
+                      <EnsureConnections>
+                        <PWAGate>
+                          {children}
+                        </PWAGate>
+                        <CookieConsentBanner />
+                      </EnsureConnections>
+                    </DialogProvider>
                   </PWAProvider>
                 </GitBookProvider>
               </PostHogProvider>

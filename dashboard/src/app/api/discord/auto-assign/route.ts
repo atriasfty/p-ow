@@ -17,7 +17,8 @@ const VIEWER_PERMISSIONS = {
     canManageBolos: false,
     canRequestLoa: false,
     canViewQuota: true,
-    canUseAdminCommands: false
+    canUseAdminCommands: false,
+    canAccessAdmin: false
 }
 
 // Auto-assign panel role based on Discord roles
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
         if (!server) {
             return NextResponse.json({ error: "Server not found" }, { status: 404 })
         }
-        
+
         const botToken = server?.customBotEnabled && server?.customBotToken ? server.customBotToken : process.env.DISCORD_BOT_TOKEN
         if (!botToken) {
             return NextResponse.json({ error: "Bot token not configured" }, { status: 500 })
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
             try {
                 // Remove member from this server's member list
                 await prisma.member.deleteMany({
-                    where: { 
+                    where: {
                         userId: session.user.id,
                         serverId: server.id
                     }
@@ -173,7 +174,8 @@ export async function POST(req: Request) {
                     canManageBolos: bestMatch.role.canManageBolos,
                     canRequestLoa: bestMatch.role.canRequestLoa,
                     canViewQuota: bestMatch.role.canViewQuota,
-                    canUseAdminCommands: bestMatch.role.canUseAdminCommands
+                    canUseAdminCommands: bestMatch.role.canUseAdminCommands,
+                    canAccessAdmin: bestMatch.role.canAccessAdmin
                 }
             })
         }
@@ -212,7 +214,8 @@ export async function POST(req: Request) {
                     canManageBolos: existingMember.role.canManageBolos,
                     canRequestLoa: existingMember.role.canRequestLoa,
                     canViewQuota: existingMember.role.canViewQuota,
-                    canUseAdminCommands: existingMember.role.canUseAdminCommands
+                    canUseAdminCommands: existingMember.role.canUseAdminCommands,
+                    canAccessAdmin: existingMember.role.canAccessAdmin
                 }
             })
         }

@@ -45,9 +45,16 @@ model Server {
   maxUploadSize         Int?      // In bytes
   staffRequestRateLimit Int?      // In milliseconds
   
+  // Webhook Notifications (Feature 6)
+  webhookUrl            String?   // Discord webhook URL
+  webhookEvents         String?   // JSON array of event types to notify
+  
   // Recruitment & Staff Features
   loaChannelId           String?   // Where LOA requests go for review
   onLoaRoleId            String?   // Role applied while on LOA
+  featureLoa             Boolean   @default(true)
+  featureStaffReq        Boolean   @default(true)
+  featurePermLog         Boolean   @default(true)
   
   logs            Log[]
   punishments     Punishment[]
@@ -169,6 +176,7 @@ model Role {
   canRequestLoa       Boolean @default(true)
   canViewQuota        Boolean @default(true)
   canUseAdminCommands Boolean @default(false)
+  canAccessAdmin      Boolean @default(false) // Auto-grant admin panel access to role members
   
   server       Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId     String
@@ -282,6 +290,9 @@ model ApiKey {
   dailyLimit  Int      @default(500) // Max requests per 24h
   usageCount  Int      @default(0)   // Requests today
   resetAt     DateTime @default(now()) // When usageCount resets
+  
+  // IP Allowlist (Feature 4)
+  allowedIps  String?   // Comma-separated list of allowed IPs
 
   @@index([serverId])
 }

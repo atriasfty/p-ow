@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
+import { AutomationEngine } from "@/lib/automation-engine"
 import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
 
@@ -40,6 +41,16 @@ export async function POST(req: Request) {
                 reason,
                 status: "pending"
             }
+        })
+
+        // Trigger Automation/Webhook
+        await AutomationEngine.trigger("LOA_REQUESTED" as any, {
+            serverId,
+            player: {
+                name: loa.robloxUsername || "Unknown",
+                id: session.user.id
+            },
+            details: { reason: loa.reason, startDate: loa.startDate, endDate: loa.endDate }
         })
 
         // Notify via bot queue if configured

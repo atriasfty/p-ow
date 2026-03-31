@@ -37,7 +37,12 @@ export async function PATCH(req: Request) {
             logCacheTtl,
             automationCacheTtl,
             customBotToken,
-            customBotEnabled
+            customBotEnabled,
+            featureLoa,
+            featureStaffReq,
+            featurePermLog,
+            webhookUrl,
+            webhookEvents
         } = await req.json()
 
         if (!serverId) {
@@ -51,7 +56,7 @@ export async function PATCH(req: Request) {
         }
 
         const server = await prisma.server.findUnique({ where: { id: serverId } })
-        
+
         let finalBotToken = undefined
         let finalBotEnabled = undefined
 
@@ -84,8 +89,12 @@ export async function PATCH(req: Request) {
                 onLoaRoleId: onLoaRoleId || null,
                 maxUploadSize: maxUploadSize || null,
                 staffRequestRateLimit: staffRequestRateLimit || null,
-                ...(finalBotToken !== undefined && { customBotToken: finalBotToken }),
                 ...(finalBotEnabled !== undefined && { customBotEnabled: finalBotEnabled }),
+                ...(featureLoa !== undefined && { featureLoa }),
+                ...(featureStaffReq !== undefined && { featureStaffReq }),
+                ...(featurePermLog !== undefined && { featurePermLog }),
+                ...(webhookUrl !== undefined && { webhookUrl: webhookUrl || null }),
+                ...(webhookEvents !== undefined && { webhookEvents: Array.isArray(webhookEvents) ? JSON.stringify(webhookEvents) : (webhookEvents || null) }),
             }
         })
 

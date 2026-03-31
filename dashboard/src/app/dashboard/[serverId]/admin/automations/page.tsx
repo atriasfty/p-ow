@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react"
 import { Plus, Zap, Trash2, Edit2, Loader2 } from "lucide-react"
 import { AutomationEditor } from "./automation-editor"
 import { LimitIndicator, SubscriptionPromo } from "@/components/subscription/subscription-ui"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Automation {
     id: string
@@ -21,6 +22,7 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
     const [editingAutomation, setEditingAutomation] = useState<Automation | null>(null)
     const [isCreating, setIsCreating] = useState(false)
     const [limits, setLimits] = useState({ allowed: true, current: 0, max: 0 })
+    const { showConfirm } = useDialog()
 
     useEffect(() => {
         fetchAutomations()
@@ -56,15 +58,16 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
             }
         } catch (e) { }
     }
-    
+
     useEffect(() => {
-        if(limits.max > 0) {
+        if (limits.max > 0) {
             setLimits(prev => ({ ...prev, allowed: automations.length < prev.max, current: automations.length }))
         }
     }, [automations])
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this automation?")) return
+        const confirmed = await showConfirm("Delete Automation", "Are you sure you want to delete this automation?", "Delete", "destructive")
+        if (!confirmed) return
 
         try {
             const res = await fetch("/api/admin/automations", {
@@ -117,11 +120,10 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
                     <button
                         onClick={() => setIsCreating(true)}
                         disabled={!limits.allowed}
-                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            limits.allowed 
-                            ? "bg-emerald-500 text-black hover:bg-emerald-400" 
-                            : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${limits.allowed
+                                ? "bg-emerald-500 text-black hover:bg-emerald-400"
+                                : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                            }`}
                     >
                         <Plus className="h-4 w-4" />
                         Create Automation
@@ -130,7 +132,7 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
             </div>
 
             {!limits.allowed && (
-                <SubscriptionPromo 
+                <SubscriptionPromo
                     title="Automation Limit Reached"
                     description="You have reached the maximum number of active automations for your current plan. Upgrade your server to unlock more powerful workflows."
                 />

@@ -8,9 +8,18 @@ import { usePermissions } from "@/components/auth/role-sync-wrapper"
 interface ToolboxProps {
     serverId: string
     isOnLoa?: boolean
+    featureLoa?: boolean
+    featureStaffReq?: boolean
+    featurePermLog?: boolean
 }
 
-export function Toolbox({ serverId, isOnLoa }: ToolboxProps) {
+export function Toolbox({
+    serverId,
+    isOnLoa,
+    featureLoa = true,
+    featureStaffReq = true,
+    featurePermLog = true
+}: ToolboxProps) {
     const [loaOpen, setLoaOpen] = useState(false)
     const [commandOpen, setCommandOpen] = useState(false)
     const [permLogOpen, setPermLogOpen] = useState(false)
@@ -185,7 +194,7 @@ export function Toolbox({ serverId, isOnLoa }: ToolboxProps) {
                 <div className="h-4 w-px bg-[#333]" />
 
                 {/* Perm Log Button */}
-                {permissions.canUseToolbox && (
+                {permissions.canUseToolbox && featurePermLog && (
                     <button
                         onClick={() => setPermLogOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 hover:text-blue-300 transition-all flex-shrink-0"
@@ -196,7 +205,7 @@ export function Toolbox({ serverId, isOnLoa }: ToolboxProps) {
                 )}
 
                 {/* LOA Request Button */}
-                {permissions.canRequestLoa && (
+                {permissions.canRequestLoa && featureLoa && (
                     isOnLoa ? (
                         <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-700/30 border border-zinc-600/20 text-zinc-500 flex-shrink-0">
                             <Check className="h-4 w-4" />
@@ -225,7 +234,7 @@ export function Toolbox({ serverId, isOnLoa }: ToolboxProps) {
                 )}
 
                 {/* Staff Request Button */}
-                {permissions.canUseToolbox && (
+                {permissions.canUseToolbox && featureStaffReq && (
                     <button
                         onClick={() => setStaffRequestOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 hover:border-red-500/40 text-red-400 hover:text-red-300 transition-all flex-shrink-0"

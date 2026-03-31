@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Save, Trash2, Plus, GripVertical, Settings2, Eye, Share2, Copy, Check, ExternalLink, BarChart3 } from "lucide-react"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Question {
     id: string
@@ -86,6 +87,7 @@ export default function EditFormPage({
     const [showSettings, setShowSettings] = useState(false)
     const [copied, setCopied] = useState<string | null>(null)
     const [resolvedParams, setResolvedParams] = useState<{ serverId: string; formId: string } | null>(null)
+    const { showConfirm } = useDialog()
 
     const [availableRoles, setAvailableRoles] = useState<DiscordRole[]>([])
     const [availableChannels, setAvailableChannels] = useState<DiscordChannel[]>([])
@@ -305,7 +307,8 @@ export default function EditFormPage({
 
     const deleteForm = async () => {
         if (!form || !resolvedParams) return
-        if (!confirm("Are you sure you want to delete this form? All responses will be lost.")) return
+        const confirmed = await showConfirm("Delete Form", "Are you sure you want to delete this form? All responses will be lost.", "Delete", "destructive")
+        if (!confirmed) return
         try {
             await fetch(`/api/forms/${form.id}`, { method: "DELETE" })
             router.push(`/dashboard/${resolvedParams.serverId}/forms`)
@@ -649,83 +652,83 @@ export default function EditFormPage({
                         </button>
                     </div>
                 ) : (
-        <>
-            {/* Description */}
-            <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
-                <textarea
-                    value={form.description || ""}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    onBlur={() => saveForm({ description: form.description })}
-                    placeholder="Add a description..."
-                    className="w-full bg-transparent text-zinc-400 placeholder:text-zinc-600 outline-none resize-none"
-                    rows={2}
-                />
-            </div>
-
-            {/* Sections */}
-            {form.sections.map((section) => (
-                <div key={section.id} className="bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-3 p-4 border-b border-[#333] bg-[#222]">
-                        <GripVertical className="h-4 w-4 text-zinc-600" />
-                        <input
-                            type="text"
-                            value={section.title}
-                            onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                            className="flex-1 bg-transparent text-lg font-semibold text-white outline-none"
-                        />
-                        {form.sections.length > 1 && (
-                            <button onClick={() => deleteSection(section.id)} className="p-2 text-zinc-500 hover:text-red-400">
-                                <Trash2 className="h-4 w-4" />
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="px-4 py-2 border-b border-[#333]">
-                        <input
-                            type="text"
-                            placeholder="Section description (optional)"
-                            value={section.description || ""}
-                            onChange={(e) => updateSection(section.id, { description: e.target.value })}
-                            className="w-full bg-transparent text-sm text-zinc-400 placeholder:text-zinc-600 outline-none"
-                        />
-                    </div>
-
-                    <div className="p-4 space-y-4">
-                        {section.questions.map((q) => (
-                            <QuestionCard
-                                key={q.id}
-                                question={q}
-                                allQuestions={form.sections.flatMap(s => s.questions.filter(qq => qq.id !== q.id))}
-                                onUpdate={(updates) => updateQuestion(q.id, updates)}
-                                onDelete={() => deleteQuestion(q.id)}
+                    <>
+                        {/* Description */}
+                        <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
+                            <textarea
+                                value={form.description || ""}
+                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                onBlur={() => saveForm({ description: form.description })}
+                                placeholder="Add a description..."
+                                className="w-full bg-transparent text-zinc-400 placeholder:text-zinc-600 outline-none resize-none"
+                                rows={2}
                             />
+                        </div>
+
+                        {/* Sections */}
+                        {form.sections.map((section) => (
+                            <div key={section.id} className="bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden">
+                                <div className="flex items-center gap-3 p-4 border-b border-[#333] bg-[#222]">
+                                    <GripVertical className="h-4 w-4 text-zinc-600" />
+                                    <input
+                                        type="text"
+                                        value={section.title}
+                                        onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                                        className="flex-1 bg-transparent text-lg font-semibold text-white outline-none"
+                                    />
+                                    {form.sections.length > 1 && (
+                                        <button onClick={() => deleteSection(section.id)} className="p-2 text-zinc-500 hover:text-red-400">
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="px-4 py-2 border-b border-[#333]">
+                                    <input
+                                        type="text"
+                                        placeholder="Section description (optional)"
+                                        value={section.description || ""}
+                                        onChange={(e) => updateSection(section.id, { description: e.target.value })}
+                                        className="w-full bg-transparent text-sm text-zinc-400 placeholder:text-zinc-600 outline-none"
+                                    />
+                                </div>
+
+                                <div className="p-4 space-y-4">
+                                    {section.questions.map((q) => (
+                                        <QuestionCard
+                                            key={q.id}
+                                            question={q}
+                                            allQuestions={form.sections.flatMap(s => s.questions.filter(qq => qq.id !== q.id))}
+                                            onUpdate={(updates) => updateQuestion(q.id, updates)}
+                                            onDelete={() => deleteQuestion(q.id)}
+                                        />
+                                    ))}
+
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {QUESTION_TYPES.map((type) => (
+                                            <button
+                                                key={type.value}
+                                                onClick={() => addQuestion(section.id, type.value)}
+                                                className="flex items-center gap-2 px-3 py-2 bg-[#222] hover:bg-[#333] text-zinc-400 hover:text-white rounded-lg text-sm transition-colors"
+                                            >
+                                                <span>{type.icon}</span>
+                                                {type.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         ))}
 
-                        <div className="flex flex-wrap gap-2 pt-2">
-                            {QUESTION_TYPES.map((type) => (
-                                <button
-                                    key={type.value}
-                                    onClick={() => addQuestion(section.id, type.value)}
-                                    className="flex items-center gap-2 px-3 py-2 bg-[#222] hover:bg-[#333] text-zinc-400 hover:text-white rounded-lg text-sm transition-colors"
-                                >
-                                    <span>{type.icon}</span>
-                                    {type.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ))}
-
-            <button
-                onClick={addSection}
-                className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-[#333] hover:border-[#555] rounded-xl text-zinc-500 hover:text-white transition-colors"
-            >
-                Add Section
-            </button>
-        </>
-    )
-}
+                        <button
+                            onClick={addSection}
+                            className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-[#333] hover:border-[#555] rounded-xl text-zinc-500 hover:text-white transition-colors"
+                        >
+                            Add Section
+                        </button>
+                    </>
+                )
+                }
             </div >
         </div >
     )

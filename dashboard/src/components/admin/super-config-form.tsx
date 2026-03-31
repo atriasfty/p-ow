@@ -6,6 +6,7 @@ import { Loader2, Save, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 export function SuperConfigForm() {
     const router = useRouter()
@@ -13,6 +14,7 @@ export function SuperConfigForm() {
     const [value, setValue] = useState("")
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
+    const { showConfirm } = useDialog()
 
     const SUGGESTED_KEYS = [
         "MAX_REQUESTS_PER_MINUTE",
@@ -57,7 +59,8 @@ export function SuperConfigForm() {
 
     const handleDelete = async () => {
         if (!key) return
-        if (!confirm(`Are you sure you want to delete the config key: ${key}?`)) return
+        const confirmed = await showConfirm("Delete Config", `Are you sure you want to delete the config key: ${key}?`, "Delete", "destructive")
+        if (!confirmed) return
 
         setLoading(true)
         try {

@@ -33,6 +33,26 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
         return { valid: false, error: "Invalid or disabled API key", status: 401 }
     }
 
+    // --- IP ALLOWLIST CHECK ---
+    if (apiKey.allowedIps) {
+        const incomingIp = head.get("x-forwarded-for")?.split(",")[0]?.trim() || head.get("x-real-ip") || "unknown"
+        const allowedList = apiKey.allowedIps.split(",").map((ip: string) => ip.trim()).filter(Boolean)
+
+        if (allowedList.length > 0 && !allowedList.includes(incomingIp)) {
+            // Log the unauthorized attempt
+            await prisma.securityLog.create({
+                data: {
+                    event: "PUBLIC_API_BLOCKED_IP",
+                    ip: incomingIp,
+                    details: `Key: ${apiKey.name} (${apiKey.id}) | Blocked IP: ${incomingIp}`,
+                    userId: apiKey.serverId
+                }
+            }).catch(() => { })
+
+            return { valid: false, error: "Access denied: IP address not in allowlist", status: 403 }
+        }
+    }
+
     // --- RATE LIMITING & QUOTAS ---
     const now = new Date()
 

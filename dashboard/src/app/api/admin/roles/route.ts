@@ -14,7 +14,7 @@ export async function POST(req: Request) {
             serverId, name, color, quotaMinutes, discordRoleId,
             canShift, canViewOtherShifts, canViewLogs, canViewPunishments,
             canIssueWarnings, canKick, canBan, canBanBolo,
-            canUseToolbox, canManageBolos, canRequestLoa, canViewQuota, canUseAdminCommands
+            canUseToolbox, canManageBolos, canRequestLoa, canViewQuota, canUseAdminCommands, canAccessAdmin
         } = await req.json()
 
         if (!serverId || !name) {
@@ -45,7 +45,8 @@ export async function POST(req: Request) {
                 canManageBolos: canManageBolos ?? true,
                 canRequestLoa: canRequestLoa ?? true,
                 canViewQuota: canViewQuota ?? true,
-                canUseAdminCommands: canUseAdminCommands ?? false
+                canUseAdminCommands: canUseAdminCommands ?? false,
+                canAccessAdmin: canAccessAdmin ?? false
             }
         })
 
@@ -66,7 +67,7 @@ export async function PATCH(req: Request) {
             roleId, name, color, quotaMinutes, discordRoleId,
             canShift, canViewOtherShifts, canViewLogs, canViewPunishments,
             canIssueWarnings, canKick, canBan, canBanBolo,
-            canUseToolbox, canManageBolos, canRequestLoa, canViewQuota, canUseAdminCommands
+            canUseToolbox, canManageBolos, canRequestLoa, canViewQuota, canUseAdminCommands, canAccessAdmin
         } = await req.json()
 
         if (!roleId) {
@@ -102,7 +103,8 @@ export async function PATCH(req: Request) {
                 canManageBolos,
                 canRequestLoa,
                 canViewQuota,
-                canUseAdminCommands
+                canUseAdminCommands,
+                canAccessAdmin
             }
         })
 

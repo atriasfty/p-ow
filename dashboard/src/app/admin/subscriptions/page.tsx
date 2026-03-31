@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Crown, Zap, Star, Shield, Server, User, Loader2, ArrowLeft, Search, Check } from "lucide-react"
 import Link from "next/link"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface ServerData {
     id: string
@@ -20,6 +21,7 @@ export default function AdminSubscriptionsPage() {
     const [search, setSearch] = useState("")
     const [userIdInput, setUserIdInput] = useState("")
     const [userPlanUpdating, setUserPlanUpdating] = useState(false)
+    const { showAlert } = useDialog()
 
     useEffect(() => {
         fetchServers()
@@ -65,7 +67,7 @@ export default function AdminSubscriptionsPage() {
                 body: JSON.stringify({ type: "user", targetId: userIdInput.trim(), plan: "pow-pro-user" })
             })
             setUserIdInput("")
-            alert("User plan granted!")
+            await showAlert("Success", "User plan granted!", "success")
         } catch (e) {
             console.error("Failed to grant user plan:", e)
         } finally {

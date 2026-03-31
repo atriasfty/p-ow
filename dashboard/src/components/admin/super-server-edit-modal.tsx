@@ -5,6 +5,7 @@ import { Loader2, X, Save } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface SuperServerEditModalProps {
     server: any
@@ -23,6 +24,7 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
     })
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+    const { showAlert } = useDialog()
 
     if (!isOpen) return null
 
@@ -41,10 +43,10 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
                 onClose()
                 router.refresh()
             } else {
-                alert("Failed to update server.")
+                await showAlert("Error", "Failed to update server.", "error")
             }
         } catch (e) {
-            alert("An error occurred.")
+            await showAlert("Error", "An error occurred.", "error")
         } finally {
             setLoading(false)
         }

@@ -4,6 +4,7 @@ import { useState, useEffect, use, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useUser, SignInButton, UserButton } from "@clerk/nextjs"
 import { FileText, Upload, X, Check, AlertCircle, ChevronDown, Loader2 } from "lucide-react"
+import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Question {
     id: string
@@ -385,6 +386,7 @@ function QuestionInput({
     formId: string
 }) {
     const [uploading, setUploading] = useState(false)
+    const { showAlert } = useDialog()
 
     // Normalize value to array format
     const files = Array.isArray(value) ? value : (value?.url ? [value] : [])
@@ -394,7 +396,7 @@ function QuestionInput({
         const totalFiles = files.length + filesToUpload.length
 
         if (totalFiles > 20) {
-            alert(`You can only upload up to 20 files. Currently have ${files.length}, trying to add ${filesToUpload.length}.`)
+            await showAlert("Upload Limit", `You can only upload up to 20 files. Currently have ${files.length}, trying to add ${filesToUpload.length}.`, "warning")
             return
         }
 

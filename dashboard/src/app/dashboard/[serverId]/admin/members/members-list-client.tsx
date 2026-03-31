@@ -2,7 +2,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { RefreshCw, User, Shield, Loader2, Search } from "lucide-react"
+import { RefreshCw, User, Shield, Loader2, Search, Copy, Check, BarChart3, X } from "lucide-react"
+import { ShiftHeatmap } from "@/components/admin/shift-heatmap"
 
 interface Role {
     id: string
@@ -26,6 +27,7 @@ interface ExistingMember {
     userId: string
     isAdmin: boolean
     role: Role | null
+    shifts?: { startTime: string | Date, endTime: string | Date | null }[]
 }
 
 interface Server {
@@ -49,12 +51,14 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
     const [search, setSearch] = useState("")
     const [debouncedSearch, setDebouncedSearch] = useState("")
     const [memberMap, setMemberMap] = useState<Record<string, ExistingMember>>({})
-    
+    const [copiedUserId, setCopiedUserId] = useState<string | null>(null)
+    const [viewingHeatmapUser, setViewingHeatmapUser] = useState<{ id: string, name: string } | null>(null)
+
     // Pagination state
     const [page, setPage] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
     const limit = 50
-    
+
     const isMounted = useRef(true)
 
     // Debounce search
@@ -78,12 +82,12 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
     // Fetch Clerk users with pagination and search
     useEffect(() => {
         isMounted.current = true
-        
+
         const fetchUsers = async () => {
             setLoading(true)
             try {
                 const offset = (page - 1) * limit
-                const res = await fetch(`/api/admin/users?limit=${limit}&offset=${offset}&search=${encodeURIComponent(debouncedSearch)}`)
+                const res = await fetch(`/api/admin/server-users?serverId=${serverId}&limit=${limit}&offset=${offset}&search=${encodeURIComponent(debouncedSearch)}`)
                 if (res.ok && isMounted.current) {
                     const data = await res.json()
                     setUsers(data.users)
@@ -97,9 +101,9 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                 }
             }
         }
-        
+
         fetchUsers()
-        
+
         return () => {
             isMounted.current = false
         }
@@ -208,6 +212,8 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Roblox</th>
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Role</th>
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Admin</th>
+                            <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Last Seen</th>
+                            <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Stats</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -236,6 +242,21 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                                                     {user.username && (
                                                         <div className="text-xs text-zinc-500">@{user.username}</div>
                                                     )}
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(user.id)
+                                                            setCopiedUserId(user.id)
+                                                            setTimeout(() => setCopiedUserId(null), 2000)
+                                                        }}
+                                                        className="flex items-center gap-1 mt-1 text-[10px] font-mono text-zinc-600 hover:text-zinc-300 transition-colors group/copy"
+                                                        title="Click to copy Clerk User ID"
+                                                    >
+                                                        {copiedUserId === user.id ? (
+                                                            <><Check className="h-2.5 w-2.5 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
+                                                        ) : (
+                                                            <><Copy className="h-2.5 w-2.5 opacity-0 group-hover/copy:opacity-100" />{user.id}</>
+                                                        )}
+                                                    </button>
                                                 </div>
                                             </div>
                                         </td>
@@ -273,11 +294,10 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                                                 <button
                                                     onClick={() => handleRoleChange(user, member.role?.id || null, !member.isAdmin)}
                                                     disabled={updating === user.id}
-                                                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors disabled:opacity-50 ${
-                                                        member.isAdmin 
-                                                            ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" 
-                                                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                                                    }`}
+                                                    className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors disabled:opacity-50 ${member.isAdmin
+                                                        ? "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                                        : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                                                        }`}
                                                 >
                                                     <Shield className="h-3 w-3" />
                                                     {member.isAdmin ? "Admin" : "Make Admin"}
@@ -285,6 +305,30 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                                             ) : (
                                                 <span className="text-xs text-zinc-600">Assign role first</span>
                                             )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {member?.shifts && member.shifts.length > 0 ? (
+                                                member.shifts[0].endTime ? (
+                                                    <span className="text-xs text-zinc-400">
+                                                        {new Date(member.shifts[0].endTime).toLocaleDateString()}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
+                                                        On Duty
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <span className="text-xs text-zinc-600">Never</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <button
+                                                onClick={() => setViewingHeatmapUser({ id: user.id, name: user.name || user.username || "User" })}
+                                                className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                                                title="View shift activity heatmap"
+                                            >
+                                                <BarChart3 className="h-4 w-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 )
@@ -319,6 +363,46 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                     </button>
                 </div>
             </div>
+
+            {/* Heatmap Modal */}
+            {viewingHeatmapUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-4xl bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-[#222] flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                                    <BarChart3 className="h-5 w-5 text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white">{viewingHeatmapUser.name} - Activity</h3>
+                                    <p className="text-xs text-zinc-500">Overview of staff shift performance</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setViewingHeatmapUser(null)}
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <ShiftHeatmap
+                                serverId={serverId}
+                                userId={viewingHeatmapUser.id}
+                                userName={viewingHeatmapUser.name}
+                            />
+                        </div>
+                        <div className="px-6 py-4 bg-[#222] border-t border-[#333] flex justify-end">
+                            <button
+                                onClick={() => setViewingHeatmapUser(null)}
+                                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
