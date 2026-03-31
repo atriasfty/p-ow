@@ -275,6 +275,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
                                                 onClick={() => openDeleteConfirm(loa.id, "active", loa.userId)}
                                                 disabled={deleting === loa.id}
                                                 className="p-2 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                                                aria-label="Delete LOA"
                                             >
                                                 {deleting === loa.id ? (
                                                     <Loader2 className="h-4 w-4 animate-spin" />
