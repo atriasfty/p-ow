@@ -29,18 +29,24 @@ export async function GET(req: Request) {
             }
         })
 
-        const membersWithShifts = await Promise.all(members.map(async (m) => {
-            const lastShift = await prisma.shift.findFirst({
-                where: { userId: m.userId, serverId },
-                orderBy: { startTime: 'desc' },
-                select: { startTime: true, endTime: true }
-            })
+        // ⚡ Bolt: Optimize N+1 queries by fetching latest shifts for all members in one query
+        const userIds = members.map(m => m.userId)
+        const latestShifts = await prisma.shift.findMany({
+            where: { serverId, userId: { in: userIds } },
+            distinct: ['userId'],
+            orderBy: { startTime: 'desc' },
+            select: { userId: true, startTime: true, endTime: true }
+        })
 
+        const shiftsByUserId = new Map(latestShifts.map(s => [s.userId, { startTime: s.startTime, endTime: s.endTime }]))
+
+        const membersWithShifts = members.map((m) => {
+            const lastShift = shiftsByUserId.get(m.userId)
             return {
                 ...m,
                 shifts: lastShift ? [lastShift] : []
             }
-        }))
+        })
 
         return NextResponse.json({ members: membersWithShifts })
     } catch (e) {
