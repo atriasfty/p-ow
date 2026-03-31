@@ -44,7 +44,12 @@ export function ServerStatsHeader({ serverId, initialPlayers, initialMaxPlayers,
                     {maxPlayers} Max • {isServerOnline ? "Online" : "Offline"}
                 </p>
             </div>
-            <div className={`h-3 w-3 rounded-full ${isServerOnline ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"}`}></div>
+            <div
+                role="status"
+                aria-label={isServerOnline ? "Server is online" : "Server is offline"}
+                title={isServerOnline ? "Server is online" : "Server is offline"}
+                className={`h-3 w-3 rounded-full ${isServerOnline ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"}`}
+            />
         </div>
     )
 }
