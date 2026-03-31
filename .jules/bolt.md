@@ -1,0 +1,3 @@
+## 2024-05-17 - [Optimizing N+1 Database Queries]
+**Learning:** Found a classic N+1 query problem where `prisma.shift.findFirst` was called sequentially inside a `Promise.all` loop for every member fetched in the admin dashboard. This happens frequently when fetching related data that isn't directly included in a `findMany` but needs some filtering or ordering (like "latest shift").
+**Action:** Used `prisma.shift.findMany` with `userId: { in: userIds }`, combined with `distinct: ['userId']` and `orderBy: { startTime: 'desc' }` to fetch the latest shift for all users in a single database query. Then used a `Map` to efficiently assign shifts to their respective members. This drastically reduces database load and speeds up the endpoint.
