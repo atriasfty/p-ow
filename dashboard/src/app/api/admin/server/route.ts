@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit"
 import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Update server settings
@@ -15,6 +16,7 @@ export async function PATCH(req: Request) {
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
     try {
+        const body = await req.json()
         const {
             serverId,
             customName,
@@ -32,10 +34,7 @@ export async function PATCH(req: Request) {
             milestoneChannelId,
             loaChannelId,
             onLoaRoleId,
-            maxUploadSize,
             staffRequestRateLimit,
-            logCacheTtl,
-            automationCacheTtl,
             customBotToken,
             customBotEnabled,
             featureLoa,
@@ -43,7 +42,7 @@ export async function PATCH(req: Request) {
             featurePermLog,
             webhookUrl,
             webhookEvents
-        } = await req.json()
+        } = body
 
         if (!serverId) {
             return NextResponse.json({ error: "Missing serverId" }, { status: 400 })
@@ -87,7 +86,6 @@ export async function PATCH(req: Request) {
                 milestoneChannelId: milestoneChannelId || null,
                 loaChannelId: loaChannelId || null,
                 onLoaRoleId: onLoaRoleId || null,
-                maxUploadSize: maxUploadSize || null,
                 staffRequestRateLimit: staffRequestRateLimit || null,
                 ...(finalBotEnabled !== undefined && { customBotEnabled: finalBotEnabled }),
                 ...(featureLoa !== undefined && { featureLoa }),
@@ -97,6 +95,16 @@ export async function PATCH(req: Request) {
                 ...(webhookEvents !== undefined && { webhookEvents: Array.isArray(webhookEvents) ? JSON.stringify(webhookEvents) : (webhookEvents || null) }),
             }
         })
+
+        // Log the action
+        const changedFields = Object.keys(body).filter(k => k !== 'serverId').join(", ")
+        await logAudit(
+            serverId,
+            "SETTINGS_UPDATED",
+            `Updated server settings: ${changedFields}`,
+            "DASHBOARD",
+            session.user.id
+        )
 
         return NextResponse.json({ success: true, server: updated })
     } catch (e) {

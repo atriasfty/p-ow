@@ -54,7 +54,7 @@ async function processQueue(client: Client, prisma: PrismaClient) {
             where: { id: item.id, status: "PENDING" },
             data: { status: "PROCESSING" }
         })
-        
+
         // If count > 0, THIS worker successfully locked the item
         if (result.count > 0) {
             const lockedItem = await prisma.botQueue.findUnique({ where: { id: item.id } })
@@ -67,7 +67,7 @@ async function processQueue(client: Client, prisma: PrismaClient) {
         try {
             // Check retry limit (using existing error column or just fail after 1 try for now)
             // If the item has failed too many times, we would ideally skip it.
-            
+
             if (item.type === "MESSAGE") {
                 const channel = await client.channels.fetch(item.targetId).catch(() => null)
                 if (channel && (channel.isTextBased() || channel instanceof TextChannel)) {
@@ -77,7 +77,7 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                             const parsed = JSON.parse(item.content)
                             if (parsed.embeds || parsed.content) payload = parsed
                         }
-                    } catch (e) {}
+                    } catch (e) { }
 
                     await (channel as any).send(payload)
 
@@ -111,6 +111,13 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                 if (!member) throw new Error("Member not found in guild")
 
                 await member.roles.add(item.content)
+                await prisma.botQueue.update({
+                    where: { id: item.id },
+                    data: { status: "SENT", processedAt: new Date() }
+                })
+            } else if (item.type === "SYNC_COMMANDS") {
+                const { deployCommands } = await import("../deploy-commands")
+                await deployCommands()
                 await prisma.botQueue.update({
                     where: { id: item.id },
                     data: { status: "SENT", processedAt: new Date() }

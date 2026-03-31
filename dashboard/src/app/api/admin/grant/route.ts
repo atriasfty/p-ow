@@ -1,8 +1,8 @@
-
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit"
 
 // Grant admin access - superadmin only
 export async function POST(req: Request) {
@@ -35,6 +35,14 @@ export async function POST(req: Request) {
                 isAdmin: true
             }
         })
+
+        await logAudit(
+            serverId,
+            "ADMIN_GRANTED",
+            `Granted individual admin access to user: ${userId}`,
+            "DASHBOARD",
+            session.user.id
+        )
 
         return NextResponse.json({ success: true, id: member.id })
     } catch (e) {

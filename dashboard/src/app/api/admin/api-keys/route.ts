@@ -4,6 +4,7 @@ import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import crypto from "crypto"
+import { logAudit } from "@/lib/audit"
 
 export async function GET(req: Request) {
     const session = await getSession()
@@ -78,7 +79,7 @@ export async function GET(req: Request) {
         // Define fallback legacy key IDs for older logs before we started grouping by userId
         const keyMapCondition = keys.length > 0 ? keys.map(k => ({ details: { contains: k.id } })) : []
         const orConditions = serverId
-            ? [{ userId: serverId }, ...keyMapCondition]
+            ? [{ serverId }, ...keyMapCondition]
             : keyMapCondition
 
         if (orConditions.length > 0) {
@@ -153,6 +154,16 @@ export async function POST(req: Request) {
         }
     })
 
+    if (serverId) {
+        await logAudit(
+            serverId,
+            "API_KEY_CREATED",
+            `Created API key: ${name}`,
+            "DASHBOARD",
+            session?.user?.id
+        )
+    }
+
     return NextResponse.json(apiKey)
 }
 
@@ -183,6 +194,16 @@ export async function DELETE(req: Request) {
     await prisma.apiKey.deleteMany({
         where: { id, ...(serverId ? { serverId } : {}) }
     })
+
+    if (serverId) {
+        await logAudit(
+            serverId,
+            "API_KEY_DELETED",
+            `Deleted API key ID: ${id}`,
+            "DASHBOARD",
+            session?.user?.id
+        )
+    }
 
     return NextResponse.json({ success: true })
 }
@@ -217,6 +238,16 @@ export async function PATCH(req: Request) {
         where: { id, ...(serverId ? { serverId } : {}) },
         data
     })
+
+    if (serverId) {
+        await logAudit(
+            serverId,
+            "API_KEY_UPDATED",
+            `Updated API key ID: ${id}. Changes: ${Object.keys(data).join(", ")}`,
+            "DASHBOARD",
+            session?.user?.id
+        )
+    }
 
     return NextResponse.json(apiKey)
 }

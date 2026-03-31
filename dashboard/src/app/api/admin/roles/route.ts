@@ -1,8 +1,8 @@
-
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit"
 
 // Create role
 export async function POST(req: Request) {
@@ -49,6 +49,14 @@ export async function POST(req: Request) {
                 canAccessAdmin: canAccessAdmin ?? false
             }
         })
+
+        await logAudit(
+            serverId,
+            "ROLE_CREATED",
+            `Created role: ${name}`,
+            "DASHBOARD",
+            session.user.id
+        )
 
         return NextResponse.json({ success: true, role })
     } catch (e) {
@@ -108,6 +116,14 @@ export async function PATCH(req: Request) {
             }
         })
 
+        await logAudit(
+            role.serverId,
+            "ROLE_UPDATED",
+            `Updated role: ${role.name}`,
+            "DASHBOARD",
+            session.user.id
+        )
+
         return NextResponse.json({ success: true, role: updated })
     } catch (e) {
         console.error("Update role error:", e)
@@ -143,6 +159,14 @@ export async function DELETE(req: Request) {
         }
 
         await prisma.role.delete({ where: { id: roleId } })
+
+        await logAudit(
+            role.serverId,
+            "ROLE_DELETED",
+            `Deleted role: ${role.name}`,
+            "DASHBOARD",
+            session.user.id
+        )
 
         return NextResponse.json({ success: true })
     } catch (e) {

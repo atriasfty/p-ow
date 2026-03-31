@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 import { findMemberByDiscordId } from "../lib/clerk"
@@ -18,7 +18,7 @@ export async function handlePunishCommand(interaction: ChatInputCommandInteracti
 
 async function handleLogPunishment(interaction: ChatInputCommandInteraction) {
     // Defer immediately
-    await interaction.deferReply({ ephemeral: true })
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] })
 
     const serverId = await resolveServer(interaction)
     if (!serverId) return interaction.editReply({ content: "❌ You must specify a server or run this within a registered Guild." })

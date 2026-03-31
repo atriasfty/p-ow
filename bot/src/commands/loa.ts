@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 import { findMemberByDiscordId } from "../lib/clerk"
@@ -7,9 +7,9 @@ export async function handleLoaCommand(interaction: ChatInputCommandInteraction)
     if (interaction.options.getSubcommand() === "request") {
         const serverId = await resolveServer(interaction)
         if (!serverId) {
-            return interaction.reply({ content: "❌ This command must be run within a registered Project Overwatch server.", ephemeral: true })
+            return interaction.reply({ content: "❌ This command must be run within a registered Project Overwatch server.", flags: [MessageFlags.Ephemeral] })
         }
-        
+
         const startDateStr = interaction.options.getString("start_date", true)
         const endDateStr = interaction.options.getString("end_date", true)
         const reason = interaction.options.getString("reason", true)
@@ -20,22 +20,22 @@ export async function handleLoaCommand(interaction: ChatInputCommandInteraction)
         const endDate = new Date(endDateStr)
 
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            return interaction.reply({ content: "Invalid date format. Use YYYY-MM-DD", ephemeral: true })
+            return interaction.reply({ content: "Invalid date format. Use YYYY-MM-DD", flags: [MessageFlags.Ephemeral] })
         }
 
         if (endDate < startDate) {
-            return interaction.reply({ content: "End date cannot be before start date", ephemeral: true })
+            return interaction.reply({ content: "End date cannot be before start date", flags: [MessageFlags.Ephemeral] })
         }
 
         // Defer ASAP before Clerk lookup
-        await interaction.deferReply({ ephemeral: true })
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] })
 
         const member = await findMemberByDiscordId(prisma, discordId, serverId)
 
         if (!member) {
             return interaction.editReply("You are not a member of this server.")
         }
-        
+
         if (!member.role || !member.role.canRequestLoa) {
             return interaction.editReply("You do not have permission to request an LOA on this server.")
         }
