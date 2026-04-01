@@ -265,6 +265,7 @@ export function Toolbox({
                                     setPermLogMessage(null)
                                 }}
                                 className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                                aria-label="Close modal"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -343,7 +344,7 @@ export function Toolbox({
                                         <p className="text-xs text-zinc-500">Your quota will be paused during LOA</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setLoaOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                                <button onClick={() => setLoaOpen(false)} className="p-2 hover:bg-white/10 rounded-lg" aria-label="Close modal">
                                     <X className="h-4 w-4 text-zinc-400" />
                                 </button>
                             </div>
@@ -430,6 +431,7 @@ export function Toolbox({
                                     setCommandInput("")
                                 }}
                                 className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                                aria-label="Close modal"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -488,6 +490,7 @@ export function Toolbox({
                             <button
                                 onClick={() => setStaffRequestOpen(false)}
                                 className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                                aria-label="Close modal"
                             >
                                 <X className="h-5 w-5" />
                             </button>
