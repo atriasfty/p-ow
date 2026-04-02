@@ -1,9 +1,9 @@
 
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
-import { PrcClient } from "@/lib/prc"
 import { NextResponse } from "next/server"
 import { isServerMember } from "@/lib/admin"
+import { getFromCache, getFromCacheStale, setToCache } from "@/lib/roblox-cache"
 
 export async function GET(req: Request) {
     const session = await getSession()
@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     if (!serverId || !query || query.length < 3) return NextResponse.json([])
 
-    if (!(await isServerMember(session.user as any, serverId))) {
+    if (!(await isServerMember(session.user as any, serverId))) { // eslint-disable-line @typescript-eslint/no-explicit-any
         return new NextResponse("Forbidden", { status: 403 })
     }
 
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
         // Process logs into unique players
         const recentPlayers = new Map<string, { name: string, id: string, source: string }>()
 
-        recentLogs.forEach((log: any) => {
+        recentLogs.forEach((log: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
             if (log.playerName && log.playerName.toLowerCase().includes(query)) {
                 recentPlayers.set(log.playerName.toLowerCase(), { name: log.playerName, id: log.playerId || "", source: "Recent Activity" })
             }
@@ -58,12 +58,29 @@ export async function GET(req: Request) {
         })
 
         // 2. Search Roblox Users
-        const robloxRes = await fetch(`https://users.roblox.com/v1/users/search?keyword=${encodeURIComponent(query)}&limit=10`)
-        let robloxUsers: any[] = []
+        let robloxUsers: any[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+        const cacheKey = `roblox:search:${query}`
+        const cachedSearch = getFromCache<any[]>(cacheKey) // eslint-disable-line @typescript-eslint/no-explicit-any
 
-        if (robloxRes.ok) {
-            const robloxData = await robloxRes.json()
-            robloxUsers = robloxData.data || []
+        if (cachedSearch) {
+            robloxUsers = cachedSearch
+        } else {
+            try {
+                const robloxRes = await fetch(`https://users.roblox.com/v1/users/search?keyword=${encodeURIComponent(query)}&limit=10`)
+
+                if (robloxRes.ok) {
+                    const robloxData = await robloxRes.json()
+                    robloxUsers = robloxData.data || []
+                    setToCache(cacheKey, robloxUsers)
+                } else {
+                    const staleSearch = getFromCacheStale<any[]>(cacheKey) // eslint-disable-line @typescript-eslint/no-explicit-any
+                    if (staleSearch) robloxUsers = staleSearch
+                }
+            } catch (err) {
+                console.warn("Roblox search error:", err)
+                const staleSearch = getFromCacheStale<any[]>(cacheKey) // eslint-disable-line @typescript-eslint/no-explicit-any
+                if (staleSearch) robloxUsers = staleSearch
+            }
         }
 
         // 3. Fetch Thumbnails for all unique IDs
@@ -72,7 +89,7 @@ export async function GET(req: Request) {
         robloxUsers.forEach(u => uniqueIds.add(u.id.toString()))
 
         const userIdsArray = Array.from(uniqueIds)
-        let thumbs = new Map()
+        const thumbs = new Map()
 
         if (userIdsArray.length > 0) {
             try {
@@ -81,7 +98,7 @@ export async function GET(req: Request) {
                 if (thumbRes.ok) {
                     const thumbData = await thumbRes.json()
                     if (thumbData.data) {
-                        thumbData.data.forEach((t: any) => thumbs.set(t.targetId, t.imageUrl))
+                        thumbData.data.forEach((t: any) => thumbs.set(t.targetId, t.imageUrl)) // eslint-disable-line @typescript-eslint/no-explicit-any
                     }
                 }
             } catch (err) {
