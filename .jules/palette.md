@@ -1,0 +1,3 @@
+## 2024-04-02 - Missing Accessible Names on List Actions & Switch Roles
+**Learning:** In dynamically mapped lists containing icon-only action buttons (e.g., Edit, Cancel Edit, More Options), elements often lack accessible names or context. Custom switch toggles built with `<button>` were also missing `role="switch"` and `aria-checked` states, which are necessary for screen readers.
+**Action:** When implementing repeating list item actions, always interpolate specific context into `aria-label` and `title` (e.g., `Manage punishment for ${userName}`). When creating custom toggles, always include `role="switch"` and bind `aria-checked` to the toggle's active state.

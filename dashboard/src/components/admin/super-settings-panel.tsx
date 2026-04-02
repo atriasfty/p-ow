@@ -68,6 +68,9 @@ export function SuperSettingsPanel({ initialConfigs }: SuperSettingsPanelProps) 
                     onClick={() => updateConfig(id, isEnabled ? "false" : "true")}
                     disabled={loading === id}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-[#111] ${isEnabled ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                    role="switch"
+                    aria-checked={isEnabled}
+                    aria-label={label}
                 >
                     {loading === id ? (
                         <Loader2 className="h-3 w-3 animate-spin mx-auto text-white" />
