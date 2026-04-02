@@ -3,7 +3,7 @@ import { isSuperAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
 
 // Use the app/API host for queries (ingestion host eu.i.posthog.com does not support /query/)
-const POSTHOG_HOST = "https://eu.posthog.com"
+const POSTHOG_HOST = "https://a.atriasafety.org"
 const POSTHOG_PERSONAL_KEY = process.env.POSTHOG_PERSONAL_API_KEY
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID
 
