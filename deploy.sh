@@ -176,7 +176,7 @@ GARMIN_API_KEY="${GARMIN_API_KEY}"
 
 # PostHog Analytics
 NEXT_PUBLIC_POSTHOG_KEY="${POSTHOG_KEY}"
-NEXT_PUBLIC_POSTHOG_HOST="https://eu.i.posthog.com"
+NEXT_PUBLIC_POSTHOG_HOST="https://a.atriasafety.org"
 POSTHOG_PERSONAL_API_KEY="${POSTHOG_PERSONAL_KEY}"
 POSTHOG_PROJECT_ID="${POSTHOG_PROJECT_ID}"
 
@@ -296,7 +296,7 @@ else
         echo "GARMIN_API_URL=\"https://garminapi.ciankelly.xyz\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "NEXT_PUBLIC_POSTHOG_HOST=" "${SHARED_ENV_FILE}"; then
-        echo "NEXT_PUBLIC_POSTHOG_HOST=\"https://eu.i.posthog.com\"" >> "${SHARED_ENV_FILE}"
+        echo "NEXT_PUBLIC_POSTHOG_HOST=\"https://a.atriasafety.org\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "NEXT_PUBLIC_LEGAL_URL=" "${SHARED_ENV_FILE}"; then
         echo "NEXT_PUBLIC_LEGAL_URL=\"https://lacrp.ciankelly.xyz/project-overwatch-legal-documents\"" >> "${SHARED_ENV_FILE}"
