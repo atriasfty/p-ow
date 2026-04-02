@@ -22,7 +22,10 @@ import { isFeatureEnabled } from "@/lib/feature-flags"
 async function fetchServerStats(apiUrl: string) {
     try {
         const client = new PrcClient(apiUrl)
-        const info = await client.getServer()
+        const info = await Promise.race([
+            client.getServer(),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500))
+        ])
         return { online: true, players: info.CurrentPlayers, maxPlayers: info.MaxPlayers }
     } catch (e) {
         return { online: false, players: 0, maxPlayers: 0 }
