@@ -3,9 +3,14 @@ import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Create role
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -67,6 +72,10 @@ export async function POST(req: Request) {
 
 // Update role
 export async function PATCH(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -133,6 +142,10 @@ export async function PATCH(req: Request) {
 
 // Delete role
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
