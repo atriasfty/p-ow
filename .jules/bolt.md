@@ -1,3 +1,6 @@
 ## 2024-05-17 - [Optimizing N+1 Database Queries]
 **Learning:** Found a classic N+1 query problem where `prisma.shift.findFirst` was called sequentially inside a `Promise.all` loop for every member fetched in the admin dashboard. This happens frequently when fetching related data that isn't directly included in a `findMany` but needs some filtering or ordering (like "latest shift").
 **Action:** Used `prisma.shift.findMany` with `userId: { in: userIds }`, combined with `distinct: ['userId']` and `orderBy: { startTime: 'desc' }` to fetch the latest shift for all users in a single database query. Then used a `Map` to efficiently assign shifts to their respective members. This drastically reduces database load and speeds up the endpoint.
+## 2024-05-18 - [Optimizing Queue Processing]
+**Learning:** In queue processors that fetch items then update them individually to a processing status (like locking), executing the `updateMany` lock AND subsequent `findUnique` fetch in a sequential loop creates a significant N+1 bottleneck.
+**Action:** Optimize this by wrapping the individual lock updates in a `Promise.all()` to run them concurrently, then immediately followed by a single `findMany({ where: { id: { in: lockedIds } } })` to fetch all successfully locked items at once instead of inside a loop.
