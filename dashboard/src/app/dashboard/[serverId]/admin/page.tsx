@@ -89,6 +89,8 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
                         currentWebhookEvents={server.webhookEvents}
                         isOwner={isOwner}
                         serverMembers={members}
+                        botMissingPermissions={server.botMissingPermissions}
+                        deletionScheduledAt={server.deletionScheduledAt}
                     />
                 </div>
             </div>

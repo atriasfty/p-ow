@@ -45,7 +45,7 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
                     event: "PUBLIC_API_BLOCKED_IP",
                     ip: incomingIp,
                     details: `Key: ${apiKey.name} (${apiKey.id}) | Blocked IP: ${incomingIp}`,
-                    userId: apiKey.serverId
+                    serverId: apiKey.serverId
                 }
             }).catch(() => { })
 
@@ -145,7 +145,7 @@ export async function logApiAccess(apiKey: any, event: string, details?: string)
             event,
             ip,
             details: details || `Key: ${apiKey.name} (${apiKey.id})`,
-            userId: apiKey.serverId // Store serverId in target userId purely to allow fast graph analytics filtering later seamlessly!
+            serverId: apiKey.serverId
         }
     }).catch(() => { })
 }

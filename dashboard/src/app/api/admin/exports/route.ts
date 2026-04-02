@@ -103,25 +103,42 @@ export async function GET(req: Request) {
                 take: 1000 // Last 1000 punishments
             })
 
+            // Build an identity map from the Member table (most accurate for Roblox usernames)
+            const members = await prisma.member.findMany({
+                where: { serverId },
+                select: { userId: true, robloxId: true, robloxUsername: true }
+            })
+
+            const identityMap = new Map<string, string>()
+            members.forEach(m => {
+                if (m.userId && m.robloxUsername) identityMap.set(m.userId, m.robloxUsername)
+                if (m.robloxId && m.robloxUsername) identityMap.set(m.robloxId, m.robloxUsername)
+            })
+
+            // Fallback to Clerk for any missing identities (e.g. staff from other servers)
             const clerk = await clerkClient()
-            const userIds: string[] = Array.from(new Set([
+            const missingIds = Array.from(new Set([
                 ...punishments.map((p: any) => p.userId),
                 ...punishments.map((p: any) => p.moderatorId)
-            ].filter(Boolean)))
+            ].filter(id => id && !identityMap.has(id))))
 
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
-            const userMap = new Map(clerkUsers.data.map((u: any) => {
-                const robloxAccount = u.externalAccounts.find((a: any) =>
-                    a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
-                )
-                return [u.id as string, robloxAccount?.username || "Unknown"]
-            }))
+            if (missingIds.length > 0) {
+                const clerkUsers = await clerk.users.getUserList({ userId: missingIds, limit: 100 })
+                clerkUsers.data.forEach((u: any) => {
+                    const robloxAccount = u.externalAccounts.find((a: any) =>
+                        a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
+                    )
+                    if (robloxAccount?.username) {
+                        identityMap.set(u.id, robloxAccount.username)
+                    }
+                })
+            }
 
             csvContent = "User Roblox Username,Moderator Roblox Username,Type,Reason,Resolved,Created At\n"
             punishments.forEach((p: any) => {
-                const userName = userMap.get(p.userId) || "Unknown"
-                const modName = p.moderatorId ? (userMap.get(p.moderatorId) || "Unknown") : "System"
-                csvContent += `${userName},${modName},${p.type},"${p.reason.replace(/"/g, '""')}",${p.resolved},${p.createdAt.toISOString()}\n`
+                const userName = identityMap.get(p.userId) || "Unknown"
+                const modName = p.moderatorId ? (identityMap.get(p.moderatorId) || "Unknown") : "System"
+                csvContent += `${userName},${modName},${p.type},"${(p.reason || "").replace(/"/g, '""')}",${p.resolved},${p.createdAt.toISOString()}\n`
             })
 
         } else {

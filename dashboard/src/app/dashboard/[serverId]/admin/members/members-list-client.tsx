@@ -181,7 +181,7 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search members (server-side)..."
+                        placeholder="Search members..."
                         className="w-full bg-[#222] border border-[#333] rounded-lg pl-10 pr-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
                     />
                 </div>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
+import { logAudit } from "@/lib/audit"
 
 // GET /api/admin/milestones?serverId=xxx
 export async function GET(req: Request) {
@@ -53,6 +54,14 @@ export async function POST(req: Request) {
             }
         })
 
+        await logAudit(
+            serverId,
+            "MILESTONE_CREATED",
+            `Created milestone: ${name} (${requiredMinutes} minutes)`,
+            "DASHBOARD",
+            session.user.id
+        )
+
         return NextResponse.json(milestone)
     } catch (e: any) {
         console.error("[MILESTONES POST]", e)
@@ -87,6 +96,14 @@ export async function DELETE(req: Request) {
     await prisma.staffMilestone.delete({
         where: { id }
     })
+
+    await logAudit(
+        serverId,
+        "MILESTONE_DELETED",
+        `Deleted milestone: ${exists.name}`,
+        "DASHBOARD",
+        session.user.id
+    )
 
     return NextResponse.json({ success: true })
 }

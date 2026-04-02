@@ -56,6 +56,10 @@ model Server {
   featureStaffReq        Boolean   @default(true)
   featurePermLog         Boolean   @default(true)
   
+  // Operational Status
+  botMissingPermissions Boolean  @default(false)
+  deletionScheduledAt   DateTime? 
+  
   logs            Log[]
   punishments     Punishment[]
   shifts          Shift[]
@@ -306,12 +310,15 @@ model BannedIp {
 
 model SecurityLog {
   id        String   @id @default(cuid())
-  event     String   // e.g. "IP_BANNED", "BLOCKED_REQUEST", "API_KEY_USED"
-  ip        String
-  userId    String?
+  event     String   // e.g. "IP_BANNED", "BLOCKED_REQUEST", "API_KEY_USED", "SETTINGS_UPDATED"
+  ip        String?  // Keep IP optional for internal dashboard actions
+  origin    String   @default("API") // "API" or "DASHBOARD"
+  serverId  String?  // Optional for global security events
+  creatorId String?  // Clerk user ID for dashboard actions
   details   String?
   createdAt DateTime @default(now())
 
+  @@index([serverId])
   @@index([ip])
   @@index([createdAt])
 }

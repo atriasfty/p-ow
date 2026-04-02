@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing Context in Repeated List Actions
+**Learning:** Icon-only buttons in mapped list elements (like "Edit" / "Delete" roles) are extremely confusing for screen readers without specific context (e.g., repeating "Edit" for every item vs "Edit Admin role"). Similarly, disabled actions must have `title` tooltips explaining *why* they are disabled so users aren't confused.
+**Action:** Always append dynamic contextual names (like `role.name`) to `aria-label` and `title` attributes on mapped items, and add explanatory tooltips to conditionally disabled actions. Custom toggles should have `role="switch"` and `aria-checked` attributes to act natively.

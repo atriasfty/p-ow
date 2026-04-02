@@ -12,6 +12,7 @@ Project Overwatch includes a powerful, built-in Form Builder. You can use it to 
 The editor uses a drag-and-drop interface. You can:
 * **Add Sections:** Break long forms into multiple pages.
 * **Add Questions:** Choose from Short Answer, Long Answer, Multiple Choice, Checkboxes, Dropdowns, Scales, Dates, Times, or File Uploads.
+  * *Note: File uploads are limited to **100MB** per file and up to 20 files per submission.*
 * **Conditional Logic:** Click the gear icon next to a question to set rules. For example, only show "Why were you banned?" if they select "Yes" to "Have you been banned before?".
 
 ## 2. Form Settings & Sharing

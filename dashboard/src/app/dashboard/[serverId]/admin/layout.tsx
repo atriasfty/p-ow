@@ -57,7 +57,8 @@ export default async function AdminLayout({
         { name: "Raid Mitigation", href: `/dashboard/${serverId}/admin/raid-mitigation`, icon: ShieldAlert },
     ]
 
-    if (server?.featureLoa !== false) {
+    if ((server as any)?.featureLoa !== false) {
+        // Insert LOA tab before Automations (index 7)
         tabs.splice(7, 0, { name: "Leave of Absences", href: `/dashboard/${serverId}/admin/loa`, icon: Calendar })
     }
 

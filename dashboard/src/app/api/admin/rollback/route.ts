@@ -79,7 +79,8 @@ export async function POST(req: Request) {
             data: {
                 event: "RAID_ROLLBACK",
                 ip: "dashboard", // Internal
-                userId: session.user.id,
+                creatorId: session.user.id,
+                serverId,
                 details: `Rolled back ${reversals.length} actions for target ${targetUserId} on server ${serverId}`
             }
         })

@@ -87,19 +87,19 @@ export async function performAutoJoin(sessionUser: SessionUser) {
         // Now, we must check their roles in each guild to assign them the correct POW permissions
         // We resolve the bot token per server to support White Label Bots
 
-        for (const server of newServersToJoin) {
+        await Promise.all(newServersToJoin.map(async (server: typeof newServersToJoin[0]) => {
             try {
                 const botToken = server.customBotEnabled && server.customBotToken 
                     ? server.customBotToken 
                     : process.env.DISCORD_BOT_TOKEN
                     
-                if (!botToken) continue
+                if (!botToken) return
                 const guildMemberRes = await fetch(
                     `https://discord.com/api/v10/guilds/${server.discordGuildId}/members/${sessionUser.discordId}`,
                     { headers: { Authorization: `Bot ${botToken}` } }
                 )
 
-                if (!guildMemberRes.ok) continue
+                if (!guildMemberRes.ok) return
 
                 const guildMemberData = await guildMemberRes.json()
                 const userDiscordRoles: string[] = guildMemberData.roles || []
@@ -107,10 +107,10 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                 // Check for suspended/terminated
                 if (server.terminatedRoleId && userDiscordRoles.includes(server.terminatedRoleId)) {
                     // Do not add them, maybe delete account but we skip for now
-                    continue
+                    return
                 }
                 if (server.suspendedRoleId && userDiscordRoles.includes(server.suspendedRoleId)) {
-                    continue
+                    return
                 }
 
                 // Check matching roles
@@ -175,7 +175,7 @@ export async function performAutoJoin(sessionUser: SessionUser) {
             } catch (e) {
                 console.error(`[Auto-Join] Failed to process auto-join for server ${server.id}:`, e)
             }
-        }
+        }))
 
         return joinedServers
 

@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 
@@ -9,7 +9,7 @@ export async function handleServerCommand(interaction: ChatInputCommandInteracti
 
     if (subcommand === "status") {
         // Defer immediately
-        await interaction.deferReply({ ephemeral: true })
+        await interaction.deferReply({ flags: [MessageFlags.Ephemeral] })
 
         const serverId = await resolveServer(interaction)
         if (!serverId) return interaction.editReply({ content: "❌ You must specify a server or run this within a registered Guild." })
