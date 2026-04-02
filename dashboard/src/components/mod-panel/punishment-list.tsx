@@ -281,6 +281,8 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                             setOpenMenu(openMenu === p.id ? null : p.id)
                                                         }}
                                                         className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                                        aria-label={`Manage punishment for ${user?.name || p.userId}`}
+                                                        title={`Manage punishment for ${user?.name || p.userId}`}
                                                     >
                                                         <MoreVertical className="h-3 w-3 text-zinc-500" />
                                                     </button>
@@ -360,12 +362,16 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                     onClick={() => handleEdit(p.id)}
                                                     disabled={loading === p.id}
                                                     className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                                    aria-label={`Save reason for ${user?.name || p.userId}`}
+                                                    title={loading === p.id ? "Saving..." : "Save reason"}
                                                 >
                                                     {loading === p.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
                                                 </button>
                                                 <button
                                                     onClick={() => setEditingId(null)}
                                                     className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                                    aria-label="Cancel editing reason"
+                                                    title="Cancel"
                                                 >
                                                     <X className="h-3 w-3" />
                                                 </button>

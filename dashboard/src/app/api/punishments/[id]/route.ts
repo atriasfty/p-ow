@@ -3,9 +3,11 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 
-import { verifyPermissionOrError } from "@/lib/auth-permissions"
+import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    if (!verifyCsrf(req)) return new NextResponse("CSRF verification failed", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -30,6 +32,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    if (!verifyCsrf(req)) return new NextResponse("CSRF verification failed", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

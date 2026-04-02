@@ -169,7 +169,7 @@ export default async function ModPanelPage({
                     )}
                 </div>
             )}
-            {isOnLoa && activeLoa && (
+            {(server as any)?.featureLoa && isOnLoa && activeLoa && (
                 <div className="rounded-xl bg-orange-500/10 border border-orange-500/30 p-3 flex items-center gap-3 text-left">
                     <Calendar className="h-5 w-5 text-orange-400 flex-shrink-0" />
                     <div>
@@ -300,7 +300,7 @@ export default async function ModPanelPage({
                             {/* LEFT COLUMN: Toolbox (Fixed width if needed, or col-span-1) */}
                             <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
                                 {/* LOA Banner */}
-                                {isOnLoa && activeLoa && (
+                                {(server as any)?.featureLoa && isOnLoa && activeLoa && (
                                     <div className="rounded-xl bg-orange-500/10 border border-orange-500/30 p-4 flex items-center gap-3 flex-shrink-0">
                                         <Calendar className="h-5 w-5 text-orange-400" />
                                         <div>
@@ -363,7 +363,13 @@ export default async function ModPanelPage({
                             <div className="lg:col-span-2 xl:col-span-3 flex flex-col gap-4 h-full min-h-0">
                                 {/* Toolbox Bar */}
                                 {/* Toolbox Bar - Gated in component but also hide if needed */}
-                                <Toolbox serverId={serverId} isOnLoa={isOnLoa} />
+                                <Toolbox
+                                    serverId={serverId}
+                                    isOnLoa={isOnLoa}
+                                    featureLoa={(server as any).featureLoa}
+                                    featureStaffReq={(server as any).featureStaffReq}
+                                    featurePermLog={(server as any).featurePermLog}
+                                />
 
                                 {/* Logs Panel */}
                                 {/* Logs Panel - Gated */}

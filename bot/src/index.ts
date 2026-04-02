@@ -1,5 +1,5 @@
 import { client, prisma } from "./client"
-import { Events, Interaction } from "discord.js"
+import { Events, Interaction, MessageFlags } from "discord.js"
 import { handleLoaCommand } from "./commands/loa"
 import { handleShiftCommand } from "./commands/shift"
 import { handleQuotaCommand } from "./commands/quota"
@@ -9,15 +9,15 @@ import { handleStaffRequestCommand } from "./commands/staffrequest"
 import { startBotQueueService } from "./services/bot-queue"
 import { startLogSyncService } from "./services/log-sync"
 import { startAutoRoleSync } from "./services/role-sync"
+import { startServerCleanupJob } from "./services/server-cleanup"
 import { deployCommands } from "./deploy-commands"
 
 client.once(Events.ClientReady, async (c: any) => {
     console.log(`Ready! Logged in as ${c.user?.tag || 'Bot'}`)
 
-    // Sync slash commands with Discord if requested
-    if (process.env.DEPLOY_COMMANDS === "true") {
-        await deployCommands()
-    }
+    // Sync slash commands with Discord
+    console.log("Initializing command sync...")
+    await deployCommands().catch(err => console.error("DEPLOY ERROR:", err))
 
     // Start auto role sync service
     startAutoRoleSync(client, prisma)
@@ -27,6 +27,9 @@ client.once(Events.ClientReady, async (c: any) => {
 
     // Start log sync service (Poll dashboard for PRC logs)
     startLogSyncService(client)
+
+    // Start automated server cleanup (PRC 24h Deletion Policy)
+    startServerCleanupJob()
 })
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
@@ -113,10 +116,41 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     } catch (e) {
         console.error("Command error:", e)
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: "There was an error executing this command!", ephemeral: true })
+            await interaction.followUp({ content: "There was an error executing this command!", flags: [MessageFlags.Ephemeral] })
         } else {
-            await interaction.reply({ content: "There was an error executing this command!", ephemeral: true })
+            await interaction.reply({ content: "There was an error executing this command!", flags: [MessageFlags.Ephemeral] })
         }
+    }
+})
+
+// Handle Bot removed from server (PRC Policy: 24h grace period then delete)
+client.on(Events.GuildDelete, async (guild) => {
+    console.log(`⚠️ Bot kicked/left guild: ${guild.name} (${guild.id})`)
+    const gracePeriod = new Date()
+    gracePeriod.setHours(gracePeriod.getHours() + 24)
+
+    try {
+        await (prisma.server as any).updateMany({
+            where: { discordGuildId: guild.id },
+            data: { deletionScheduledAt: gracePeriod }
+        })
+        console.log(`🕒 Server ${guild.name} marked for deletion in 24h.`)
+    } catch (error) {
+        console.error("Failed to schedule server deletion:", error)
+    }
+})
+
+// Handle Bot added to server (Cancel deletion if scheduled)
+client.on(Events.GuildCreate, async (guild) => {
+    console.log(`✅ Bot joined guild: ${guild.name} (${guild.id})`)
+    try {
+        await (prisma.server as any).updateMany({
+            where: { discordGuildId: guild.id },
+            data: { deletionScheduledAt: null }
+        })
+        console.log(`✨ Server ${guild.name} deletion canceled.`)
+    } catch (error) {
+        console.error("Failed to cancel server deletion:", error)
     }
 })
 

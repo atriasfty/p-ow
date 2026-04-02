@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 
 export async function handleQuotaCommand(interaction: ChatInputCommandInteraction) {

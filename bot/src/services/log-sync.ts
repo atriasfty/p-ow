@@ -14,13 +14,13 @@ export function startLogSyncService(client: Client) {
             setTimeout(schedule, 1000)
             return
         }
-        
+
         try {
             await syncLogs()
         } catch (e) {
             console.error("Log sync service error:", e)
         }
-        
+
         const interval = await getGlobalConfig("SYNC_INTERVAL_MS")
         setTimeout(schedule, interval)
     }
@@ -32,7 +32,7 @@ async function syncLogs() {
     isSyncing = true
     try {
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30s max per sync cycle
+        const timeoutId = setTimeout(() => controller.abort(), 120000) // 120s max per sync cycle (raised from 30s)
 
         const response = await fetch(`${DASHBOARD_URL}/api/internal/sync`, {
             method: "POST",

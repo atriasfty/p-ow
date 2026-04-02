@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 import { PrcClient } from "../lib/prc"
@@ -11,7 +11,7 @@ export async function handleIngameCommand(interaction: ChatInputCommandInteracti
     const discordId = interaction.user.id
 
     // Defer immediately before Clerk lookup
-    await interaction.deferReply({ ephemeral: true })
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] })
 
     // Find member using Clerk
     const member = await findMemberByDiscordId(prisma, discordId, serverId)

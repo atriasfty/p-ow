@@ -49,34 +49,44 @@ export default async function ServerSelectorPage() {
     }
 
     // Tenant Isolation: Only show servers the user is specifically a Member of
-    // Data Overexposure Prevention: Only select necessary fields for the UI
     const memberships = await prisma.member.findMany({
         where: { userId: session.user.id },
         select: {
+            role: {
+                select: {
+                    canAccessAdmin: true
+                }
+            },
             server: {
                 select: {
                     id: true,
                     name: true,
                     customName: true,
                     bannerUrl: true,
-                    apiUrl: true, // Needed for fetchServerStats but we won't pass it to the client
-                    subscriptionPlan: true
+                    apiUrl: true,
+                    subscriptionPlan: true,
+                    subscriberUserId: true
                 }
             }
         }
     })
 
     const servers = memberships.map((m: any) => m.server)
+    const isUserSuperAdmin = isSuperAdmin(session.user as any)
 
     // Parallel fetch for all stats
-    const serversWithStats = await Promise.all(servers.map(async (s: any) => {
+    const serversWithStats = await Promise.all(memberships.map(async (m: any) => {
+        const s = m.server
         const stats = await fetchServerStats(s.apiUrl)
+        const isAdmin = isUserSuperAdmin || s.subscriberUserId === session.user.id || m.role?.canAccessAdmin === true
+
         return {
             id: s.id,
             name: s.name,
             customName: s.customName,
-            bannerUrl: sanitizeUrl(s.bannerUrl), // XSS Prevention
+            bannerUrl: sanitizeUrl(s.bannerUrl),
             subscriptionPlan: s.subscriptionPlan,
+            isAdmin,
             stats
         }
     }))
@@ -113,7 +123,7 @@ export default async function ServerSelectorPage() {
                             </div>
                             <div className="flex items-center gap-4">
                                 {isSuperAdmin(session.user as any) && (
-                                    <Link 
+                                    <Link
                                         href="/admin/super"
                                         className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-sm font-semibold rounded-lg transition-colors border border-amber-500/20"
                                     >
@@ -127,7 +137,7 @@ export default async function ServerSelectorPage() {
 
                         {/* Global Upsell */}
                         {hasFreeServer && firstFreeServerId && (
-                            <UpsellBanner 
+                            <UpsellBanner
                                 serverId={firstFreeServerId}
                                 plan="free"
                                 feature="GLOBAL_UPSELL"
@@ -149,7 +159,7 @@ export default async function ServerSelectorPage() {
                                         <p className="text-sm text-indigo-200">You need to link your subscription to a server to apply your premium benefits.</p>
                                     </div>
                                 </div>
-                                <Link 
+                                <Link
                                     href="/dashboard/subscription"
                                     className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 flex-shrink-0"
                                 >
@@ -164,7 +174,7 @@ export default async function ServerSelectorPage() {
                                 <h2 className="text-xl font-semibold text-white">My Servers & Departments</h2>
                                 <div className="flex gap-4 items-center">
                                     {canCreateServer && (
-                                        <Link 
+                                        <Link
                                             href="/dashboard/create"
                                             className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-sm font-semibold rounded-lg transition-colors border border-emerald-500/20 shadow-lg shadow-emerald-500/5 group"
                                         >
@@ -192,7 +202,7 @@ export default async function ServerSelectorPage() {
                                             </p>
                                         </div>
                                         {canCreateServer && (
-                                            <Link 
+                                            <Link
                                                 href="/dashboard/create"
                                                 className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-bold rounded-xl transition-all shadow-xl shadow-emerald-500/10 flex items-center gap-2 group scale-100 hover:scale-105 active:scale-95"
                                             >
@@ -224,33 +234,24 @@ export default async function ServerSelectorPage() {
                                                             {server.stats.online && server.stats.players > 0 ? "Online" : "Offline"}
                                                         </div>
                                                     </div>
-                                                    <Shield className="h-5 w-5 text-emerald-500" />
-                                                </div>
-
-                                                {/* Quick Access */}
-                                                <div className="mt-4 rounded-lg bg-emerald-500/10 p-3 text-center text-sm font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 cursor-pointer">
-                                                    Quick Access: Press ⌘ + Enter
                                                 </div>
 
                                                 {/* Stats */}
-                                                <div className="mt-4 flex items-center justify-between border-b border-white/5 pb-4">
+                                                <div className="mt-4 flex items-center justify-between pb-2">
                                                     <div className="flex items-center gap-2 text-sm text-zinc-400">
                                                         <Users className="h-4 w-4" />
                                                         <span>{server.stats.players ?? 0} players</span>
-                                                    </div>
-                                                    {/* Avatars placeholder */}
-                                                    <div className="flex -space-x-2">
-                                                        <div className="h-6 w-6 rounded-full bg-zinc-700 border border-[#1a1a1a]"></div>
-                                                        <div className="h-6 w-6 rounded-full bg-zinc-600 border border-[#1a1a1a]"></div>
                                                     </div>
                                                 </div>
 
                                                 {/* Links */}
                                                 <div className="mt-4 space-y-2">
-                                                    <Link href={`/dashboard/${server.id}/admin`} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
-                                                        <LayoutDashboard className="h-4 w-4 text-sky-400" />
-                                                        Admin Dashboard
-                                                    </Link>
+                                                    {server.isAdmin && (
+                                                        <Link href={`/dashboard/${server.id}/admin`} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
+                                                            <LayoutDashboard className="h-4 w-4 text-sky-400" />
+                                                            Admin Dashboard
+                                                        </Link>
+                                                    )}
                                                     <Link href={`/dashboard/${server.id}/mod-panel`} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors">
                                                         <Shield className="h-4 w-4 text-emerald-400" />
                                                         Moderator Panel

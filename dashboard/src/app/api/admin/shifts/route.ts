@@ -100,6 +100,10 @@ export async function POST(req: NextRequest) {
         return new NextResponse("No active shift found", { status: 404 })
     }
 
+    if (activeShift.serverId !== serverId) {
+        return new NextResponse("Forbidden - Shift belongs to another server", { status: 403 })
+    }
+
     // End the shift
     const endTime = new Date()
     const duration = Math.floor((endTime.getTime() - activeShift.startTime.getTime()) / 1000)
@@ -145,6 +149,10 @@ export async function DELETE(req: NextRequest) {
     const shift = await prisma.shift.findUnique({ where: { id: shiftId } })
     if (!shift) {
         return new NextResponse("Shift not found", { status: 404 })
+    }
+
+    if (shift.serverId !== serverId) {
+        return new NextResponse("Forbidden - Shift belongs to another server", { status: 403 })
     }
 
     // Delete the shift

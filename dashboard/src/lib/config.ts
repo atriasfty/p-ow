@@ -49,7 +49,7 @@ export async function getGlobalConfig<T extends GlobalConfigKey>(key: T, default
 
 // --- PER-SERVER CONFIGS ---
 const SERVER_DEFAULTS = {
-    maxUploadSize: 50 * 1024 * 1024, // 50MB
+    maxUploadSize: 100 * 1024 * 1024, // 100MB
     staffRequestRateLimit: 5 * 60 * 1000, // 5 mins
     logCacheTtl: 5000, // 5 secs
     automationCacheTtl: 10000, // 10 secs
@@ -58,8 +58,8 @@ const SERVER_DEFAULTS = {
 export type ServerConfigKey = keyof typeof SERVER_DEFAULTS
 
 export async function getServerOverride<T extends ServerConfigKey>(serverId: string, key: T): Promise<typeof SERVER_DEFAULTS[T]> {
-    // These keys were removed from the database model, so always return default
-    if (key === "logCacheTtl" || key === "automationCacheTtl") {
+    // These keys are hardcoded and ignore DB overrides to prevent issues / standardize limits
+    if (key === "logCacheTtl" || key === "automationCacheTtl" || key === "maxUploadSize") {
         return SERVER_DEFAULTS[key]
     }
 

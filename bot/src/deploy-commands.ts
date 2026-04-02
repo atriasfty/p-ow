@@ -1,4 +1,5 @@
 import { REST, Routes, SlashCommandBuilder } from "discord.js"
+import { prisma } from "./client"
 import dotenv from "dotenv"
 
 dotenv.config()
@@ -133,21 +134,58 @@ export async function deployCommands() {
     const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN!)
 
     try {
-        console.log("Syncing slash commands with Discord...")
+        console.log(`Syncing slash commands globally with Discord... (Client ID: ${process.env.CLIENT_ID || 'MISSING'})`)
+        if (process.env.GUILD_ID) console.log(`Guild ID: ${process.env.GUILD_ID}`)
 
-        if (!process.env.CLIENT_ID || !process.env.GUILD_ID) {
-            console.warn("Missing CLIENT_ID or GUILD_ID - skipping command sync")
+        if (!process.env.CLIENT_ID) {
+            console.warn("❌ Missing CLIENT_ID in environment! Command sync aborted.")
             return
         }
 
-        await rest.put(
-            Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-            { body: commands }
-        )
+        // 1. Global deployment (takes up to 1h to propagate, but works everywhere)
+        try {
+            await rest.put(
+                Routes.applicationCommands(process.env.CLIENT_ID),
+                { body: commands }
+            )
+            console.log("✓ Global slash commands updated")
+        } catch (globalError: any) {
+            console.error("❌ Failed to sync global commands:", globalError.message)
+        }
 
-        console.log("✓ Slash commands synced successfully")
+        // 2. Sync with specific guild for immediate updates
+        if (process.env.GUILD_ID) {
+            try {
+                console.log(`Syncing guild-specific commands for ${process.env.GUILD_ID}...`)
+                await rest.put(
+                    Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+                    { body: commands }
+                )
+                console.log("✓ Guild-specific commands updated (instant)")
+
+                // Clear missing permissions flag if it was set
+                await (prisma.server as any).updateMany({
+                    where: { discordGuildId: process.env.GUILD_ID },
+                    data: { botMissingPermissions: false }
+                })
+            } catch (guildError: any) {
+                if (guildError.code === 50001) {
+                    console.warn("⚠️ Guild sync failed: 'Missing Access'. Ensure bot has 'applications.commands' scope in this server.")
+
+                    // Set missing permissions flag for dashboard warning
+                    await (prisma.server as any).updateMany({
+                        where: { discordGuildId: process.env.GUILD_ID },
+                        data: { botMissingPermissions: true }
+                    })
+                } else {
+                    console.error("❌ Failed to sync guild commands:", guildError.message)
+                }
+            }
+        }
+
+        console.log("Command synchronization cycle complete.")
     } catch (error) {
-        console.error("Failed to sync commands:", error)
+        console.error("Unexpected error during sync cycle:", error)
     }
 }
 
