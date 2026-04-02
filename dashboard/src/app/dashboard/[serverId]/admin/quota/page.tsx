@@ -103,9 +103,10 @@ export default async function AdminQuotaPage({
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekEnd.getDate() + 7)
 
-    // Get shifts for this week - across ALL servers for global quota
+    // Get shifts for this week - filtered by serverId for per-server quota accuracy
     const shifts = await prisma.shift.findMany({
         where: {
+            serverId,
             startTime: { gte: weekStart, lt: weekEnd }
         }
     })

@@ -119,12 +119,19 @@ export default async function ModPanelPage({
         where: {
             serverId,
             userId: { in: shiftUserIds },
-            startTime: { gte: weekStart },
-            endTime: { not: null }
+            startTime: { gte: weekStart }
         }
     })
 
-    const weeklyDurationSeconds = weeklyShifts.reduce((acc: number, s: any) => acc + (s.duration || 0), 0)
+    const weeklyDurationSeconds = weeklyShifts.reduce((acc: number, s: any) => {
+        if (s.endTime) {
+            return acc + (s.duration || 0)
+        } else {
+            // Include elapsed time for active shift
+            const elapsed = Math.floor((now.getTime() - s.startTime.getTime()) / 1000)
+            return acc + elapsed
+        }
+    }, 0)
     const weeklyDurationMinutes = Math.floor(weeklyDurationSeconds / 60)
     const quotaProgress = quotaMinutes > 0 ? Math.min(100, Math.round((weeklyDurationMinutes / quotaMinutes) * 100)) : 0
 
