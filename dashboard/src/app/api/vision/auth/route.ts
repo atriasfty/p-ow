@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { SignJWT, jwtVerify } from "jose"
-import { verifyVisionSignature, visionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
 import { canAccessVision } from "@/lib/subscription"
 
 // Handle preflight requests
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: visionCorsHeaders })
+export async function OPTIONS(req: Request) {
+    return NextResponse.json({}, { headers: getVisionCorsHeaders(req) })
 }
 
 // Generate a token for Vision app
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
             console.error("[Vision Auth] VISION_JWT_SECRET is not set!")
             return NextResponse.json(
                 { error: "Server configuration error" },
-                { status: 500, headers: visionCorsHeaders }
+                { status: 500, headers: getVisionCorsHeaders(req) }
             )
         }
 
@@ -25,13 +25,13 @@ export async function GET(req: Request) {
         const session = await getSession()
 
         if (!session?.user) {
-            return NextResponse.json({ error: "Not authenticated" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
         // Check if user has vision access (pro user plan or member of max server)
         const hasAccess = await canAccessVision(session.user.id)
         if (!hasAccess) {
-            return NextResponse.json({ error: "Vision access requires a Pro User subscription or membership in a Max tier server." }, { status: 403, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Vision access requires a Pro User subscription or membership in a Max tier server." }, { status: 403, headers: getVisionCorsHeaders(req) })
         }
 
         // Create a JWT token for Vision
@@ -58,10 +58,10 @@ export async function GET(req: Request) {
                 image: session.user.image,
                 robloxUsername: session.user.robloxUsername
             }
-        }, { headers: visionCorsHeaders })
+        }, { headers: getVisionCorsHeaders(req) })
     } catch (error) {
         console.error("[Vision Auth] Error:", error)
-        return NextResponse.json({ error: "Failed to generate token" }, { status: 500, headers: visionCorsHeaders })
+        return NextResponse.json({ error: "Failed to generate token" }, { status: 500, headers: getVisionCorsHeaders(req) })
     }
 }
 
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
             console.error("[Vision Auth] VISION_JWT_SECRET is not set!")
             return NextResponse.json(
                 { error: "Server configuration error" },
-                { status: 500, headers: visionCorsHeaders }
+                { status: 500, headers: getVisionCorsHeaders(req) }
             )
         }
 
@@ -84,14 +84,14 @@ export async function POST(req: Request) {
         if (!verifyVisionSignature(signature)) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 403, headers: visionCorsHeaders }
+                { status: 403, headers: getVisionCorsHeaders(req) }
             )
         }
 
         const { token } = await req.json()
 
         if (!token) {
-            return NextResponse.json({ valid: false, error: "No token provided" }, { status: 400, headers: visionCorsHeaders })
+            return NextResponse.json({ valid: false, error: "No token provided" }, { status: 400, headers: getVisionCorsHeaders(req) })
         }
 
         const { payload } = await jwtVerify(token, VISION_SECRET, {
@@ -108,9 +108,9 @@ export async function POST(req: Request) {
                 robloxUsername: payload.robloxUsername,
                 discordId: payload.discordId
             }
-        }, { headers: visionCorsHeaders })
+        }, { headers: getVisionCorsHeaders(req) })
     } catch (error) {
         console.error("[Vision Auth] Token verification failed:", error)
-        return NextResponse.json({ valid: false, error: "Invalid token" }, { status: 401, headers: visionCorsHeaders })
+        return NextResponse.json({ valid: false, error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
     }
 }
