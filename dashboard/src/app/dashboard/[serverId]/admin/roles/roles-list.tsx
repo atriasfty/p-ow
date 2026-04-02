@@ -249,14 +249,18 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => openEditor(role)}
-                                    className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                                    className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                                    aria-label={`Edit ${role.name} role`}
+                                    title={`Edit ${role.name} role`}
                                 >
                                     <Edit2 className="h-4 w-4" />
                                 </button>
                                 <button
                                     onClick={() => handleDelete(role.id)}
                                     disabled={deleting === role.id || role.isDefault}
-                                    className="p-2 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                                    className="p-2 rounded-lg hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                                    aria-label={`Delete ${role.name} role`}
+                                    title={role.isDefault ? "Cannot delete default role" : `Delete ${role.name} role`}
                                 >
                                     {deleting === role.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 </button>
@@ -283,7 +287,12 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
                         <div className="p-6 border-b border-[#222]">
                             <div className="flex items-center justify-between">
                                 <h3 className="font-bold text-white">{editingRole ? "Edit Role" : "Create Role"}</h3>
-                                <button onClick={() => setCreating(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                                <button
+                                    onClick={() => setCreating(false)}
+                                    className="p-2 hover:bg-white/10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                                    aria-label="Close role editor"
+                                    title="Close role editor"
+                                >
                                     <X className="h-4 w-4 text-zinc-400" />
                                 </button>
                             </div>
@@ -351,8 +360,11 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
                                             </div>
                                             <button
                                                 type="button"
+                                                role="switch"
+                                                aria-checked={formPerms[key as keyof RolePermissions]}
+                                                aria-label={details.label}
                                                 onClick={() => setFormPerms(prev => ({ ...prev, [key]: !prev[key as keyof RolePermissions] }))}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-4 ${formPerms[key as keyof RolePermissions] ? 'bg-indigo-500' : 'bg-zinc-700'}`}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ml-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${formPerms[key as keyof RolePermissions] ? 'bg-indigo-500' : 'bg-zinc-700'}`}
                                             >
                                                 <span
                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formPerms[key as keyof RolePermissions] ? 'translate-x-6' : 'translate-x-1'}`}
