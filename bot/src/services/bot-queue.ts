@@ -47,20 +47,25 @@ async function processQueue(client: Client, prisma: PrismaClient) {
 
     if (pendingItems.length === 0) return
 
-    const itemsToProcess: any[] = []
-    for (const item of pendingItems) {
-        // updateMany allows conditional updates on non-unique fields
-        const result = await prisma.botQueue.updateMany({
-            where: { id: item.id, status: "PENDING" },
-            data: { status: "PROCESSING" }
-        })
+    // Parallelize locking using Promise.all to reduce sequential blocking
+    const lockResults = await Promise.all(
+        pendingItems.map(item =>
+            prisma.botQueue.updateMany({
+                where: { id: item.id, status: "PENDING" },
+                data: { status: "PROCESSING" }
+            }).then(result => ({ id: item.id, locked: result.count > 0 }))
+        )
+    )
 
-        // If count > 0, THIS worker successfully locked the item
-        if (result.count > 0) {
-            const lockedItem = await prisma.botQueue.findUnique({ where: { id: item.id } })
-            if (lockedItem) itemsToProcess.push(lockedItem)
-        }
-    }
+    const successfullyLockedIds = lockResults.filter(r => r.locked).map(r => r.id)
+
+    if (successfullyLockedIds.length === 0) return
+
+    // Fetch all locked items in a single query instead of N findUnique queries
+    // ⚡ Bolt: Batching findUnique calls into a single findMany to avoid N+1 query overhead
+    const itemsToProcess = await prisma.botQueue.findMany({
+        where: { id: { in: successfullyLockedIds } }
+    })
 
     // Process items in parallel but with a small concurrency to avoid rate limits
     await Promise.all(itemsToProcess.map(async (item: any) => {
