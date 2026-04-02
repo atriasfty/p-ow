@@ -3,10 +3,10 @@ import { jwtVerify } from "jose"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
-import { verifyVisionSignature, visionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
 
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: visionCorsHeaders })
+export async function OPTIONS(req: Request) {
+    return NextResponse.json({}, { headers: getVisionCorsHeaders(req.headers.get("origin")) })
 }
 
 export async function POST(req: Request) {
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
             console.error("[Vision Punish] VISION_JWT_SECRET is not set!")
             return NextResponse.json(
                 { error: "Server configuration error" },
-                { status: 500, headers: visionCorsHeaders }
+                { status: 500, headers: getVisionCorsHeaders(req.headers.get("origin")) }
             )
         }
 
@@ -27,14 +27,14 @@ export async function POST(req: Request) {
         if (!verifyVisionSignature(signature)) {
             return NextResponse.json(
                 { error: "Unauthorized - Invalid Signature" },
-                { status: 403, headers: visionCorsHeaders }
+                { status: 403, headers: getVisionCorsHeaders(req.headers.get("origin")) }
             )
         }
 
         // 2. Verify JWT token
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "No token provided" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "No token provided" }, { status: 401, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
 
         const token = authHeader.substring(7)
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
             })
             payload = result.payload
         } catch {
-            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
 
         // 3. Parse request body
@@ -54,12 +54,12 @@ export async function POST(req: Request) {
         const { playerId, playerUsername, type, reason, serverId: requestedServerId } = body
 
         if (!playerId || !playerUsername || !type || !reason) {
-            return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Missing required fields" }, { status: 400, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
 
         const validTypes = ["Warn", "Kick", "Ban", "Ban Bolo"]
         if (!validTypes.includes(type)) {
-            return NextResponse.json({ error: "Invalid punishment type" }, { status: 400, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Invalid punishment type" }, { status: 400, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
 
         // 4. Determine server - use requested or find user's server membership
@@ -75,30 +75,30 @@ export async function POST(req: Request) {
                 select: { serverId: true }
             })
             if (!member) {
-                return NextResponse.json({ error: "No server membership found" }, { status: 400, headers: visionCorsHeaders })
+                return NextResponse.json({ error: "No server membership found" }, { status: 400, headers: getVisionCorsHeaders(req.headers.get("origin")) })
             }
             serverId = member.serverId
         } else {
             // Explicitly verify the user has access to the requested server
             const hasAccess = await isServerMember({ id: payload.userId } as any, serverId)
             if (!hasAccess) {
-                return NextResponse.json({ error: "Forbidden: Not a member of this server" }, { status: 403, headers: visionCorsHeaders })
+                return NextResponse.json({ error: "Forbidden: Not a member of this server" }, { status: 403, headers: getVisionCorsHeaders(req.headers.get("origin")) })
             }
         }
 
         // Verify action-specific permissions
         const perms = await getUserPermissions({ id: payload.userId } as any, serverId)
         if (type === "Warn" && !perms.canIssueWarnings) {
-            return NextResponse.json({ error: "Forbidden: Missing canIssueWarnings permission" }, { status: 403, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Forbidden: Missing canIssueWarnings permission" }, { status: 403, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
         if (type === "Kick" && !perms.canKick) {
-            return NextResponse.json({ error: "Forbidden: Missing canKick permission" }, { status: 403, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Forbidden: Missing canKick permission" }, { status: 403, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
         if (type === "Ban" && !perms.canBan) {
-            return NextResponse.json({ error: "Forbidden: Missing canBan permission" }, { status: 403, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Forbidden: Missing canBan permission" }, { status: 403, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
         if (type === "Ban Bolo" && !perms.canBanBolo) {
-            return NextResponse.json({ error: "Forbidden: Missing canBanBolo permission" }, { status: 403, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Forbidden: Missing canBanBolo permission" }, { status: 403, headers: getVisionCorsHeaders(req.headers.get("origin")) })
         }
 
         // 5. Log punishment to database
@@ -194,10 +194,10 @@ export async function POST(req: Request) {
             punishmentId: punishment.id,
             commandExecuted,
             message: `${type} issued successfully`
-        }, { headers: visionCorsHeaders })
+        }, { headers: getVisionCorsHeaders(req.headers.get("origin")) })
 
     } catch (error) {
         console.error("[Vision Punish] Error:", error)
-        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: visionCorsHeaders })
+        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: getVisionCorsHeaders(req.headers.get("origin")) })
     }
 }

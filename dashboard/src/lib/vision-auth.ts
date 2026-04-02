@@ -42,10 +42,22 @@ export function verifyVisionSignature(header: string | null): boolean {
     return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
 }
 
-export const visionCorsHeaders = {
-    // Note: Desktop app origins can vary (file://, http://localhost, etc.)
-    // For maximum security in production, this should be restricted to known origins
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Vision-Sig"
+export function getVisionCorsHeaders(origin: string | null) {
+    const allowedOrigins = [
+        process.env.NEXT_PUBLIC_APP_URL,
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "null"
+    ]
+
+    const isAllowed = origin && allowedOrigins.includes(origin)
+
+    // For file:// protocol, the origin is sometimes exactly "null" as a string
+    const allowOrigin = (isAllowed || origin === "null") ? origin : allowedOrigins[0] || "http://localhost:3000"
+
+    return {
+        "Access-Control-Allow-Origin": allowOrigin,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Vision-Sig"
+    }
 }
