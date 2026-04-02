@@ -264,7 +264,8 @@ export function Toolbox({
                                     setPermLogOpen(false)
                                     setPermLogMessage(null)
                                 }}
-                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                                aria-label="Close Permission Log"
+                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -272,36 +273,39 @@ export function Toolbox({
 
                         <form onSubmit={handlePermLogSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Permission</label>
+                                <label htmlFor="permission" className="block text-sm font-medium text-zinc-400 mb-2">Permission</label>
                                 <input
+                                    id="permission"
                                     type="text"
                                     value={permLogData.permission}
                                     onChange={(e) => setPermLogData({ ...permLogData, permission: e.target.value })}
                                     placeholder="e.g., Roadwork"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Username/s</label>
+                                <label htmlFor="usernames" className="block text-sm font-medium text-zinc-400 mb-2">Username/s</label>
                                 <input
+                                    id="usernames"
                                     type="text"
                                     value={permLogData.usernames}
                                     onChange={(e) => setPermLogData({ ...permLogData, usernames: e.target.value })}
                                     placeholder="e.g., ciankellya, user123"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Time</label>
+                                <label htmlFor="time" className="block text-sm font-medium text-zinc-400 mb-2">Time</label>
                                 <input
+                                    id="time"
                                     type="text"
                                     value={permLogData.time}
                                     onChange={(e) => setPermLogData({ ...permLogData, time: e.target.value })}
                                     placeholder="e.g., Permanent or 30m"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
 
@@ -343,7 +347,11 @@ export function Toolbox({
                                         <p className="text-xs text-zinc-500">Your quota will be paused during LOA</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setLoaOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                                <button
+                                    onClick={() => setLoaOpen(false)}
+                                    aria-label="Close LOA Request"
+                                    className="p-2 hover:bg-white/10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                                >
                                     <X className="h-4 w-4 text-zinc-400" />
                                 </button>
                             </div>
@@ -352,37 +360,40 @@ export function Toolbox({
                         <form onSubmit={handleLoaSubmit} className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-400 mb-2">Start Date</label>
+                                    <label htmlFor="startDate" className="block text-sm font-medium text-zinc-400 mb-2">Start Date</label>
                                     <input
+                                        id="startDate"
                                         type="date"
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
                                         required
-                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-400 mb-2">End Date</label>
+                                    <label htmlFor="endDate" className="block text-sm font-medium text-zinc-400 mb-2">End Date</label>
                                     <input
+                                        id="endDate"
                                         type="date"
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
                                         required
                                         min={startDate}
-                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Reason</label>
+                                <label htmlFor="reason" className="block text-sm font-medium text-zinc-400 mb-2">Reason</label>
                                 <textarea
+                                    id="reason"
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
                                     required
                                     rows={3}
                                     placeholder="Please explain why you need time off..."
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 resize-none"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 resize-none"
                                 />
                             </div>
 
@@ -429,7 +440,8 @@ export function Toolbox({
                                     setCommandMessage(null)
                                     setCommandInput("")
                                 }}
-                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                                aria-label="Close Run Command"
+                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -437,14 +449,15 @@ export function Toolbox({
 
                         <form onSubmit={handleCommandSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Command</label>
+                                <label htmlFor="commandInput" className="block text-sm font-medium text-zinc-400 mb-2">Command</label>
                                 <input
+                                    id="commandInput"
                                     type="text"
                                     value={commandInput}
                                     onChange={(e) => setCommandInput(e.target.value)}
                                     placeholder=":h [message] or any server command..."
                                     autoFocus
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                 />
                             </div>
 
@@ -487,7 +500,8 @@ export function Toolbox({
                             </div>
                             <button
                                 onClick={() => setStaffRequestOpen(false)}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                                aria-label="Close Staff Request"
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -495,14 +509,15 @@ export function Toolbox({
 
                         <form onSubmit={handleStaffRequestSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                                <label htmlFor="staffRequestReason" className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
                                     Reason for request
                                 </label>
                                 <textarea
+                                    id="staffRequestReason"
                                     value={staffRequestReason}
                                     onChange={(e) => setStaffRequestReason(e.target.value)}
                                     placeholder="Briefly describe why you need staff assistance..."
-                                    className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-red-500/50 transition-colors min-h-[100px] resize-none"
+                                    className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-red-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors min-h-[100px] resize-none"
                                     required
                                     autoFocus
                                 />

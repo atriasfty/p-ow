@@ -1,7 +1,7 @@
 import posthog from 'posthog-js'
 
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY
-const POSTHOG_HOST = 'https://eu.i.posthog.com'
+const POSTHOG_HOST = 'https://a.atriasafety.org'
 
 let isInitialized = false
 

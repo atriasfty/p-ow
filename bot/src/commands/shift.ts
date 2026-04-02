@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder } from "discord.js"
+import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 import { findMemberByDiscordId } from "../lib/clerk"
@@ -9,7 +9,7 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
     const discordId = interaction.user.id
 
     // ALWAYS defer first to avoid timeout (Clerk lookup can take time)
-    await interaction.deferReply({ ephemeral: true })
+    await interaction.deferReply({ flags: [MessageFlags.Ephemeral] })
 
     if (subcommand === "start") {
         const serverId = await resolveServer(interaction)
