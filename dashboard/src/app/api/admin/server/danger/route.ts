@@ -1,9 +1,11 @@
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { isServerOwner, isSuperAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
 
 export async function PATCH(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -56,6 +58,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
