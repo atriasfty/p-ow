@@ -72,8 +72,7 @@ async function queryPostHogEvents(eventName: string, hours: number = 24): Promis
     }
 }
 
-function aggregateServiceMetrics(events: PostHogEvent[], service: string) {
-    const serviceEvents = events.filter((e) => e.properties.service === service)
+function aggregateServiceMetrics(serviceEvents: PostHogEvent[], service: string) {
     if (serviceEvents.length === 0) {
         return { service, avgMs: 0, p95Ms: 0, p99Ms: 0, totalCalls: 0, errorRate: 0, errors: 0, timeouts: 0 }
     }
@@ -110,8 +109,7 @@ function getStatusCodeBreakdown(events: PostHogEvent[]) {
         .sort((a, b) => b.count - a.count)
 }
 
-function getTimeSeries(events: PostHogEvent[], service: string, hours: number, bucketMinutes: number = 5) {
-    const serviceEvents = events.filter((e) => e.properties.service === service)
+function getTimeSeries(serviceEvents: PostHogEvent[], service: string, hours: number, bucketMinutes: number = 5) {
     const buckets = new Map<string, { durations: number[]; errors: number }>()
 
     // Initialize ALL buckets with zeros to prevent gaps that break charts
@@ -158,8 +156,7 @@ function getTimeSeries(events: PostHogEvent[], service: string, hours: number, b
         }))
 }
 
-function getEndpointBreakdown(events: PostHogEvent[], service: string) {
-    const serviceEvents = events.filter((e) => e.properties.service === service)
+function getEndpointBreakdown(serviceEvents: PostHogEvent[], service: string) {
     const byEndpoint = new Map<string, { durations: number[]; errors: number }>()
 
     for (const e of serviceEvents) {
@@ -210,11 +207,22 @@ export async function GET(req: Request) {
         queryPostHogEvents("metric_db_query", hours),
     ])
 
+    // ⚡ Bolt: Group API events by service once in O(N) rather than filtering the large array 3 times per service
+    const apiEventsByService = new Map<string, PostHogEvent[]>()
+    for (const e of apiEvents) {
+        const svc = e.properties.service || "unknown"
+        if (!apiEventsByService.has(svc)) apiEventsByService.set(svc, [])
+        apiEventsByService.get(svc)!.push(e)
+    }
+    const prcEvents = apiEventsByService.get("prc") || []
+    const clerkEvents = apiEventsByService.get("clerk") || []
+    const powApiEvents = apiEventsByService.get("pow-api") || []
+
     // Service health summaries
     const services = {
-        prc: aggregateServiceMetrics(apiEvents, "prc"),
-        clerk: aggregateServiceMetrics(apiEvents, "clerk"),
-        powApi: aggregateServiceMetrics(apiEvents, "pow-api"),
+        prc: aggregateServiceMetrics(prcEvents, "prc"),
+        clerk: aggregateServiceMetrics(clerkEvents, "clerk"),
+        powApi: aggregateServiceMetrics(powApiEvents, "pow-api"),
         database: {
             service: "database",
             avgMs: dbEvents.length > 0
@@ -247,15 +255,15 @@ export async function GET(req: Request) {
 
     // Time series for charts
     const timeSeries = {
-        prc: getTimeSeries(apiEvents, "prc", hours),
-        clerk: getTimeSeries(apiEvents, "clerk", hours),
-        powApi: getTimeSeries(apiEvents, "pow-api", hours),
+        prc: getTimeSeries(prcEvents, "prc", hours),
+        clerk: getTimeSeries(clerkEvents, "clerk", hours),
+        powApi: getTimeSeries(powApiEvents, "pow-api", hours),
     }
 
     // Endpoint breakdown
     const endpoints = {
-        prc: getEndpointBreakdown(apiEvents, "prc"),
-        powApi: getEndpointBreakdown(apiEvents, "pow-api"),
+        prc: getEndpointBreakdown(prcEvents, "prc"),
+        powApi: getEndpointBreakdown(powApiEvents, "pow-api"),
     }
 
     // Status code breakdown
