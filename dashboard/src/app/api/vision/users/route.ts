@@ -2,11 +2,11 @@ import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
-import { verifyVisionSignature, visionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
 
 // Handle preflight requests
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: visionCorsHeaders })
+export async function OPTIONS(req: Request) {
+    return NextResponse.json({}, { headers: getVisionCorsHeaders(req) })
 }
 
 // Parse "username:userId" format
@@ -27,7 +27,7 @@ export async function GET(req: Request) {
             console.error("[Vision Users] VISION_JWT_SECRET is not set!")
             return NextResponse.json(
                 { error: "Server configuration error" },
-                { status: 500, headers: visionCorsHeaders }
+                { status: 500, headers: getVisionCorsHeaders(req) }
             )
         }
 
@@ -38,14 +38,14 @@ export async function GET(req: Request) {
         if (!verifyVisionSignature(signature)) {
             return NextResponse.json(
                 { error: "Unauthorized" },
-                { status: 403, headers: visionCorsHeaders }
+                { status: 403, headers: getVisionCorsHeaders(req) }
             )
         }
 
         // Verify Vision token
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "No token provided" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "No token provided" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
         const token = authHeader.substring(7)
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
                 audience: "pow-vision"
             })
         } catch {
-            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
         // Fetch active servers
@@ -91,9 +91,9 @@ export async function GET(req: Request) {
             }
         }))
 
-        return NextResponse.json(Array.from(allUsernames), { headers: visionCorsHeaders })
+        return NextResponse.json(Array.from(allUsernames), { headers: getVisionCorsHeaders(req) })
     } catch (error) {
         console.error("[Vision Users] Error:", error)
-        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: visionCorsHeaders })
+        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: getVisionCorsHeaders(req) })
     }
 }

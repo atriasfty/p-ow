@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
-import { verifyVisionSignature, visionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
 
 // Mistral API Key
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY
 
-export async function OPTIONS() {
-    return NextResponse.json({}, { headers: visionCorsHeaders })
+export async function OPTIONS(req: Request) {
+    return NextResponse.json({}, { headers: getVisionCorsHeaders(req) })
 }
 
 export async function POST(req: Request) {
@@ -16,14 +16,14 @@ export async function POST(req: Request) {
             console.error("[Vision Identify] VISION_JWT_SECRET is not set!")
             return NextResponse.json(
                 { error: "Server configuration error" },
-                { status: 500, headers: visionCorsHeaders }
+                { status: 500, headers: getVisionCorsHeaders(req) }
             )
         }
         if (!MISTRAL_API_KEY) {
             console.error("[Vision Identify] MISTRAL_API_KEY is not set!")
             return NextResponse.json(
                 { error: "Server configuration error" },
-                { status: 500, headers: visionCorsHeaders }
+                { status: 500, headers: getVisionCorsHeaders(req) }
             )
         }
 
@@ -33,14 +33,14 @@ export async function POST(req: Request) {
         if (!verifyVisionSignature(signature)) {
             return NextResponse.json(
                 { error: "Unauthorized - Invalid Signature" },
-                { status: 403, headers: visionCorsHeaders }
+                { status: 403, headers: getVisionCorsHeaders(req) }
             )
         }
 
         // 2. Verify Session Token (JWT)
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
-            return NextResponse.json({ error: "No token provided" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "No token provided" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
         const token = authHeader.substring(7)
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
                 audience: "pow-vision"
             })
         } catch {
-            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
         // 3. Get Image Data
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         const { image } = body
 
         if (!image) {
-            return NextResponse.json({ error: "No image provided" }, { status: 400, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "No image provided" }, { status: 400, headers: getVisionCorsHeaders(req) })
         }
 
         // 4. Call Pixtral AI
@@ -98,17 +98,17 @@ export async function POST(req: Request) {
         if (!response.ok) {
             const err = await response.text()
             console.error("Pixtral API Error:", err)
-            return NextResponse.json({ error: "AI service error" }, { status: 502, headers: visionCorsHeaders })
+            return NextResponse.json({ error: "AI service error" }, { status: 502, headers: getVisionCorsHeaders(req) })
         }
 
         const data = await response.json()
         const content = data.choices[0]?.message?.content?.trim() || "null"
         const username = content === "null" ? null : content.replace(/^@/, '')
 
-        return NextResponse.json({ username }, { headers: visionCorsHeaders })
+        return NextResponse.json({ username }, { headers: getVisionCorsHeaders(req) })
 
     } catch (error) {
         console.error("[Vision Identify] Error:", error)
-        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: visionCorsHeaders })
+        return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: getVisionCorsHeaders(req) })
     }
 }
