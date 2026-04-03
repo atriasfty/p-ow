@@ -67,6 +67,9 @@ async function processQueue(client: Client, prisma: PrismaClient) {
         where: { id: { in: successfullyLockedIds } }
     })
 
+    const successfulIds: string[] = []
+    const failedItems: { id: string, error: string }[] = []
+
     // Process items in parallel but with a small concurrency to avoid rate limits
     await Promise.all(itemsToProcess.map(async (item: any) => {
         try {
@@ -85,11 +88,7 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                     } catch (e) { }
 
                     await (channel as any).send(payload)
-
-                    await prisma.botQueue.update({
-                        where: { id: item.id },
-                        data: { status: "SENT", processedAt: new Date() }
-                    })
+                    successfulIds.push(item.id)
                 } else {
                     throw new Error("Channel not found or not text-based")
                 }
@@ -97,10 +96,7 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                 const user = await client.users.fetch(item.targetId).catch(() => null)
                 if (user) {
                     await user.send(item.content)
-                    await prisma.botQueue.update({
-                        where: { id: item.id },
-                        data: { status: "SENT", processedAt: new Date() }
-                    })
+                    successfulIds.push(item.id)
                 } else {
                     throw new Error("User not found")
                 }
@@ -116,28 +112,36 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                 if (!member) throw new Error("Member not found in guild")
 
                 await member.roles.add(item.content)
-                await prisma.botQueue.update({
-                    where: { id: item.id },
-                    data: { status: "SENT", processedAt: new Date() }
-                })
+                successfulIds.push(item.id)
             } else if (item.type === "SYNC_COMMANDS") {
                 const { deployCommands } = await import("../deploy-commands")
                 await deployCommands()
-                await prisma.botQueue.update({
-                    where: { id: item.id },
-                    data: { status: "SENT", processedAt: new Date() }
-                })
+                successfulIds.push(item.id)
             }
         } catch (error: any) {
             console.error(`[QUEUE] Failed to process item ${item.id}:`, error.message || error)
-            await prisma.botQueue.update({
-                where: { id: item.id },
+            failedItems.push({ id: item.id, error: error.message || "Unknown error" })
+        }
+    }))
+
+    // ⚡ Bolt: Batching database updates to avoid N+1 query bottleneck
+    if (successfulIds.length > 0) {
+        await prisma.botQueue.updateMany({
+            where: { id: { in: successfulIds } },
+            data: { status: "SENT", processedAt: new Date() }
+        })
+    }
+
+    if (failedItems.length > 0) {
+        await Promise.all(failedItems.map(failedItem =>
+            prisma.botQueue.update({
+                where: { id: failedItem.id },
                 data: {
                     status: "FAILED",
-                    error: error.message || "Unknown error",
+                    error: failedItem.error,
                     processedAt: new Date()
                 }
             })
-        }
-    }))
+        ))
+    }
 }
