@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
@@ -6,6 +7,7 @@ import { logAudit } from "@/lib/audit"
 
 // Grant admin access - superadmin only
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
