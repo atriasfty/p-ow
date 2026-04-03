@@ -7,7 +7,7 @@ export function EnsureConnections({ children }: { children: React.ReactNode }) {
     const { user, isLoaded } = useUser()
 
     if (!isLoaded) return <div className="p-8 text-white">Loading...</div>
-    if (!user) return null
+    if (!user) return <>{children}</>
 
     // Check for discord account in external accounts
     // Using includes() to avoid TypeScript strict type comparison issues
