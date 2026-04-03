@@ -83,6 +83,8 @@ export function UpsellBanner({ serverId, plan, feature, title, description, stor
 
                 <button 
                     onClick={handleDismiss}
+                    aria-label="Dismiss banner"
+                    title="Dismiss banner"
                     className="absolute top-2 right-2 p-1 text-zinc-600 hover:text-zinc-400 transition-colors"
                 >
                     <X className="h-4 w-4" />
