@@ -133,6 +133,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                                         <Link
                                             href={`/dashboard/${server.id}/admin`}
                                             className="h-8 px-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg border border-white/5 transition-all"
+                                            title={`View Dashboard for ${server.customName || server.name}`}
+                                            aria-label={`View Dashboard for ${server.customName || server.name}`}
                                         >
                                             Dashboard
                                         </Link>
@@ -141,6 +143,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                                             size="sm"
                                             className="h-8 w-8 p-0 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:text-emerald-400"
                                             onClick={() => setEditingServer(server)}
+                                            title={`Edit ${server.customName || server.name}`}
+                                            aria-label={`Edit ${server.customName || server.name}`}
                                         >
                                             <Edit2 className="h-3.5 w-3.5" />
                                         </Button>
@@ -150,6 +154,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                                             className="h-8 w-8 p-0 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:text-red-400"
                                             onClick={() => setDeletingId(server.id)}
                                             disabled={updatingId === server.id}
+                                            title={`Delete ${server.customName || server.name}`}
+                                            aria-label={`Delete ${server.customName || server.name}`}
                                         >
                                             {updatingId === server.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                                         </Button>
