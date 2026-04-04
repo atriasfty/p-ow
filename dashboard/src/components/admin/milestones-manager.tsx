@@ -153,6 +153,8 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
                             <button
                                 onClick={() => handleDelete(m.id)}
                                 className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                aria-label={`Delete milestone ${m.name}`}
+                                title={`Delete milestone ${m.name}`}
                             >
                                 <Trash2 className="h-4 w-4" />
                             </button>
