@@ -90,7 +90,8 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
 
         try {
             const res = await fetch(`/api/loa/${loaId}/${action}`, {
-                method: "POST"
+                method: "POST",
+                headers: { 'x-csrf-check': '1' }
             })
 
             if (res.ok) {
@@ -114,7 +115,8 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
 
         try {
             const res = await fetch(`/api/loa/${loaId}`, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: { 'x-csrf-check': '1' }
             })
 
             if (res.ok) {
