@@ -14,6 +14,10 @@ export async function DELETE(req: Request) {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF check failed", { status: 403 })
+    }
+
     // Only superadmin can revoke access
     if (!isSuperAdmin(session.user)) {
         return NextResponse.json({ error: "Only superadmin can revoke admin access" }, { status: 403 })
