@@ -33,7 +33,8 @@ export function ConfirmModal({
                 {/* Header-less Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white"
+                    aria-label="Close confirmation dialog"
+                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                 >
                     <X className="h-4 w-4" />
                 </button>
@@ -54,14 +55,14 @@ export function ConfirmModal({
                         <button
                             onClick={onClose}
                             disabled={isLoading}
-                            className="flex-1 px-5 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-[#333] transition-all font-semibold text-sm border border-transparent hover:border-white/5 disabled:opacity-50"
+                            className="flex-1 px-5 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-[#333] transition-all font-semibold text-sm border border-transparent hover:border-white/5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                         >
                             {cancelLabel}
                         </button>
                         <button
                             onClick={onConfirm}
                             disabled={isLoading}
-                            className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 ${isDestructive
+                            className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all transform active:scale-[0.98] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${isDestructive
                                     ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/20'
                                     : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/20'
                                 }`}
