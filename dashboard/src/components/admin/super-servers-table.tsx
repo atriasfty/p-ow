@@ -141,6 +141,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                                             size="sm"
                                             className="h-8 w-8 p-0 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:text-emerald-400"
                                             onClick={() => setEditingServer(server)}
+                                            aria-label={`Edit server ${server.customName || server.name}`}
+                                            title={`Edit server ${server.customName || server.name}`}
                                         >
                                             <Edit2 className="h-3.5 w-3.5" />
                                         </Button>
@@ -150,6 +152,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
                                             className="h-8 w-8 p-0 border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 hover:text-red-400"
                                             onClick={() => setDeletingId(server.id)}
                                             disabled={updatingId === server.id}
+                                            aria-label={`Delete server ${server.customName || server.name}`}
+                                            title={`Delete server ${server.customName || server.name}`}
                                         >
                                             {updatingId === server.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                                         </Button>
