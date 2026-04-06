@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { findMemberByRobloxId } from "@/lib/clerk-lookup"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // GET - Get shifts for a user within current quota week
 export async function GET(req: NextRequest) {
@@ -66,6 +67,10 @@ export async function GET(req: NextRequest) {
 
 // POST - End a user's active shift
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -128,6 +133,10 @@ export async function POST(req: NextRequest) {
 
 // DELETE - Delete a specific shift
 export async function DELETE(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
