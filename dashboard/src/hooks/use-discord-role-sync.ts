@@ -19,7 +19,10 @@ export function useDiscordRoleSync({ serverId, enabled = true }: UseDiscordRoleS
                 // Step 1: Always link Discord ID to member record
                 const linkRes = await fetch("/api/discord/link", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-csrf-check": "1"
+                    },
                     body: JSON.stringify({ serverId })
                 })
 
@@ -30,7 +33,10 @@ export function useDiscordRoleSync({ serverId, enabled = true }: UseDiscordRoleS
                 // Step 2: Try auto-assign roles (optional - may fail if not configured)
                 await fetch("/api/discord/auto-assign", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "x-csrf-check": "1"
+                    },
                     body: JSON.stringify({ serverId })
                 }).catch(() => { }) // Ignore errors
 
