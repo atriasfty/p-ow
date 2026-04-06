@@ -177,12 +177,16 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
                                     <button
                                         onClick={() => setEditingAutomation(automation)}
                                         className="p-2 hover:bg-white/10 rounded-lg transition-colors text-zinc-400"
+                                        aria-label={`Edit automation ${automation.name}`}
+                                        title={`Edit automation ${automation.name}`}
                                     >
                                         <Edit2 className="h-4 w-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDelete(automation.id)}
                                         className="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-colors text-zinc-400"
+                                        aria-label={`Delete automation ${automation.name}`}
+                                        title={`Delete automation ${automation.name}`}
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </button>
