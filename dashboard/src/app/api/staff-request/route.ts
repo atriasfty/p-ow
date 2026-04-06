@@ -54,10 +54,17 @@ export async function POST(req: Request) {
 
         // 1. Get all online players with mod/admin perms and PM them
         const client = new PrcClient(server.apiUrl)
-        const [rawPlayers, serverData] = await Promise.all([
-            client.getPlayers(),
-            client.getServer()
-        ])
+
+        // ⚡ Bolt: Wrap external PRC calls in a timeout to prevent hanging if the game server is offline
+        const [rawPlayers, serverData] = await Promise.race([
+            Promise.all([
+                client.getPlayers().catch(() => []),
+                client.getServer().catch(() => null)
+            ]),
+            new Promise<[any[], any]>((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout")), 2500)
+            )
+        ]).catch(() => [[], null])
 
         // Find all mods/admins (permission contains "Moderator" or "Administrator")
         const staffPlayers = rawPlayers.filter(p => {

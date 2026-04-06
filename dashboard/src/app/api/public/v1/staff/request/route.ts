@@ -19,10 +19,17 @@ const { reason, requester } = body
     try {
         const requesterName = requester || auth.apiKey.name || "API Integration"
         const client = new PrcClient(server.apiUrl)
-        const [rawPlayers, serverData] = await Promise.all([
-            client.getPlayers().catch(() => []),
-            client.getServer().catch(() => null)
-        ])
+
+        // ⚡ Bolt: Wrap external PRC calls in a timeout to prevent hanging if the game server is offline
+        const [rawPlayers, serverData] = await Promise.race([
+            Promise.all([
+                client.getPlayers().catch(() => []),
+                client.getServer().catch(() => null)
+            ]),
+            new Promise<[any[], any]>((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout")), 2500)
+            )
+        ]).catch(() => [[], null])
 
         const staffPlayers = rawPlayers.filter(p => {
             const perm = p.Permission as any
