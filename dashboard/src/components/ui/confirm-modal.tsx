@@ -33,7 +33,8 @@ export function ConfirmModal({
                 {/* Header-less Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white"
+                    aria-label="Close modal"
+                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
                 >
                     <X className="h-4 w-4" />
                 </button>
