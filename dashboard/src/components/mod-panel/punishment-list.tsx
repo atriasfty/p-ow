@@ -280,7 +280,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                             e.stopPropagation()
                                                             setOpenMenu(openMenu === p.id ? null : p.id)
                                                         }}
-                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                                                         aria-label={`Manage punishment for ${user?.name || p.userId}`}
                                                         title={`Manage punishment for ${user?.name || p.userId}`}
                                                     >
@@ -364,7 +364,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 <button
                                                     onClick={() => handleEdit(p.id)}
                                                     disabled={loading === p.id}
-                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                                                     aria-label={`Save reason for ${user?.name || p.userId}`}
                                                     title={loading === p.id ? "Saving..." : "Save reason"}
                                                 >
@@ -372,7 +372,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 </button>
                                                 <button
                                                     onClick={() => setEditingId(null)}
-                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                                                     aria-label="Cancel editing reason"
                                                     title="Cancel"
                                                 >
