@@ -9,3 +9,6 @@
 ## 2025-04-05 - [Optimizing Concurrent Heterogeneous Database Transactions]
 **Learning:** Found a performance bottleneck where `prisma.shift.update` was called individually inside a `Promise.all` loop during server shutdown to calculate unique shift durations. Since each shift required different update data based on its `startTime`, `updateMany` could not be used. While `Promise.all` executes concurrently in Node.js, this still results in N+1 separate transactions being sent to the SQLite database.
 **Action:** Wrapped the array of update promises inside a `prisma.$transaction()` block. This batches all individual updates into a single database transaction, significantly reducing transaction overhead and database lock contention during mass shutdown events.
+## 2025-04-05 - [Optimizing Clerk User Fetching]
+**Learning:** The `clerkClient.users.getUserList({ limit: 100 })` method fetches the first 100 users globally across the entire Clerk application. Using this to retrieve users for a specific server causes a severe O(N) over-fetching bottleneck, potentially omitting relevant users if the app has >100 users total.
+**Action:** Always fetch the target server's `members` from Prisma first. Extract their unique `userId`s, and then fetch from Clerk strictly using `getUserList({ userId: uniqueUserIds.slice(0, 500) })`.

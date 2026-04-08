@@ -37,9 +37,18 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
-    // Fetch Clerk users
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
+    })
+
+    // Fetch Clerk users based on server members
     const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
+    const uniqueUserIds = Array.from(new Set(members.map(m => m.userId)))
+    const usersResponse = uniqueUserIds.length > 0
+        ? await client.users.getUserList({ userId: uniqueUserIds.slice(0, 500) })
+        : { data: [] }
 
     const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
         const discordAccount = user.externalAccounts.find(
@@ -84,12 +93,6 @@ export default async function AdminQuotaPage({
         )
         return user?.image || null
     }
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
 
     // Calculate week start based on offset (Monday)
     const now = new Date()
