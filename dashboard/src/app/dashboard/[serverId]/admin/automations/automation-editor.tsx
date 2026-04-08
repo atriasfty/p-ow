@@ -298,7 +298,9 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
                                                             onClick={() => {
                                                                 const newConds = conds.filter((_, idx) => idx !== i); setConditions(JSON.stringify(newConds))
                                                             }}
-                                                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                                                            className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                                                            aria-label="Remove condition"
+                                                            title="Remove condition"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </button>
