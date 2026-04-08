@@ -82,7 +82,7 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
         try {
             const res = await fetch("/api/admin/automations", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
                 body: JSON.stringify({
                     serverId,
                     id: automation?.id,
