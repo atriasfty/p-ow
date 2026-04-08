@@ -2,10 +2,15 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { hasPermission } from "@/lib/admin"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 export async function POST(req: Request) {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
+    if (!verifyCsrf(req)) {
+        return new NextResponse("CSRF validation failed", { status: 403 })
+    }
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Decline LOA
 export async function POST(
@@ -11,6 +12,10 @@ export async function POST(
 ) {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
+    if (!verifyCsrf(req)) {
+        return new NextResponse("CSRF validation failed", { status: 403 })
+    }
 
     try {
         const { id } = await params
