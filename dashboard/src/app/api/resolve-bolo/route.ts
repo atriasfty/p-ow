@@ -5,6 +5,9 @@ import { NextResponse } from "next/server"
 import { verifyCsrf } from "@/lib/auth-permissions"
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
