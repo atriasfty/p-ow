@@ -6,8 +6,41 @@ const isDashboardRoute = createRouteMatcher(["/dashboard(.*)", "/api/(.*)"]);
 const isSuperAdminRoute = createRouteMatcher(["/admin/super(.*)", "/api/admin/super(.*)"]);
 const isPublicApi = createRouteMatcher(["/api/maintenance-check", "/api/vision/(.*)"]);
 
+// CSRF Route matchers
+const isApiRoute = createRouteMatcher(["/api/(.*)"]);
+const isCsrfExemptApi = createRouteMatcher(["/api/public/(.*)", "/api/vision/(.*)", "/api/internal/(.*)", "/api/maintenance-check"]);
+
 export default clerkMiddleware(async (auth, req) => {
     const { userId, sessionClaims } = await auth();
+
+    // --- CSRF Protection for state-modifying API routes ---
+    if (isApiRoute(req) && !isCsrfExemptApi(req)) {
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+            const origin = req.headers.get("origin");
+            const referer = req.headers.get("referer");
+            const host = req.headers.get("host");
+
+            let isCsrfValid = false;
+            if (host) {
+                try {
+                    if (origin) {
+                        isCsrfValid = new URL(origin).host === host;
+                    } else if (referer) {
+                        isCsrfValid = new URL(referer).host === host;
+                    }
+                } catch (e) {
+                    isCsrfValid = false;
+                }
+            }
+
+            if (!isCsrfValid) {
+                return new NextResponse(JSON.stringify({ error: "Forbidden: CSRF verification failed" }), {
+                    status: 403,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+    }
 
     // 2. Check Maintenance Mode from Prisma via a fast internal fetch (or direct if edge-compatible)
     // Since Middleware runs on Edge, we'll use our existing maintenance-check API internally 
