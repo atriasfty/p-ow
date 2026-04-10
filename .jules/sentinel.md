@@ -13,3 +13,8 @@ State-modifying API routes (POST, PATCH, DELETE) in the Next.js dashboard must b
 **Vulnerability:** Cookie-based App Router API endpoints that change state (POST/PATCH/DELETE) lack Next.js's built-in Server Actions CSRF protections. Endpoints like `admin/grant/route.ts` were missing CSRF validation entirely.
 **Learning:** The Next.js dashboard uses a custom `verifyCsrf` helper for cookie-based API routes because `route.ts` files do not inherit Next.js Server Actions CSRF protections inherently.
 **Prevention:** Always ensure `verifyCsrf(req)` is imported from `@/lib/auth-permissions` and called at the top of any state-modifying API route that authenticates via `getSession()`.
+
+## 2025-03-01 - Privilege Escalation in Punishment Editing
+**Vulnerability:** The API endpoint to edit punishments (`dashboard/src/app/api/punishments/[id]/route.ts`) only required a baseline permission check (`canViewPunishments`) to allow editing *any* punishment. This allowed users with view-only permissions to improperly modify punishment reasons.
+**Learning:** Checking a single general permission is insufficient when an entity (like a punishment) represents different security tiers (Warn vs Ban) within the same API endpoint.
+**Prevention:** Always dynamically verify the specific permissions required to edit an entity based on the entity's type or properties (`canIssueWarnings` for 'Warn', `canBan` for 'Ban', etc.).

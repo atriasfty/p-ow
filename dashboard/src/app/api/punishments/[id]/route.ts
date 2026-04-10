@@ -43,8 +43,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const punishment = await prisma.punishment.findUnique({ where: { id } })
     if (!punishment) return new NextResponse("Not Found", { status: 404 })
 
-    // Baseline permission check to edit ANY punishment details
-    const baseError = await verifyPermissionOrError(session.user, punishment.serverId, "canViewPunishments")
+    // Ensure the user has the permission corresponding to the punishment type they are editing
+    let requiredPermission = "canViewPunishments" // fallback
+    if (punishment.type === "Warn") requiredPermission = "canIssueWarnings"
+    else if (punishment.type === "Kick") requiredPermission = "canKick"
+    else if (punishment.type === "Ban" || punishment.type === "Ban Bolo") requiredPermission = "canBan"
+
+    const baseError = await verifyPermissionOrError(session.user, punishment.serverId, requiredPermission)
     if (baseError) return baseError
 
     // Additional check if resolving a BOLO
