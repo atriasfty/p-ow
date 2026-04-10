@@ -83,6 +83,23 @@ export async function performAutoJoin(sessionUser: SessionUser) {
         if (newServersToJoin.length === 0) return []
 
         const joinedServers: string[] = []
+        const newMembersData: any[] = []
+        const analyticsEvents: any[] = []
+
+        // ⚡ Bolt: Eliminate N+1 DB queries by fetching all related panel roles in one go
+        const newServerIds = newServersToJoin.map((s: any) => s.id)
+        const allPanelRoles = await prisma.role.findMany({
+            where: { serverId: { in: newServerIds }, discordRoleId: { not: null } }
+        })
+
+        // Group panel roles by serverId for O(1) lookups
+        const panelRolesByServer = new Map<string, typeof allPanelRoles>()
+        for (const role of allPanelRoles) {
+            if (!panelRolesByServer.has(role.serverId)) {
+                panelRolesByServer.set(role.serverId, [])
+            }
+            panelRolesByServer.get(role.serverId)!.push(role)
+        }
 
         // Now, we must check their roles in each guild to assign them the correct POW permissions
         // We resolve the bot token per server to support White Label Bots
@@ -113,10 +130,8 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                     return
                 }
 
-                // Check matching roles
-                const panelRoles = await prisma.role.findMany({
-                    where: { serverId: server.id, discordRoleId: { not: null } }
-                })
+                // ⚡ Bolt: Lookup pre-fetched panel roles using O(1) hash map
+                const panelRoles = panelRolesByServer.get(server.id) || []
 
                 // Get role hierarchy
                 const guildRolesRes = await fetch(
@@ -148,24 +163,21 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                 const isStaff = server.staffRoleId && userDiscordRoles.includes(server.staffRoleId)
 
                 if (bestRoleId || isStaff) {
-                    // Add member to DB
-                    await prisma.member.create({
-                        data: {
-                            userId: sessionUser.id,
-                            serverId: server.id,
-                            discordId: sessionUser.discordId,
-                            robloxId: sessionUser.robloxId,
-                            robloxUsername: sessionUser.robloxUsername,
-                            roleId: bestRoleId,
-                            isAdmin: false
-                        }
+                    // ⚡ Bolt: Collect member data for batch insertion instead of N+1 creates
+                    newMembersData.push({
+                        userId: sessionUser.id,
+                        serverId: server.id,
+                        discordId: sessionUser.discordId,
+                        robloxId: sessionUser.robloxId,
+                        robloxUsername: sessionUser.robloxUsername,
+                        roleId: bestRoleId,
+                        isAdmin: false
                     })
 
                     joinedServers.push(server.id)
 
-                    // Analytics
-                    const posthog = PostHogClient()
-                    posthog.capture({
+                    // ⚡ Bolt: Collect analytics events for batch dispatch
+                    analyticsEvents.push({
                         distinctId: sessionUser.id,
                         event: "user_auto_joined_server",
                         properties: { serverId: server.id, guildId: server.discordGuildId }
@@ -176,6 +188,16 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                 console.error(`[Auto-Join] Failed to process auto-join for server ${server.id}:`, e)
             }
         }))
+
+        // ⚡ Bolt: Execute batched inserts and dispatch analytics
+        if (newMembersData.length > 0) {
+            await prisma.member.createMany({
+                data: newMembersData
+            })
+
+            const posthog = PostHogClient()
+            analyticsEvents.forEach(evt => posthog.capture(evt))
+        }
 
         return joinedServers
 
