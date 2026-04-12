@@ -2,8 +2,12 @@ import { getSession } from "@/lib/auth-clerk"
 import { isSuperAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     const session = await getSession()
     if (!session || !isSuperAdmin(session.user as any)) {
         return new NextResponse("Unauthorized", { status: 401 })
@@ -31,6 +35,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
     const session = await getSession()
     if (!session || !isSuperAdmin(session.user as any)) {
         return new NextResponse("Unauthorized", { status: 401 })
