@@ -40,6 +40,7 @@ export async function getClerkUserByDiscordId(discordId: string): Promise<{
 
         if (!user) {
             // Fallback: search through users with Discord OAuth (less efficient but catches edge cases)
+            // Keep limit 100 for global fetch as this might be correct for a simple bot fetch unless there's an array of IDs
             const allUsers = await clerk.users.getUserList({ limit: 100 }) as any
 
             for (const u of allUsers.data) {

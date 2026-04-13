@@ -37,12 +37,13 @@ export default async function AdminLoaPage({ params }: { params: Promise<{ serve
     if (uniqueUserIds.length > 0) {
         try {
             const client = await clerkClient()
-            const usersResponse = await client.users.getUserList({
-                userId: uniqueUserIds,
-                limit: 100
-            })
+            let usersData: any[] = []
+            const chunks = []
+            for (let i = 0; i < uniqueUserIds.length; i += 100) chunks.push(uniqueUserIds.slice(i, i + 100))
+            const results = await Promise.all(chunks.map(chunk => client.users.getUserList({ userId: chunk, limit: 100 })))
+            usersData = results.flatMap(r => r.data)
             
-            clerkUsers = usersResponse.data.map(user => {
+            clerkUsers = usersData.map(user => {
                 const discordAccount = user.externalAccounts.find(
                     a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
                 )

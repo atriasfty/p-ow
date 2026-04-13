@@ -40,13 +40,18 @@ export async function GET(req: Request) {
         const userIds = activeShifts.map((s: any) => s.userId)
 
         // Clerk getUserList can take an array of userIds
-        const clerkUsers = await clerk.users.getUserList({
-            userId: userIds
-        })
+        let usersData: any[] = []
+        if (userIds.length > 0) {
+            const chunks = []
+            for (let i = 0; i < userIds.length; i += 100) chunks.push(userIds.slice(i, i + 100))
+            const results = await Promise.all(chunks.map(chunk => clerk.users.getUserList({ userId: chunk, limit: 100 })))
+            usersData = results.flatMap(r => r.data)
+        }
 
         // 3. Map active shifts to Clerk users (ensures we show everyone we can find)
         const staffOnDuty = activeShifts.map((shift: any) => {
-            const user = clerkUsers.data.find((u: any) => u.id === shift.userId)
+            const user = usersData.find((u: any) => u.id === shift.userId)
+            // user search replaced above
             if (!user) return null
 
             // Find roblox username from external accounts
