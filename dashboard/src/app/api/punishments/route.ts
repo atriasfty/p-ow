@@ -68,8 +68,12 @@ export async function GET(req: Request) {
         const client = await clerkClient()
         let users: any[] = []
         try {
-            const userList = await client.users.getUserList({ userId: clerkIds })
-            users = userList.data
+            if (clerkIds.length > 0) {
+                const chunks = []
+                for (let i = 0; i < clerkIds.length; i += 100) chunks.push(clerkIds.slice(i, i + 100))
+                const results = await Promise.all(chunks.map(chunk => client.users.getUserList({ userId: chunk, limit: 100 })))
+                users = results.flatMap(r => r.data)
+            }
         } catch (e) {
             console.error("Clerk fetch error", e)
         }

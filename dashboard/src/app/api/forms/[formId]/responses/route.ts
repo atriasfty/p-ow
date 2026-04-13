@@ -83,12 +83,17 @@ export async function GET(
             .filter((id: string | null): id is string => id !== null)
 
         // Fetch user details from Clerk
-        const users = respondentIds.length > 0
-            ? await (await clerkClient()).users.getUserList({ userId: respondentIds, limit: 100 })
-            : { data: [] }
+        let usersData: any[] = []
+        if (respondentIds.length > 0) {
+            const client = await clerkClient()
+            const chunks = []
+            for (let i = 0; i < respondentIds.length; i += 100) chunks.push(respondentIds.slice(i, i + 100))
+            const results = await Promise.all(chunks.map(chunk => client.users.getUserList({ userId: chunk, limit: 100 })))
+            usersData = results.flatMap(r => r.data)
+        }
 
         // Map users to Roblox username
-        const userMap = new Map(users.data.map(u => {
+        const userMap = new Map(usersData.map(u => {
             const roblox = u.externalAccounts.find(a =>
                 a.provider === "oauth_custom_roblox" || a.provider === "roblox"
             )
