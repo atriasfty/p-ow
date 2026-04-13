@@ -98,7 +98,10 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
         try {
             const res = await fetch(`/api/admin/rollback`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-csrf-check": "1"
+                },
                 body: JSON.stringify({
                     serverId,
                     targetUserId: targetUser.id,
