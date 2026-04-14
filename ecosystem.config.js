@@ -18,5 +18,16 @@ module.exports = {
       watch: false,
       autorestart: true,
     },
+    {
+      name: 'pow-sync',
+      script: 'node',
+      args: 'src/sync-server.js',
+      cwd: './current/dashboard',
+      watch: false,
+      autorestart: true,
+      env: {
+        SYNC_PORT: 41730
+      }
+    },
   ],
 };

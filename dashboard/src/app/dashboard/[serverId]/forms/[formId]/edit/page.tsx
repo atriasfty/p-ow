@@ -3,8 +3,12 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Save, Trash2, Plus, GripVertical, Settings2, Eye, Share2, Copy, Check, ExternalLink, BarChart3, ChevronUp, ChevronDown, UserMinus } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, GripVertical, Settings2, Eye, Share2, Copy, Check, ExternalLink, BarChart3, ChevronUp, ChevronDown, UserMinus, Loader2 } from "lucide-react"
 import { useDialog } from "@/components/providers/dialog-provider"
+import { LiveEditorProvider, useLiveEditor } from "@/components/forms/live-editor-provider"
+import { LiveCursors } from "@/components/forms/live-cursors"
+import { ActiveEditorsAvatar } from "@/components/forms/active-editors-avatar"
+import * as Y from "yjs"
 
 interface Question {
     id: string
@@ -73,10 +77,36 @@ const QUESTION_TYPES = [
     { value: "file_upload", label: "File Upload", icon: "📎" },
 ]
 
-export default function EditFormPage({
+export default function EditFormPageWrapper({
     params,
 }: {
     params: Promise<{ serverId: string; formId: string }>
+}) {
+    const [resolvedParams, setResolvedParams] = useState<{ serverId: string; formId: string } | null>(null)
+    
+    useEffect(() => {
+        params.then(p => setResolvedParams(p))
+    }, [params])
+
+    if (!resolvedParams) return (
+        <div className="min-h-screen bg-[#111] flex items-center justify-center">
+            <Loader2 className="h-6 w-6 text-zinc-500 animate-spin" />
+        </div>
+    )
+
+    return (
+        <LiveEditorProvider formId={resolvedParams.formId}>
+            <EditFormInner params={params} resolvedParams={resolvedParams} />
+        </LiveEditorProvider>
+    )
+}
+
+function EditFormInner({
+    params,
+    resolvedParams
+}: {
+    params: Promise<{ serverId: string; formId: string }>
+    resolvedParams: { serverId: string; formId: string }
 }) {
     const router = useRouter()
     const [form, setForm] = useState<Form | null>(null)
@@ -87,8 +117,8 @@ export default function EditFormPage({
     const [showSettings, setShowSettings] = useState(false)
     const [openAddMenu, setOpenAddMenu] = useState<string | null>(null) // sectionId
     const [copied, setCopied] = useState<string | null>(null)
-    const [resolvedParams, setResolvedParams] = useState<{ serverId: string; formId: string } | null>(null)
     const { showConfirm } = useDialog()
+    const { doc, connected } = useLiveEditor()
 
     const [availableRoles, setAvailableRoles] = useState<DiscordRole[]>([])
     const [availableChannels, setAvailableChannels] = useState<DiscordChannel[]>([])
@@ -97,12 +127,33 @@ export default function EditFormPage({
     const [loadingEditors, setLoadingEditors] = useState(false)
 
     useEffect(() => {
-        params.then(p => {
-            setResolvedParams(p)
-            loadForm(p.formId)
-            loadDiscordData(p.serverId)
-        })
-    }, [params])
+        loadForm(resolvedParams.formId)
+        loadDiscordData(resolvedParams.serverId)
+    }, [resolvedParams])
+
+    // --- YJS Syncing Logic ---
+    useEffect(() => {
+        if (!doc) return
+        const yMap = doc.getMap("formState")
+
+        const handleSync = (event: Y.YEvent<any>, transaction: Y.Transaction) => {
+            if (!transaction.local) {
+                const updatedForm = yMap.get("data") as Form | undefined
+                if (updatedForm) setForm(updatedForm)
+            }
+        }
+
+        yMap.observe(handleSync)
+        return () => yMap.unobserve(handleSync)
+    }, [doc])
+
+    const broadcastFormState = (newState: Form) => {
+        if (!doc) return
+        const yMap = doc.getMap("formState")
+        doc.transact(() => {
+            yMap.set("data", newState)
+        }, "local")
+    }
 
     useEffect(() => {
         if (showSettings && resolvedParams) {
@@ -185,6 +236,17 @@ export default function EditFormPage({
                 ignoredRoleIds: safeJSONParse(data.ignoredRoleIds, [])
             }
             setForm(parsedForm)
+            
+            // Initial seed to Yjs if we are the first to load
+            if (doc) {
+                const yMap = doc.getMap("formState")
+                if (!yMap.has("data")) {
+                    yMap.set("data", parsedForm)
+                } else {
+                    // We join an existing session, adopt their state instead of our DB load
+                    setForm(yMap.get("data") as Form)
+                }
+            }
         } catch (e: any) {
             setError(e.message)
         } finally {
@@ -218,6 +280,7 @@ export default function EditFormPage({
                 ignoredRoleIds: safeJSONParse(data.ignoredRoleIds, [])
             }
             setForm(parsedForm)
+            broadcastFormState(parsedForm)
         } catch (e: any) {
             setError(e.message)
         } finally {
@@ -245,12 +308,14 @@ export default function EditFormPage({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ sectionId, ...updates })
             })
-            setForm({
+            const newForm = {
                 ...form,
                 sections: form.sections.map(s =>
                     s.id === sectionId ? { ...s, ...updates } : s
                 )
-            })
+            }
+            setForm(newForm)
+            broadcastFormState(newForm)
         } catch { }
     }
 
@@ -294,18 +359,17 @@ export default function EditFormPage({
         if (!form) return
 
         // 1. Optimistic Update (Immediate UI response)
-        setForm(prev => {
-            if (!prev) return null
-            return {
-                ...prev,
-                sections: prev.sections.map(s => ({
-                    ...s,
-                    questions: s.questions.map(q =>
-                        q.id === questionId ? { ...q, ...updates } : q
-                    )
-                }))
-            }
-        })
+        const newForm = {
+            ...form,
+            sections: form.sections.map(s => ({
+                ...s,
+                questions: s.questions.map(q =>
+                    q.id === questionId ? { ...q, ...updates } : q
+                )
+            }))
+        }
+        setForm(newForm)
+        broadcastFormState(newForm)
 
         // 2. Debounced Network Call
         if (questionUpdateTimeouts.current[questionId]) {
@@ -379,7 +443,9 @@ export default function EditFormPage({
         // Optimistic update
         const updatedSections = [...form.sections]
         updatedSections[sectionIndex] = { ...updatedSections[sectionIndex], questions: updatedQuestions }
-        setForm({ ...form, sections: updatedSections })
+        const newForm = { ...form, sections: updatedSections }
+        setForm(newForm)
+        broadcastFormState(newForm)
 
         // Save to server
         try {
@@ -413,7 +479,9 @@ export default function EditFormPage({
         const updatedSections = sections.map((s, i) => ({ ...s, order: i }))
 
         // Optimistic update
-        setForm({ ...form, sections: updatedSections })
+        const newForm = { ...form, sections: updatedSections }
+        setForm(newForm)
+        broadcastFormState(newForm)
 
         // Save to server
         try {
@@ -472,7 +540,11 @@ export default function EditFormPage({
                             <input
                                 type="text"
                                 value={form.title}
-                                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                                onChange={(e) => {
+                                    const nf = { ...form, title: e.target.value }
+                                    setForm(nf)
+                                    broadcastFormState(nf)
+                                }}
                                 onBlur={() => saveForm({ title: form.title })}
                                 className="bg-transparent text-lg font-semibold text-white outline-none"
                             />
@@ -498,6 +570,7 @@ export default function EditFormPage({
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        <ActiveEditorsAvatar />
                         <Link
                             href={`/dashboard/${resolvedParams.serverId}/forms/${form.id}/responses`}
                             className="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm transition-colors"
@@ -525,7 +598,9 @@ export default function EditFormPage({
                 </div>
             </div>
 
-            <div className="max-w-4xl mx-auto p-6 space-y-6">
+            <div className="max-w-4xl mx-auto p-6 space-y-6 relative">
+                <LiveCursors />
+                
                 {showSettings ? (
                     <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6 space-y-6">
                         <div className="flex items-center justify-between">
@@ -634,7 +709,12 @@ export default function EditFormPage({
                                 <input
                                     type="checkbox"
                                     checked={form.requiresAuth}
-                                    onChange={(e) => saveForm({ requiresAuth: e.target.checked })}
+                                    onChange={(e) => {
+                                        const nf = { ...form, requiresAuth: e.target.checked }
+                                        setForm(nf)
+                                        broadcastFormState(nf)
+                                        saveForm({ requiresAuth: e.target.checked })
+                                    }}
                                     className="rounded"
                                 />
                                 <div>
@@ -646,7 +726,12 @@ export default function EditFormPage({
                                 <input
                                     type="checkbox"
                                     checked={form.isAnonymous}
-                                    onChange={(e) => saveForm({ isAnonymous: e.target.checked })}
+                                    onChange={(e) => {
+                                        const nf = { ...form, isAnonymous: e.target.checked }
+                                        setForm(nf)
+                                        broadcastFormState(nf)
+                                        saveForm({ isAnonymous: e.target.checked })
+                                    }}
                                     className="rounded"
                                 />
                                 <div>
@@ -805,7 +890,11 @@ export default function EditFormPage({
                                 <p className="text-sm text-white mb-2">Custom Thank You Message</p>
                                 <textarea
                                     value={form.thankYouMessage || ""}
-                                    onChange={(e) => setForm({ ...form, thankYouMessage: e.target.value || null })}
+                                    onChange={(e) => {
+                                        const nf = { ...form, thankYouMessage: e.target.value || null }
+                                        setForm(nf)
+                                        broadcastFormState(nf)
+                                    }}
                                     onBlur={() => saveForm({ thankYouMessage: form.thankYouMessage })}
                                     placeholder="Thanks for submitting! We have received your response."
                                     className="w-full bg-[#1a1a1a] px-3 py-2 rounded text-sm text-white outline-none resize-none"
@@ -829,7 +918,11 @@ export default function EditFormPage({
                         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
                             <textarea
                                 value={form.description || ""}
-                                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                onChange={(e) => {
+                                    const nf = { ...form, description: e.target.value }
+                                    setForm(nf)
+                                    broadcastFormState(nf)
+                                }}
                                 onBlur={() => saveForm({ description: form.description })}
                                 placeholder="Add a description..."
                                 className="w-full bg-transparent text-zinc-400 placeholder:text-zinc-600 outline-none resize-none"
