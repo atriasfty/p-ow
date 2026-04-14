@@ -85,10 +85,24 @@ export async function GET(
                         counts[opt] = 0
                     }
                     for (const a of answers) {
-                        if (counts[a.value] !== undefined) {
-                            counts[a.value]++
-                        } else {
-                            counts[a.value] = 1
+                        try {
+                            // Extract actual value from JSON-stored string
+                            const val = typeof a.value === 'string' && (a.value.startsWith('"') || a.value.startsWith('['))
+                                ? JSON.parse(a.value)
+                                : a.value
+
+                            if (counts[val] !== undefined) {
+                                counts[val]++
+                            } else if (val) {
+                                counts[val] = 1
+                            }
+                        } catch {
+                            // Fallback to raw value if parsing fails
+                            if (counts[a.value] !== undefined) {
+                                counts[a.value]++
+                            } else {
+                                counts[a.value] = 1
+                            }
                         }
                     }
                     analytics[question.id] = {
@@ -131,7 +145,7 @@ export async function GET(
 
                 case "scale": {
                     // Calculate average and distribution
-                    const values = answers.map(a => parseInt(a.value)).filter(v => !isNaN(v))
+                    const values = answers.map((a: any) => parseInt(a.value)).filter((v: any) => !isNaN(v))
                     const avg = values.length > 0 ? values.reduce((a: number, b: number) => a + b, 0) / values.length : 0
 
                     const distribution: Record<number, number> = {}

@@ -47,7 +47,7 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
     return (
         <div className="space-y-8">
             {/* Server Settings */}
-            <div className="bg-[#1a1a1a] rounded-xl border border-[#222] overflow-hidden">
+            <div className="bg-[#1a1a1a] rounded-xl border border-[#222]">
                 <div className="p-6 border-b border-[#222]">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
@@ -87,6 +87,9 @@ export default async function AdminGeneralPage({ params }: { params: Promise<{ s
                         featurePermLog={server.featurePermLog}
                         currentWebhookUrl={server.webhookUrl}
                         currentWebhookEvents={server.webhookEvents}
+                        prcWebhookId={server.prcWebhookId}
+                        webhookEnabled={server.webhookEnabled}
+                        webhookPublicKey={server.webhookPublicKey}
                         isOwner={isOwner}
                         serverMembers={members}
                         botMissingPermissions={server.botMissingPermissions}

@@ -70,6 +70,13 @@ export async function GET(req: Request) {
                 permission: p.Permission,
                 vehicle: p.Vehicle,
                 callsign: p.Callsign,
+                location: p.Location ? {
+                    x: p.Location.LocationX,
+                    z: p.Location.LocationZ,
+                    postal: p.Location.PostalCode,
+                    street: p.Location.StreetName,
+                    building: p.Location.BuildingNumber
+                } : null,
                 avatar: null as string | null
             }
         })

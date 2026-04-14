@@ -19,6 +19,7 @@ export type TriggerType =
     | "BOLO_CREATED" | "BOLO_CLEARED"
     | "DISCORD_MESSAGE_RECEIVED"
     | "TIME_INTERVAL"
+    | "EMERGENCY_CALL" | "MOD_CALL"
 
 export interface AutomationContext {
     serverId: string
@@ -29,6 +30,12 @@ export interface AutomationContext {
         permission?: number
         vehicle?: string
         callsign?: string
+        location?: {
+            x: number
+            z: number
+            postal: string | null
+            street: string | null
+        }
         [key: string]: any
     }
     punishment?: {
@@ -329,6 +336,13 @@ export class AutomationEngine {
             result = result.replace(/{player_callsign}/g, wrap(context.player.callsign || "None"))
             result = result.replace(/%player%/g, wrap(context.player.name))
             result = result.replace(/%id%/g, wrap(context.player.id))
+
+            if (context.player.location) {
+                result = result.replace(/{location_x}/g, String(Math.round(context.player.location.x)))
+                result = result.replace(/{location_z}/g, String(Math.round(context.player.location.z)))
+                result = result.replace(/{postal}/g, wrap(context.player.location.postal || "N/A"))
+                result = result.replace(/{street}/g, wrap(context.player.location.street || "Unknown"))
+            }
         }
         result = result.replace(/{server_id}/g, wrap(context.serverId))
         if (serverData) {

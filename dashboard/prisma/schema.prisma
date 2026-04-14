@@ -49,6 +49,11 @@ model Server {
   webhookUrl            String?   // Discord webhook URL
   webhookEvents         String?   // JSON array of event types to notify
   
+  // PRC v2 Inbound Webhooks
+  prcWebhookId          String?   @unique @default(cuid())
+  webhookEnabled        Boolean   @default(true)
+  webhookPublicKey      String?   @default("MCowBQYDK2VwAyEAjSICb9pp0kHizGQtdG8ySWsDChfGqi+gyFCttigBNOA=")
+  
   // Recruitment & Staff Features
   loaChannelId           String?   // Where LOA requests go for review
   onLoaRoleId            String?   // Role applied while on LOA
@@ -71,6 +76,12 @@ model Server {
   forms           Form[]
   apiKeys         ApiKey[]
   milestones      StaffMilestone[]
+  
+  // PRC v2 Data
+  playerLocations PlayerLocation[]
+  modCalls        ModCall[]
+  emergencyCalls  EmergencyCall[]
+  vehicleLogs     VehicleLog[]
 
   @@index([discordGuildId])
 }
@@ -202,7 +213,9 @@ model Member {
   role      Role?    @relation(fields: [roleId], references: [id])
   roleId    String?
   
+  lastVerifiedAt DateTime? 
   createdAt DateTime @default(now())
+
 
   @@unique([userId, serverId])
   @@index([userId])
@@ -458,5 +471,85 @@ model FormEditorAccess {
   
   @@unique([formId, userId])
   @@index([userId])
+}
+
+// PRC v2 DATA MODELS
+model PlayerLocation {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  playerName      String?
+  
+  locationX       Float
+  locationZ       Float
+  postalCode      String?
+  streetName      String?
+  buildingNumber  String?
+  
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, userId, createdAt])
+}
+
+model ModCall {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  callerId        String
+  callerName      String?
+  description     String?
+  callNumber      Int?
+  positionX       Float?
+  positionZ       Float?
+  positionDescriptor String?
+  respondingPlayers  String?  // JSON array of Roblox IDs who responded
+  
+  timestamp       Int?     // PRC timestamp
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model EmergencyCall {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  team            String   // Police, Fire, etc.
+  callerId        String
+  callerName      String?
+  description     String?
+  callNumber      Int?
+  positionX       Float?
+  positionZ       Float?
+  positionDescriptor String?
+  
+  timestamp       Int?     // PRC timestamp
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model VehicleLog {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  ownerId         String
+  ownerName       String?
+  vehicleName     String
+  licensePlate    String?
+  color           String?
+  livery          String?
+  positionX       Float?
+  positionZ       Float?
+  
+  timestamp       Int?     // PRC timestamp
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
 }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useServerEventsContext } from "@/components/providers/server-events-provider"
 
 interface ServerStatsProps {
     serverId: string
@@ -14,25 +15,23 @@ export function ServerStatsHeader({ serverId, initialPlayers, initialMaxPlayers,
     const [maxPlayers, setMaxPlayers] = useState(initialMaxPlayers)
     const [online, setOnline] = useState(initialOnline)
 
-    // Auto-refresh every 10 seconds
-    useEffect(() => {
-        const refreshStats = async () => {
-            try {
-                const res = await fetch(`/api/server-stats?serverId=${serverId}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    setPlayers(data.players ?? 0)
-                    setMaxPlayers(data.maxPlayers ?? 0)
-                    setOnline(data.online ?? false)
-                }
-            } catch (e) {
-                // Silent fail - keep current values
-            }
-        }
+    const { serverStats, players: ssePlayers } = useServerEventsContext()
 
-        const interval = setInterval(refreshStats, 10000)
-        return () => clearInterval(interval)
-    }, [serverId])
+    // Update from SSE server-stats events
+    useEffect(() => {
+        if (serverStats) {
+            setPlayers(serverStats.players)
+            setMaxPlayers(serverStats.maxPlayers)
+            setOnline(serverStats.online)
+        }
+    }, [serverStats])
+
+    // Also update player count from the players list itself (more accurate)
+    useEffect(() => {
+        if (ssePlayers.length > 0) {
+            setPlayers(ssePlayers.length)
+        }
+    }, [ssePlayers])
 
     const isServerOnline = online && players > 0
 
@@ -41,7 +40,7 @@ export function ServerStatsHeader({ serverId, initialPlayers, initialMaxPlayers,
             <div>
                 <h3 className="font-bold text-white text-lg">{players} Players</h3>
                 <p className="text-xs text-zinc-500">
-                    {maxPlayers} Max • {isServerOnline ? "Online" : "Offline"}
+                    {maxPlayers > 0 ? `${maxPlayers} Max • ` : ""}{isServerOnline ? "Online" : "Offline"}
                 </p>
             </div>
             <div className={`h-3 w-3 rounded-full ${isServerOnline ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" : "bg-red-500"}`}></div>

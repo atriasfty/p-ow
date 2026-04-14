@@ -34,6 +34,9 @@ interface ServerSettingsFormProps {
     featurePermLog?: boolean
     currentWebhookUrl?: string | null
     currentWebhookEvents?: string | null
+    prcWebhookId?: string | null
+    webhookEnabled?: boolean
+    webhookPublicKey?: string | null
     isOwner?: boolean
     serverMembers?: any[]
     botMissingPermissions?: boolean
@@ -67,6 +70,9 @@ export function ServerSettingsForm({
     featurePermLog = true,
     currentWebhookUrl,
     currentWebhookEvents,
+    prcWebhookId,
+    webhookEnabled: initialWebhookEnabled = true,
+    webhookPublicKey: currentWebhookPublicKey,
     isOwner,
     serverMembers,
     botMissingPermissions: initialBotMissingPermissions = false,
@@ -114,6 +120,9 @@ export function ServerSettingsForm({
             return []
         }
     })
+
+    const [webhookEnabled, setWebhookEnabled] = useState(initialWebhookEnabled)
+    const [webhookPublicKey, setWebhookPublicKey] = useState(currentWebhookPublicKey || "")
 
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState("")
@@ -169,7 +178,9 @@ export function ServerSettingsForm({
         isFeatureStaffReq !== featureStaffReq ||
         isFeaturePermLog !== featurePermLog ||
         webhookUrl !== (currentWebhookUrl || "") ||
-        JSON.stringify(webhookEvents) !== JSON.stringify(currentWebhookEvents ? JSON.parse(currentWebhookEvents) : [])
+        JSON.stringify(webhookEvents) !== JSON.stringify(currentWebhookEvents ? JSON.parse(currentWebhookEvents) : []) ||
+        webhookEnabled !== initialWebhookEnabled ||
+        webhookPublicKey !== (currentWebhookPublicKey || "")
 
     const handleReset = () => {
         setName(currentName)
@@ -200,6 +211,8 @@ export function ServerSettingsForm({
         } catch (e) {
             setWebhookEvents([])
         }
+        setWebhookEnabled(initialWebhookEnabled)
+        setWebhookPublicKey(currentWebhookPublicKey || "")
     }
 
     const handleSave = async () => {
@@ -235,7 +248,9 @@ export function ServerSettingsForm({
                     featureStaffReq: isFeatureStaffReq,
                     featurePermLog: isFeaturePermLog,
                     webhookUrl: webhookUrl || null,
-                    webhookEvents: webhookEvents
+                    webhookEvents: webhookEvents,
+                    webhookEnabled,
+                    webhookPublicKey: webhookPublicKey || null
                 })
             })
 
@@ -412,7 +427,7 @@ export function ServerSettingsForm({
 
                 {/* Content Area */}
                 <div className="flex-1 max-w-3xl animate-in fade-in slide-in-from-right-4 duration-500">
-                    <div className="bg-[#111] border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+                    <div className="bg-[#111] border border-white/5 rounded-3xl p-8 shadow-2xl relative backdrop-blur-xl">
                         <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
                             {(() => {
                                 const Icon = CATEGORIES.find(c => c.id === activeCategory)?.icon
@@ -454,6 +469,65 @@ export function ServerSettingsForm({
                                                 <img src={bannerUrl} alt="Banner" className="w-full h-full object-cover" />
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* PRC v2 Webhook Ingestion */}
+                                    <div className="pt-8 border-t border-white/5 space-y-6 text-left">
+                                        <div className="flex items-center gap-3 text-left">
+                                            <div className="h-8 w-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
+                                                <Globe className="h-4 w-4 text-sky-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-white">Real-time Ingestion (PRC v2)</h3>
+                                                <p className="text-[10px] text-zinc-500">Enable real-time tracking for players, calls, and vehicles.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-5 bg-sky-500/5 border border-sky-500/10 rounded-2xl space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="space-y-0.5 text-left">
+                                                    <p className="text-xs font-medium text-white">Enable Ingestion</p>
+                                                    <p className="text-[10px] text-zinc-500">Allow PRC to send events to Project Overwatch.</p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setWebhookEnabled(!webhookEnabled)}
+                                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${webhookEnabled ? 'bg-sky-500' : 'bg-zinc-800'}`}
+                                                >
+                                                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${webhookEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                                                </button>
+                                            </div>
+
+                                            {webhookEnabled && (
+                                                <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2 text-left">
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Your Unique Webhook URL</label>
+                                                        <div className="flex gap-2">
+                                                            <input
+                                                                readOnly
+                                                                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/prc/${prcWebhookId}?long=true`}
+                                                                className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-mono text-sky-400 focus:outline-none"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/prc/${prcWebhookId}?long=true`)
+                                                                    showAlert("Copied", "Webhook URL copied to clipboard!", "success")
+                                                                }}
+                                                                className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all shadow-inner border border-white/5 active:scale-95"
+                                                            >
+                                                                <Save className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                                                        <p className="text-[10px] text-zinc-400 font-semibold mb-2 italic">Instructions:</p>
+                                                        <li>In ER:LC, open <span className="text-zinc-300 italic">Server Settings &gt; API &gt; Event Webhook</span> and paste the URL above into the <span className="text-zinc-300 font-bold">Server URL</span> field.</li>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}

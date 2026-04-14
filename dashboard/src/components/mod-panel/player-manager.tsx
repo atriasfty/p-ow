@@ -2,32 +2,19 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { PlayerList, ParsedPlayer } from "./player-list"
+import { PlayerList } from "./player-list"
 import { PlayerSearch } from "./player-search"
+import { useServerEventsContext } from "@/components/providers/server-events-provider"
+import type { ParsedPlayerSSE } from "@/components/providers/server-events-provider"
 
 export function PlayerManager({ serverId }: { serverId: string }) {
-    const [players, setPlayers] = useState<ParsedPlayer[]>([])
-    const [loading, setLoading] = useState(true)
+    const { players: ssePlayers } = useServerEventsContext()
+    const [players, setPlayers] = useState<ParsedPlayerSSE[]>([])
 
+    // Update from SSE live players list
     useEffect(() => {
-        const fetchPlayers = async () => {
-            try {
-                const res = await fetch(`/api/players?serverId=${serverId}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    setPlayers(data)
-                }
-            } catch (e) {
-                console.error("Player fetch error", e)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchPlayers()
-        const interval = setInterval(fetchPlayers, 10000) // 10 seconds as requested
-        return () => clearInterval(interval)
-    }, [serverId])
+        setPlayers(ssePlayers)
+    }, [ssePlayers])
 
     return (
         <>

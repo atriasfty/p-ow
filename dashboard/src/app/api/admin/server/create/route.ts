@@ -120,7 +120,7 @@ export async function POST(req: Request) {
             return newServer
         })
 
-        return NextResponse.json({ success: true, serverId: result.id })
+        return NextResponse.json({ success: true, serverId: result.id, prcWebhookId: result.prcWebhookId })
 
     } catch (e: any) {
         console.error("Server Creation Error:", e)

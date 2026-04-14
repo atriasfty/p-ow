@@ -87,6 +87,37 @@ export async function isServerOwner(user: SessionUser | null, serverId: string):
 }
 
 /**
+ * Internal helper to get a member record, potentially triggering a JIT verification
+ * if the last verification was more than 5 minutes ago.
+ */
+async function getOrVerifyMember(user: SessionUser, serverId: string) {
+    const possibleIds = [user.id]
+    if (user.discordId) possibleIds.push(user.discordId)
+    if (user.robloxId) possibleIds.push(user.robloxId)
+
+    const member = await prisma.member.findFirst({
+        where: {
+            serverId,
+            userId: { in: possibleIds }
+        },
+        include: { role: true }
+    })
+
+    if (!member) return null
+
+    // JIT Verification: If more than 5 minutes since last check, re-sync with Discord
+    const FIVE_MINUTES = 5 * 60 * 1000
+    const needsVerify = !member.lastVerifiedAt || (Date.now() - member.lastVerifiedAt.getTime() > FIVE_MINUTES)
+
+    if (needsVerify && member.discordId) {
+        const { verifyMemberRoles } = await import("./discord-verify")
+        return await verifyMemberRoles(user.id, serverId)
+    }
+
+    return member
+}
+
+/**
  * Check if the user is an admin for a specific server
  */
 export async function isServerAdmin(user: SessionUser | null, serverId: string): Promise<boolean> {
@@ -98,24 +129,11 @@ export async function isServerAdmin(user: SessionUser | null, serverId: string):
     // Server owner always has access
     if (await isServerOwner(user, serverId)) return true
 
-    // Build possible user IDs to check (member might be stored with any of these)
-    const possibleIds = [user.id]
-    if (user.discordId) possibleIds.push(user.discordId)
-    if (user.robloxId) possibleIds.push(user.robloxId)
+    // Get or Verify member record
+    const member = await getOrVerifyMember(user, serverId)
+    if (!member) return false
 
-    // Check if any of the user's possible IDs are marked as admin in the Member table
-    const member = await prisma.member.findFirst({
-        where: {
-            serverId,
-            userId: { in: possibleIds },
-            OR: [
-                { isAdmin: true },
-                { role: { canAccessAdmin: true } }
-            ]
-        }
-    })
-
-    return member !== null
+    return member.isAdmin || member.role?.canAccessAdmin === true
 }
 
 /**
@@ -127,17 +145,7 @@ export async function isServerMember(user: SessionUser | null, serverId: string)
     // Superadmin has access to everything
     if (isSuperAdmin(user)) return true
 
-    const possibleIds = [user.id]
-    if (user.discordId) possibleIds.push(user.discordId)
-    if (user.robloxId) possibleIds.push(user.robloxId)
-
-    const member = await prisma.member.findFirst({
-        where: {
-            serverId,
-            userId: { in: possibleIds }
-        }
-    })
-
+    const member = await getOrVerifyMember(user, serverId)
     return member !== null
 }
 
@@ -150,18 +158,7 @@ export async function getUserPermissions(user: SessionUser | null, serverId: str
     // Superadmin has all permissions
     if (isSuperAdmin(user)) return ALL_PERMISSIONS
 
-    // Build possible user IDs to check (member might be stored with any of these)
-    const possibleIds = [user.id]
-    if (user.discordId) possibleIds.push(user.discordId)
-    if (user.robloxId) possibleIds.push(user.robloxId)
-
-    const member = await prisma.member.findFirst({
-        where: {
-            serverId,
-            userId: { in: possibleIds }
-        },
-        include: { role: true }
-    })
+    const member = await getOrVerifyMember(user, serverId)
 
     if (!member) return DEFAULT_PERMISSIONS
 

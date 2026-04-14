@@ -41,7 +41,9 @@ export async function PATCH(req: Request) {
             featureStaffReq,
             featurePermLog,
             webhookUrl,
-            webhookEvents
+            webhookEvents,
+            webhookEnabled,
+            webhookPublicKey
         } = body
 
         if (!serverId) {
@@ -93,6 +95,8 @@ export async function PATCH(req: Request) {
                 ...(featurePermLog !== undefined && { featurePermLog }),
                 ...(webhookUrl !== undefined && { webhookUrl: webhookUrl || null }),
                 ...(webhookEvents !== undefined && { webhookEvents: Array.isArray(webhookEvents) ? JSON.stringify(webhookEvents) : (webhookEvents || null) }),
+                ...(webhookEnabled !== undefined && { webhookEnabled }),
+                ...(webhookPublicKey !== undefined && { webhookPublicKey: webhookPublicKey || null }),
             }
         })
 

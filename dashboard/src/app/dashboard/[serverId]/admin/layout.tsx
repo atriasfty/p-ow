@@ -47,6 +47,7 @@ export default async function AdminLayout({
 
     const tabs = [
         { name: "General", href: `/dashboard/${serverId}/admin`, icon: Settings },
+        { name: "Quota", href: `/dashboard/${serverId}/admin/quota`, icon: Clock },
         { name: "Audit Log", href: `/dashboard/${serverId}/admin/audit`, icon: ActivitySquare },
         { name: "Members", href: `/dashboard/${serverId}/admin/members`, icon: Users },
         { name: "Roles", href: `/dashboard/${serverId}/admin/roles`, icon: Shield },

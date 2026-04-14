@@ -26,21 +26,62 @@ Project Overwatch is composed of three interconnected systems sharing a single s
 
 ## 2. Database & Schema Management (CRITICAL)
 
-The system uses a single SQLite database file located at `dashboard/prisma/dev.db`.
+The production database is **remote and NOT accessible from the local machine**. The `dashboard/prisma/dev.db` file is only used for local development.
 
 ### Synchronization Requirement
-The `bot` and `dashboard` directories have **separate** `prisma/schema.prisma` files. 
+The `bot` and `dashboard` directories have **separate** `prisma/schema.prisma` files.
 - **RULE:** If you modify `dashboard/prisma/schema.prisma`, you **MUST** copy the changes to `bot/prisma/schema.prisma`.
 - **COMMANDS:** You must run `npx prisma generate` in **both** directories after any schema change.
-- **MIGRATIONS:** Always run migrations from the `dashboard` directory. Use `npx prisma db push --accept-data-loss` for rapid prototyping or `npx prisma migrate dev` for formal changes.
+
+### Migrations (CRITICAL RULE)
+**NEVER** use `npx prisma db push` or `npx prisma migrate dev`. The production deployment (`deploy.sh`) exclusively uses `npx prisma migrate deploy`.
+
+**EVERY schema change requires manually creating a migration folder + SQL file:**
+```
+dashboard/prisma/migrations/<YYYYMMDDHHMMSS>_<migration_name>/migration.sql
+```
+
+The SQL must contain the exact DDL statements (e.g., `ALTER TABLE`, `CREATE TABLE`). `migrate deploy` will apply any unapplied folders in order.
 
 ---
 
-## 3. Security & Authentication Logic
+## 3. Real-Time Architecture (SSE)
+
+All live data on the mod panel flows through a single **Server-Sent Events (SSE)** connection, not HTTP polling.
+
+### How it works
+1. `src/lib/log-syncer.ts` polls the PRC API every ~4 seconds and writes to the database.
+2. When new data is detected, it emits events via `eventBus` (`src/lib/event-bus.ts`).
+3. `src/app/api/sse/[serverId]/route.ts` streams these events to the client.
+4. `src/components/providers/server-events-provider.tsx` wraps the mod panel and exposes the data via React context.
+
+### SSE Context Hooks (IMPORTANT)
+- **`useServerEventsContext()`** — throws if used outside `<ServerEventsProvider>`. **Only use inside mod-panel components.**
+- **`useServerEventsContextSafe()`** — returns `null` if outside the provider. **Use this in shared components** like `LogViewer` that can be rendered on multiple pages.
+
+---
+
+## 4. Mod Call Panel
+
+Automatically opens for the responding moderator when they reply to a mod call in-game.
+
+### Detection Flow
+1. PRC API returns `ModCalls` as: `{ Caller: "name:robloxId", Moderator: "name:robloxId", Timestamp: number }`.
+2. `log-syncer.ts` matches the `Moderator` field to an existing `ModCall` DB record and updates its `respondingPlayers` column (JSON string array of Roblox IDs).
+3. The updated `ModCall` list is pushed over SSE to all connected clients.
+4. `ModCallDetector` component watches the SSE `calls` event and checks if `session.user.robloxId` is in `respondingPlayers`.
+5. If found, `ModCallPanel` opens with a 45° diagonal wipe animation.
+
+### modcall-context API (`/api/modcall-context`)
+Authenticated endpoint. Returns: call details, nearby players (within ±2 min & 200 game units from the call's coordinates), current live positions of all involved players, and filtered logs (±5 min, only involving those players).
+
+---
+
+## 5. Security & Authentication Logic
 
 ### Identity (Clerk)
 - Never use local user tables for auth. Always use `clerkClient` and `getSession()`.
-- **User IDs:** Clerk IDs look like `user_...`. 
+- **User IDs:** Clerk IDs look like `user_...`.
 - **External Accounts:** Roblox usernames are found in `externalAccounts` where provider is `oauth_custom_roblox`. **Note:** This is an array; index 0 is usually primary.
 
 ### Permissions Hierarchy
@@ -61,7 +102,7 @@ Permissions are calculated using `dashboard/src/lib/admin.ts`. The order of oper
 
 ---
 
-## 4. The Form & Recruitment System
+## 6. The Form & Recruitment System
 
 ### Per-Form Logic
 Settings that used to be global are now **per-form**. Do not add these to the `Server` model:
@@ -77,12 +118,13 @@ Located in `api/forms/[formId]/submit/route.ts`.
 
 ---
 
-## 5. Discord Integration & Bot Logic
+## 7. Discord Integration & Bot Logic
 
 ### log-syncer.ts
 This is the heart of the bot's game-to-web bridge.
 - **Rate Limits:** It polls PRC logs. Because SQLite does not support `skipDuplicates: true` in Prisma, you **must** manually deduplicate logs by fetching existing timestamps before calling `createMany`.
 - **Commands:** The bot parses raw chat logs for triggers like `:log warn`, `:log shift start`, and `:shutdown`.
+- **ModCalls:** The PRC REST API returns `{ Caller, Moderator, Timestamp }` for mod calls. There is NO `Players` array on mod calls from the REST API.
 
 ### Auto-Join & Sync
 - **Auto-Join:** When a user logs in, `performAutoJoin` checks their Discord servers. If they have the `staffRoleId` in a guild registered in POW, it automatically creates a `Member` record for them.
@@ -90,7 +132,7 @@ This is the heart of the bot's game-to-web bridge.
 
 ---
 
-## 6. Vision API (HMAC Security)
+## 8. Vision API (HMAC Security)
 
 Requests from the Vision desktop app to the Dashboard API (`/api/vision/...`) use a dual-layer security check:
 1. **JWT:** Standard Clerk session token.
@@ -99,33 +141,33 @@ Requests from the Vision desktop app to the Dashboard API (`/api/vision/...`) us
 
 ---
 
-## 7. PWA & Mobile UI
+## 9. PWA & Mobile UI
 
 The `PWAGate.tsx` component blocks mobile browser access to force PWA installation.
 - **Exemption List:** The following paths are hardcoded to bypass the gate:
-  - `/` (Landing)
-  - `/login`
-  - `/pricing`
-  - `/vision-auth`
-  - `/forms/[shareId]` (Public filling)
+  - `/` (Landing), `/login`, `/pricing`, `/vision-auth`, `/forms/[shareId]`
 - **Mobile Nav:** The `BottomNav.tsx` is only rendered when `isMobile && isInstalled` is true.
 
 ---
 
-## 8. Common Pitfalls & Anti-Patterns
+## 10. Common Pitfalls & Anti-Patterns
 
+- **Never create unauthenticated API routes.** Every route must call `getSession()` and validate the user's server membership if a `serverId` is involved.
 - **Hallucinating UI:** The "Toolbox" does **not** have Kick/Ban buttons. Those are on the **Player Panel**. The Toolbox has: Perm Log, LOA Request, Run Command, Staff Request.
 - **Direct DB Access in Bot:** The bot uses the same database but different Prisma client generation. Always verify the bot's `schema.prisma` before writing code that touches `Log` or `Punishment`.
 - **Roblox Username Cache:** Many tables store `robloxId`. When displaying usernames, check the `Member` cache or fetch from Clerk. Do not assume the username is always available in the `Punishment` record.
 - **Quota Logic:** Quotas are stored in **Minutes** but shifts are recorded in **Seconds**. Divide by 60 for comparison.
+- **SSE Context:** Never use `useServerEventsContext()` in components that are rendered outside the mod panel. Use `useServerEventsContextSafe()` instead.
 
 ---
 
-## 9. Critical Triggers for Automations
+## 11. Critical Triggers for Automations
 - `PLAYER_JOIN` / `PLAYER_LEAVE`
 - `COMMAND_USED` (Check `details.command` for patterns)
 - `PUNISHMENT_ISSUED` (Triggers on Warn, Kick, Ban, BOLO)
 - `TIME_INTERVAL` (Used for scheduled tasks/announcements)
+- `MOD_CALL` (Triggered when a new mod call is created)
+- `EMERGENCY_CALL` (Triggered when a new 911 call is created)
 
 ---
-*Last verified and detailed: March 5, 2026*
+*Last updated: April 14, 2026*

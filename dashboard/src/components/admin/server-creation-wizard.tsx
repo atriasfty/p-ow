@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Server, Key, CheckCircle, Search, LogIn, Plus, ExternalLink } from "lucide-react"
+import { Loader2, Server, Key, CheckCircle, Search, LogIn, Plus, ExternalLink, Globe, Copy, Check } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
@@ -17,7 +17,7 @@ interface EligibleGuild {
 export function ServerCreationWizard() {
     const router = useRouter()
 
-    const [step, setStep] = useState<1 | 2 | 3>(1)
+    const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
 
     // Form state
     const [prcApiKey, setPrcApiKey] = useState("")
@@ -35,6 +35,13 @@ export function ServerCreationWizard() {
         availableRoles: { id: string, name: string, color: number }[];
     } | null>(null)
 
+    const [createdServer, setCreatedServer] = useState<{
+        serverId: string;
+        prcWebhookId: string;
+    } | null>(null)
+
+    const [copied, setCopied] = useState(false)
+
     // Initial Config state
     const [config, setConfig] = useState({
         adminRoleId: "",
@@ -45,6 +52,16 @@ export function ServerCreationWizard() {
     // Guilds state
     const [guilds, setGuilds] = useState<EligibleGuild[]>([])
     const [loadingGuilds, setLoadingGuilds] = useState(true)
+
+    // Auto-redirect after success
+    useEffect(() => {
+        if (step === 4 && createdServer) {
+            const t = setTimeout(() => {
+                router.push(`/dashboard/${createdServer.serverId}/admin`)
+            }, 3000)
+            return () => clearTimeout(t)
+        }
+    }, [step, createdServer, router])
 
     useEffect(() => {
         const fetchGuilds = async () => {
@@ -117,8 +134,8 @@ export function ServerCreationWizard() {
             const res = await fetch("/api/admin/server/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
-                    prcApiKey, 
+                body: JSON.stringify({
+                    prcApiKey,
                     discordGuildId,
                     initialConfig: config
                 })
@@ -132,17 +149,26 @@ export function ServerCreationWizard() {
                 return
             }
 
+            setCreatedServer({
+                serverId: data.serverId,
+                prcWebhookId: data.prcWebhookId
+            })
             setStep(3)
-
-            // Redirect after 3s
-            setTimeout(() => {
-                router.push(`/dashboard/${data.serverId}/admin`)
-            }, 3000)
 
         } catch (e: any) {
             setError(e.message || "An unknown error occurred.")
             setLoading(false)
+        } finally {
+            setLoading(false)
         }
+    }
+
+    const webhookUrl = createdServer ? `${window.location.origin}/api/webhooks/prc/${createdServer.prcWebhookId}?long=true` : ""
+
+    const copyWebhook = () => {
+        navigator.clipboard.writeText(webhookUrl)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
     }
 
     return (
@@ -150,11 +176,12 @@ export function ServerCreationWizard() {
             {/* Step Indicators */}
             <div className="flex items-center justify-between relative mb-8">
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-zinc-800 rounded-full z-0"></div>
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-emerald-500 rounded-full z-0 transition-all duration-500" style={{ width: step === 1 ? '0%' : step === 2 ? '50%' : '100%' }}></div>
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-emerald-500 rounded-full z-0 transition-all duration-500" style={{ width: step === 1 ? '0%' : step === 2 ? '33%' : step === 3 ? '66%' : '100%' }}></div>
 
                 <div className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full font-bold shadow-lg transition-colors ${step >= 1 ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>1</div>
                 <div className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full font-bold shadow-lg transition-colors ${step >= 2 ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>2</div>
                 <div className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full font-bold shadow-lg transition-colors ${step >= 3 ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>3</div>
+                <div className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full font-bold shadow-lg transition-colors ${step >= 4 ? 'bg-emerald-500 text-black' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>4</div>
             </div>
 
             {error && (
@@ -185,9 +212,9 @@ export function ServerCreationWizard() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-medium text-zinc-300">Select Discord Guild</label>
-                                <a 
-                                    href="https://discord.com/oauth2/authorize?client_id=1449823310383939725&permissions=8&integration_type=0&scope=bot" 
-                                    target="_blank" 
+                                <a
+                                    href="https://discord.com/oauth2/authorize?client_id=1449823310383939725&permissions=8&integration_type=0&scope=bot"
+                                    target="_blank"
                                     rel="noreferrer"
                                     className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
                                 >
@@ -204,20 +231,19 @@ export function ServerCreationWizard() {
                                     No eligible Discord servers found. You must have Administrator or Manage Server permissions.
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-1">
                                     {guilds.map((g) => {
                                         const isSelected = discordGuildId === g.id
                                         const isAvailable = g.hasBot && !g.hasPowServer
-                                        
+
                                         return (
-                                            <div 
+                                            <div
                                                 key={g.id}
                                                 onClick={() => isAvailable && setDiscordGuildId(g.id)}
-                                                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                                                    !isAvailable ? 'opacity-50 border-zinc-800 bg-zinc-900/50 cursor-not-allowed' :
-                                                    isSelected ? 'border-emerald-500 bg-emerald-500/10 cursor-pointer' : 
-                                                    'border-zinc-800 bg-zinc-900 hover:bg-zinc-800 cursor-pointer'
-                                                }`}
+                                                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${!isAvailable ? 'opacity-50 border-zinc-800 bg-zinc-900/50 cursor-not-allowed' :
+                                                    isSelected ? 'border-emerald-500 bg-emerald-500/10 cursor-pointer' :
+                                                        'border-zinc-800 bg-zinc-900 hover:bg-zinc-800 cursor-pointer'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3">
                                                     {g.icon ? (
@@ -229,17 +255,17 @@ export function ServerCreationWizard() {
                                                     )}
                                                     <span className="text-sm font-medium text-white">{g.name}</span>
                                                 </div>
-                                                
+
                                                 <div className="text-xs">
                                                     {g.hasPowServer ? (
                                                         <span className="text-zinc-500">Already Linked</span>
                                                     ) : !g.hasBot ? (
-                                                        <a 
+                                                        <a
                                                             href={`https://discord.com/oauth2/authorize?client_id=1449823310383939725&permissions=8&integration_type=0&scope=bot&guild_id=${g.id}`}
                                                             target="_blank"
                                                             rel="noreferrer"
                                                             className="text-indigo-400 hover:text-indigo-300"
-                                                            onClick={(e) => e.stopPropagation()} // Prevent selecting row when clicking link
+                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             Invite Bot
                                                         </a>
@@ -282,7 +308,7 @@ export function ServerCreationWizard() {
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Dashboard Admin Role</label>
                             <div className="relative">
-                                <select 
+                                <select
                                     value={config.adminRoleId}
                                     onChange={(e) => setConfig({ ...config, adminRoleId: e.target.value })}
                                     className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
@@ -293,14 +319,13 @@ export function ServerCreationWizard() {
                                     ))}
                                 </select>
                             </div>
-                            <p className="text-[10px] text-zinc-500">Members with this role will have full access to this dashboard.</p>
                         </div>
 
                         {/* Staff Role */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">General Staff Role</label>
                             <div className="relative">
-                                <select 
+                                <select
                                     value={config.staffRoleId}
                                     onChange={(e) => setConfig({ ...config, staffRoleId: e.target.value })}
                                     className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
@@ -311,14 +336,13 @@ export function ServerCreationWizard() {
                                     ))}
                                 </select>
                             </div>
-                            <p className="text-[10px] text-zinc-500">The primary staff role in your Discord. Used for shift tracking.</p>
                         </div>
 
                         {/* Log Channel */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">System Logs Channel</label>
                             <div className="relative">
-                                <select 
+                                <select
                                     value={config.logChannelId}
                                     onChange={(e) => setConfig({ ...config, logChannelId: e.target.value })}
                                     className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-emerald-500 outline-none appearance-none"
@@ -329,7 +353,6 @@ export function ServerCreationWizard() {
                                     ))}
                                 </select>
                             </div>
-                            <p className="text-[10px] text-zinc-500">Where the bot will send moderation and system logs.</p>
                         </div>
                     </div>
 
@@ -347,21 +370,68 @@ export function ServerCreationWizard() {
                             onClick={handleCreate}
                             disabled={loading || !config.adminRoleId || !config.staffRoleId || !config.logChannelId}
                         >
-                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "Deploy & Finish"}
+                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "Initialize Server"}
                         </Button>
                     </div>
                 </div>
             )}
 
-            {/* Step 3: Success */}
-            {step === 3 && (
+            {/* Step 3: Webhook Setup */}
+            {step === 3 && createdServer && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-500">
+                    <div className="text-center space-y-2">
+                        <Globe className="h-12 w-12 text-sky-400 mx-auto mb-2" />
+                        <h3 className="text-xl font-bold text-white">Real-time Webhook Setup</h3>
+                        <p className="text-sm text-zinc-400">Add this URL to your PRC server to enable real-time tracking.</p>
+                    </div>
+
+                    <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl space-y-6">
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Your Private Webhook URL</label>
+                            <div className="flex gap-2">
+                                <Input
+                                    readOnly
+                                    value={webhookUrl}
+                                    className="bg-black border-zinc-800 text-zinc-300 font-mono text-xs"
+                                />
+                                <Button
+                                    variant="secondary"
+                                    className="bg-zinc-800 hover:bg-zinc-700 h-10 px-3"
+                                    onClick={copyWebhook}
+                                >
+                                    {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 text-sm text-zinc-400">
+                            <h4 className="font-semibold text-white">How to setup:</h4>
+                            <ol className="list-decimal list-inside space-y-3 pl-2">
+                                <li>In ER:LC, open <span className="text-zinc-300 italic">Server Settings &gt; API &gt; Event Webhook</span> and paste the URL above into the <span className="text-zinc-300 font-bold">Server URL</span> field.</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div className="pt-4">
+                        <Button
+                            className="w-full h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-lg"
+                            onClick={() => setStep(4)}
+                        >
+                            Finish Setup
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* Step 4: Success */}
+            {step === 4 && (
                 <div className="py-12 flex flex-col items-center justify-center space-y-6 animate-in zoom-in-95 duration-500">
                     <div className="h-24 w-24 rounded-full bg-emerald-500/10 flex items-center justify-center mb-2">
                         <CheckCircle className="h-12 w-12 text-emerald-500" />
                     </div>
-                    <h3 className="text-2xl font-bold text-white text-center">Server Deployed!</h3>
+                    <h3 className="text-2xl font-bold text-white text-center">Deployment Completed!</h3>
                     <p className="text-zinc-400 text-center max-w-sm">
-                        Your Project Overwatch command center is ready. Redirecting you to the dashboard...
+                        Everything is connected. We are now redirecting you to your new command center.
                     </p>
                     <Loader2 className="animate-spin h-6 w-6 text-emerald-500 mt-4" />
                 </div>

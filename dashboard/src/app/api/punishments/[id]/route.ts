@@ -2,8 +2,8 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
-
 import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
+import { eventBus } from "@/lib/event-bus"
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     if (!verifyCsrf(req)) return new NextResponse("CSRF verification failed", { status: 403 })
@@ -13,7 +13,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     const { id } = await params
 
-    // Verify permission - Require canBan to delete punishments (highest level mod action)
     const punishment = await prisma.punishment.findUnique({ where: { id } })
     if (!punishment) return new NextResponse("Not Found", { status: 404 })
 
@@ -21,9 +20,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (error) return error
 
     try {
-        await prisma.punishment.delete({
-            where: { id }
-        })
+        await prisma.punishment.delete({ where: { id } })
+        // Notify SSE clients of deletion
+        eventBus.emit(punishment.serverId, 'punishments', { action: 'deleted', punishment: { id } })
         return NextResponse.json({ success: true })
     } catch (e) {
         console.error("Delete punishment error:", e)
@@ -43,11 +42,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const punishment = await prisma.punishment.findUnique({ where: { id } })
     if (!punishment) return new NextResponse("Not Found", { status: 404 })
 
-    // Baseline permission check to edit ANY punishment details
     const baseError = await verifyPermissionOrError(session.user, punishment.serverId, "canViewPunishments")
     if (baseError) return baseError
 
-    // Additional check if resolving a BOLO
     if (body.resolved !== undefined && punishment.type === "Ban Bolo") {
         const boloError = await verifyPermissionOrError(session.user, punishment.serverId, "canManageBolos")
         if (boloError) return boloError
@@ -58,10 +55,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (body.reason !== undefined) updateData.reason = body.reason
         if (body.resolved !== undefined) updateData.resolved = body.resolved
 
-        const updated = await prisma.punishment.update({
-            where: { id },
-            data: updateData
-        })
+        const updated = await prisma.punishment.update({ where: { id }, data: updateData })
+        // Notify SSE clients of update
+        eventBus.emit(punishment.serverId, 'punishments', { action: 'updated', punishment: updated })
         return NextResponse.json(updated)
     } catch (e) {
         console.error("Update punishment error:", e)

@@ -24,7 +24,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Use Clerk lookup to find all possible userIds for this Roblox user
-    const { possibleUserIds } = await findMemberByRobloxId(serverId, robloxUserId)
+    const { possibleUserIds, member } = await findMemberByRobloxId(serverId, robloxUserId)
+
+    // Ensure the actual member userId is included (crucial if they were logged with an alternative ID)
+    if (member && !possibleUserIds.includes(member.userId)) {
+        possibleUserIds.push(member.userId)
+    }
 
     // Calculate week start (Monday)
     const now = new Date()

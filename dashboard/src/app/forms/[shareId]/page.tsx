@@ -584,7 +584,7 @@ function QuestionInput({
                         <label className="flex flex-col items-center cursor-pointer">
                             <Upload className="h-8 w-8 text-zinc-500 mb-2" />
                             <span className="text-zinc-400">{files.length > 0 ? "Add more files" : "Click to upload"}</span>
-                            <span className="text-xs text-zinc-600 mt-1">Max 100MB per file · Up to 20 files</span>
+                            <span className="text-xs text-zinc-600 mt-1">Max 50MB per file · Up to 20 files</span>
                             <input
                                 type="file"
                                 multiple

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useServerEventsContext } from "@/components/providers/server-events-provider"
 
 interface StaffMember {
     userId: string
@@ -15,30 +16,35 @@ interface StaffMember {
 export function StaffOnDutyAvatars({ serverId, excludeUserId }: { serverId: string, excludeUserId?: string }) {
     const [staff, setStaff] = useState<StaffMember[]>([])
     const [loading, setLoading] = useState(true)
+    const { staffOnDutyIds } = useServerEventsContext()
 
-    const fetchStaff = async () => {
-        try {
-            const res = await fetch(`/api/staff/on-duty?serverId=${serverId}`)
-            if (res.ok) {
-                const data = await res.json()
-                // Filter out current user if needed
-                const filtered = excludeUserId
-                    ? data.filter((s: StaffMember) => s.userId !== excludeUserId)
-                    : data
-                setStaff(filtered)
-            }
-        } catch (e) {
-            console.error("Failed to fetch on-duty staff", e)
-        } finally {
-            setLoading(false)
-        }
-    }
-
+    // When we get updated IDs from SSE, fetch the full staff details
     useEffect(() => {
+        if (staffOnDutyIds.length === 0 && !loading) {
+            setStaff([])
+            return
+        }
+
+        // Fetch full staff details from REST (IDs alone aren't enough for display)
+        const fetchStaff = async () => {
+            try {
+                const res = await fetch(`/api/staff/on-duty?serverId=${serverId}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    const filtered = excludeUserId
+                        ? data.filter((s: StaffMember) => s.userId !== excludeUserId)
+                        : data
+                    setStaff(filtered)
+                }
+            } catch (e) {
+                console.error("Failed to fetch on-duty staff", e)
+            } finally {
+                setLoading(false)
+            }
+        }
+
         fetchStaff()
-        const interval = setInterval(fetchStaff, 15000) // Poll every 15 seconds
-        return () => clearInterval(interval)
-    }, [serverId])
+    }, [staffOnDutyIds, serverId, excludeUserId])
 
     if (loading && staff.length === 0) return null
 
@@ -59,7 +65,6 @@ export function StaffOnDutyAvatars({ serverId, excludeUserId }: { serverId: stri
                                 src={member.imageUrl}
                                 alt={member.name}
                             />
-                            {/* Simple tooltip on hover */}
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-[10px] text-white rounded opacity-0 group-hover/avatar:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-white/10 shadow-xl">
                                 <p className="font-bold">{member.name}</p>
                                 <p className="text-zinc-400">@{member.robloxUsername}</p>

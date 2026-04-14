@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
+import { isServerAdmin } from "@/lib/admin"
+import { clerkClient } from "@clerk/nextjs/server"
 
 // POST /api/forms/editor-access - Claim editor access via share link
 export async function POST(request: NextRequest) {
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET /api/forms/editor-access - Check if user has editor access to a form
+// GET /api/forms/editor-access - List or check editor access
 export async function GET(request: NextRequest) {
     try {
         const session = await getSession()
@@ -71,11 +73,67 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url)
         const formId = searchParams.get("formId")
+        const listAll = searchParams.get("listAll") === "true"
 
         if (!formId) {
             return NextResponse.json({ error: "formId is required" }, { status: 400 })
         }
 
+        // If listing all editors, verify owner/admin access
+        if (listAll) {
+            const form = await prisma.form.findUnique({
+                where: { id: formId },
+                select: { serverId: true, createdBy: true }
+            })
+
+            if (!form) return NextResponse.json({ error: "Form not found" }, { status: 404 })
+
+            const isAdmin = await isServerAdmin({ id: session.user.id } as any, form.serverId)
+            const isOwner = form.createdBy === session.user.id
+
+            if (!isOwner && !isAdmin) {
+                return NextResponse.json({ error: "Access denied" }, { status: 403 })
+            }
+
+            const editors = await prisma.formEditorAccess.findMany({
+                where: { formId },
+                orderBy: { grantedAt: "desc" }
+            })
+
+            const userIds = editors.map((e: any) => e.userId)
+
+            // Batch fetch Clerk users for profile pictures
+            const client = await clerkClient()
+            const clerkUsersRes = await client.users.getUserList({
+                userId: userIds,
+                limit: 100
+            })
+            const clerkUsers = clerkUsersRes.data
+
+            // Batch fetch Member records for Roblox usernames
+            const members = await prisma.member.findMany({
+                where: {
+                    serverId: form.serverId,
+                    userId: { in: userIds }
+                },
+                select: { userId: true, robloxUsername: true }
+            })
+
+            const enrichedEditors = editors.map((editor: any) => {
+                const clerkUser = clerkUsers.find(u => u.id === editor.userId)
+                const member = members.find((m: any) => m.userId === editor.userId)
+
+                return {
+                    ...editor,
+                    robloxUsername: member?.robloxUsername || clerkUser?.username || "Unknown",
+                    imageUrl: clerkUser?.imageUrl || null
+                }
+            })
+
+            return NextResponse.json(enrichedEditors)
+        }
+
+        // Just checking single user access
         const access = await prisma.formEditorAccess.findUnique({
             where: { formId_userId: { formId, userId: session.user.id } }
         })
@@ -83,6 +141,48 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ hasAccess: !!access })
     } catch (error) {
         console.error("[EDITOR-ACCESS GET]", error)
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    }
+}
+
+// DELETE /api/forms/editor-access - Remove editor access
+export async function DELETE(request: NextRequest) {
+    try {
+        const session = await getSession()
+        if (!session) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+        }
+
+        const { searchParams } = new URL(request.url)
+        const formId = searchParams.get("formId")
+        const userIdToRemove = searchParams.get("userId")
+
+        if (!formId || !userIdToRemove) {
+            return NextResponse.json({ error: "formId and userId are required" }, { status: 400 })
+        }
+
+        // Verify requester is owner or admin
+        const form = await prisma.form.findUnique({
+            where: { id: formId },
+            select: { serverId: true, createdBy: true }
+        })
+
+        if (!form) return NextResponse.json({ error: "Form not found" }, { status: 404 })
+
+        const isAdmin = await isServerAdmin({ id: session.user.id } as any, form.serverId)
+        const isOwner = form.createdBy === session.user.id
+
+        if (!isOwner && !isAdmin) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 })
+        }
+
+        await prisma.formEditorAccess.delete({
+            where: { formId_userId: { formId, userId: userIdToRemove } }
+        })
+
+        return NextResponse.json({ success: true })
+    } catch (error) {
+        console.error("[EDITOR-ACCESS DELETE]", error)
         return NextResponse.json({ error: "Internal server error" }, { status: 500 })
     }
 }

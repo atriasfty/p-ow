@@ -1,8 +1,6 @@
-import { PrcServer, PrcPlayer, PrcJoinLog, PrcKillLog, PrcCommandLog } from "./prc-types"
+import { PrcServer, PrcPlayer, PrcJoinLog, PrcKillLog, PrcCommandLog, PrcServerV2 } from "./prc-types"
 import { trackApiCall } from "./metrics"
 import { getGlobalConfig } from "./config"
-
-const DEFAULT_WEBHOOK_URL = process.env.DISCORD_PUNISHMENT_WEBHOOK
 
 // Rate limit state per server key
 interface RateLimitState {
@@ -26,6 +24,17 @@ const requestQueues = globalForPrc.requestQueues ??= new Map<string, Promise<unk
 
 function getKeyHash(apiKey: string): string {
     return apiKey.slice(-8)
+}
+
+export interface PrcV2Params {
+    Players?: boolean
+    Staff?: boolean
+    JoinLogs?: boolean
+    KillLogs?: boolean
+    CommandLogs?: boolean
+    ModCalls?: boolean
+    EmergencyCalls?: boolean
+    Vehicles?: boolean
 }
 
 export class PrcClient {
@@ -91,10 +100,10 @@ export class PrcClient {
      */
     private async fetchDirect<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
         const currentQueue = requestQueues.get(this.keyHash) || Promise.resolve()
-        
+
         const thisRequest = currentQueue.then(() => this.doFetch<T>(endpoint, options))
         requestQueues.set(this.keyHash, thisRequest.catch(() => { }))
-        
+
         return thisRequest
     }
 
@@ -115,7 +124,7 @@ export class PrcClient {
             })
 
             const duration = Date.now() - startTime
-            trackApiCall("prc", endpoint, duration, res.ok ? "ok" : "error", undefined, undefined, res.status)
+            trackApiCall("prc", endpoint.split("?")[0], duration, res.ok ? "ok" : "error", undefined, undefined, res.status)
 
             // Update remaining requests from headers
             const remaining = res.headers.get("X-RateLimit-Remaining")
@@ -126,7 +135,7 @@ export class PrcClient {
             if (res.status === 429) {
                 const retryAfter = parseInt(res.headers.get("Retry-After") || "2")
                 this.updateState({ blockedUntil: Date.now() + (retryAfter * 1000) })
-                
+
                 if (retryCount < MAX_RETRIES) {
                     return this.doFetch<T>(endpoint, options, retryCount + 1)
                 }
@@ -144,24 +153,43 @@ export class PrcClient {
         }
     }
 
+    /**
+     * Unified v2 Server Fetch
+     */
+    async getServerV2(params: PrcV2Params = {}): Promise<PrcServerV2> {
+        const query = new URLSearchParams()
+        Object.entries(params).forEach(([key, val]) => {
+            if (val) query.set(key, "true")
+        })
+        const qs = query.toString()
+        return this.fetchDirect<PrcServerV2>(`/server${qs ? `?${qs}` : ""}`)
+    }
+
+    /**
+     * Legacy Compatibility (Bridges to v2)
+     */
     async getServer(): Promise<PrcServer> {
-        return this.fetchDirect<PrcServer>("/server")
+        return this.getServerV2()
     }
 
     async getPlayers(): Promise<PrcPlayer[]> {
-        return this.fetchDirect<PrcPlayer[]>("/server/players")
+        const res = await this.getServerV2({ Players: true })
+        return res.Players || []
     }
 
     async getJoinLogs(): Promise<PrcJoinLog[]> {
-        return this.fetchDirect<PrcJoinLog[]>("/server/joinlogs")
+        const res = await this.getServerV2({ JoinLogs: true })
+        return res.JoinLogs || []
     }
 
     async getKillLogs(): Promise<PrcKillLog[]> {
-        return this.fetchDirect<PrcKillLog[]>("/server/killlogs")
+        const res = await this.getServerV2({ KillLogs: true })
+        return res.KillLogs || []
     }
 
     async getCommandLogs(): Promise<PrcCommandLog[]> {
-        return this.fetchDirect<PrcCommandLog[]>("/server/commandlogs")
+        const res = await this.getServerV2({ CommandLogs: true })
+        return res.CommandLogs || []
     }
 
     async executeCommand(command: string): Promise<any> {

@@ -212,7 +212,6 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Roblox</th>
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Role</th>
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Admin</th>
-                            <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Last Seen</th>
                             <th className="text-left px-4 py-3 text-xs font-medium text-zinc-500">Stats</th>
                         </tr>
                     </thead>
@@ -304,21 +303,6 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                                                 </button>
                                             ) : (
                                                 <span className="text-xs text-zinc-600">Assign role first</span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {member?.shifts && member.shifts.length > 0 ? (
-                                                member.shifts[0].endTime ? (
-                                                    <span className="text-xs text-zinc-400">
-                                                        {new Date(member.shifts[0].endTime).toLocaleDateString()}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-medium">
-                                                        On Duty
-                                                    </span>
-                                                )
-                                            ) : (
-                                                <span className="text-xs text-zinc-600">Never</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3">

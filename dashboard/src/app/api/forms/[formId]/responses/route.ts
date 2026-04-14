@@ -79,7 +79,7 @@ export async function GET(
 
         // Collect respondent IDs
         const respondentIds = responses
-            .map(r => r.respondentId)
+            .map((r: any) => r.respondentId)
             .filter((id: string | null): id is string => id !== null)
 
         // Fetch user details from Clerk

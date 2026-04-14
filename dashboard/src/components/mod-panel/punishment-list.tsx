@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { MoreVertical, Pencil, Trash2, User, X, Check, Loader2, CheckCircle2, AlertTriangle, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
+import { useServerEventsContext } from "@/components/providers/server-events-provider"
 
 interface Punishment {
     id: string
@@ -30,6 +31,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
     const [loading, setLoading] = useState<string | null>(null)
     const menuRef = useRef<HTMLDivElement>(null)
     const { permissions } = usePermissions()
+    const { punishmentEvents } = useServerEventsContext()
 
     // Pagination state
     const [hasMore, setHasMore] = useState(true)
@@ -132,30 +134,26 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         fetchUserData()
     }, [punishments])
 
-    // Refresh only new punishments periodically (don't refetch all)
+    // Listen for new punishments pushed via SSE (replaces 15s poll)
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                const res = await fetch(`/api/punishments?serverId=${serverId}&limit=10`)
-                if (res.ok) {
-                    const data = await res.json()
-                    setPunishments(prev => {
-                        // Merge new items at the beginning
-                        const existing = new Set(prev.map(p => p.id))
-                        const newItems = data.items.filter((p: Punishment) => !existing.has(p.id))
-                        if (newItems.length > 0) {
-                            return [...newItems, ...prev]
-                        }
-                        return prev
-                    })
-                }
-            } catch (e) {
-                console.error("Failed to sync punishments:", e)
-            }
-        }, 15000) // 15s sync for new items
+        if (!punishmentEvents || punishmentEvents.length === 0) return
+        const latest = punishmentEvents[0]
+        if (!latest) return
 
-        return () => clearInterval(interval)
-    }, [serverId])
+        if (latest.action === 'created') {
+            setPunishments(prev => {
+                const exists = prev.some(p => p.id === latest.punishment.id)
+                if (exists) return prev
+                return [latest.punishment, ...prev]
+            })
+        } else if (latest.action === 'updated') {
+            setPunishments(prev =>
+                prev.map(p => p.id === latest.punishment.id ? { ...p, ...latest.punishment } : p)
+            )
+        } else if (latest.action === 'deleted') {
+            setPunishments(prev => prev.filter(p => p.id !== latest.punishment.id))
+        }
+    }, [punishmentEvents])
 
     // Close menu on outside click
     useEffect(() => {

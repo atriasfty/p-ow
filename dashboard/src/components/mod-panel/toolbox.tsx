@@ -2,7 +2,9 @@
 "use client"
 
 import React, { useState } from "react"
-import { Command, Zap, Calendar, X, Send, Loader2, Check, Terminal, ClipboardList, Bell } from "lucide-react"
+import { Command, Zap, Calendar, X, Send, Loader2, Check, Terminal, ClipboardList, Bell, Phone, Map } from "lucide-react"
+import { CallsModal } from "./calls-modal"
+import { MapModal } from "./map-modal"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
 
 interface ToolboxProps {
@@ -24,6 +26,8 @@ export function Toolbox({
     const [commandOpen, setCommandOpen] = useState(false)
     const [permLogOpen, setPermLogOpen] = useState(false)
     const [staffRequestOpen, setStaffRequestOpen] = useState(false)
+    const [callsOpen, setCallsOpen] = useState(false)
+    const [mapOpen, setMapOpen] = useState(false)
 
     // LOA form state
     // ...
@@ -243,6 +247,24 @@ export function Toolbox({
                         <span className="text-sm font-medium">Staff Request</span>
                     </button>
                 )}
+
+                {/* Calls Button (PRC v2) */}
+                <button
+                    onClick={() => setCallsOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 hover:text-indigo-300 transition-all flex-shrink-0"
+                >
+                    <Phone className="h-4 w-4" />
+                    <span className="text-sm font-medium">Calls</span>
+                </button>
+
+                {/* Map Button (PRC v2) */}
+                <button
+                    onClick={() => setMapOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20 hover:border-indigo-500/40 text-indigo-400 hover:text-indigo-300 transition-all flex-shrink-0"
+                >
+                    <Map className="h-4 w-4" />
+                    <span className="text-sm font-medium">Map</span>
+                </button>
             </div>
 
             {/* Perm Log Modal */}
@@ -552,6 +574,16 @@ export function Toolbox({
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Calls Modal */}
+            {callsOpen && (
+                <CallsModal serverId={serverId} onClose={() => setCallsOpen(false)} />
+            )}
+
+            {/* Map Modal */}
+            {mapOpen && (
+                <MapModal serverId={serverId} onClose={() => setMapOpen(false)} />
             )}
         </>
     )

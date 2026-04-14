@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { AutomationEngine } from "@/lib/automation-engine"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
+import { eventBus } from "@/lib/event-bus"
 
 // POST /api/shifts/toggle - START a shift
 export async function POST(req: Request) {
@@ -43,6 +44,14 @@ export async function POST(req: Request) {
             serverId,
             player: { name: session.user.name || session.user.username || "Unknown", id: session.user.id }
         })
+
+        // Notify SSE clients of shift start
+        eventBus.emit(serverId, 'shift-status', {
+            shift: { id: shift.id, startTime: shift.startTime.toISOString() }
+        })
+        // Update on-duty staff IDs
+        const onDutyNow = await prisma.shift.findMany({ where: { serverId, endTime: null }, select: { userId: true } })
+        eventBus.emit(serverId, 'staff-on-duty-ids', onDutyNow.map(s => s.userId))
 
         return NextResponse.json(shift)
     } catch (e) {
@@ -91,6 +100,12 @@ export async function PATCH(req: Request) {
             player: { name: session.user.name || session.user.username || "Unknown", id: session.user.id },
             details: { duration }
         })
+
+        // Notify SSE clients of shift end
+        eventBus.emit(serverId, 'shift-status', { shift: null })
+        // Update on-duty staff IDs
+        const onDutyNow = await prisma.shift.findMany({ where: { serverId, endTime: null }, select: { userId: true } })
+        eventBus.emit(serverId, 'staff-on-duty-ids', onDutyNow.map(s => s.userId))
 
         return NextResponse.json(updated)
     } catch (e) {

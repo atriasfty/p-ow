@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
+import { useServerEventsContext } from "@/components/providers/server-events-provider"
 
 interface ShiftTimerProps {
     serverId: string
@@ -18,49 +19,34 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
     const [startTime, setStartTime] = useState<Date | null>(initialStartTime)
     const [elapsed, setElapsed] = useState(0)
 
-    // Poll for shift status every second
+    // Listen for shift-status events from SSE instead of polling every second
+    const { shiftStatus } = useServerEventsContext()
     useEffect(() => {
-        const checkStatus = async () => {
-            try {
-                const res = await fetch(`/api/shifts/status?serverId=${serverId}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    setStartTime(data.shift?.startTime ? new Date(data.shift.startTime) : null)
-                }
-            } catch (e) {
-                // Ignore errors
-            }
+        if (shiftStatus !== null) {
+            setStartTime(shiftStatus.shift?.startTime ? new Date(shiftStatus.shift.startTime) : null)
         }
+    }, [shiftStatus])
 
-        const pollInterval = setInterval(checkStatus, 1000)
-        return () => clearInterval(pollInterval)
-    }, [serverId])
-
-    // Update elapsed time every second
+    // Update elapsed time every second — pure client-side, no network needed
     useEffect(() => {
         if (!startTime) {
             setElapsed(0)
             return
         }
 
-        const interval = setInterval(() => {
-            const now = new Date()
-            const diff = Math.floor((now.getTime() - new Date(startTime).getTime()) / 1000)
+        const tick = () => {
+            const diff = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000)
             setElapsed(diff)
-        }, 1000)
+        }
 
-        // Initial calc
-        const now = new Date()
-        const diff = Math.floor((now.getTime() - new Date(startTime).getTime()) / 1000)
-        setElapsed(diff)
-
+        tick()
+        const interval = setInterval(tick, 1000)
         return () => clearInterval(interval)
     }, [startTime])
 
     const hours = Math.floor(elapsed / 3600)
     const minutes = Math.floor((elapsed % 3600) / 60)
     const seconds = elapsed % 60
-
     const format = (n: number) => n.toString().padStart(2, "0")
 
     // Real-time Quota Calc
@@ -68,7 +54,6 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
     const totalMinutes = weeklyMinutes + sessionMinutes
     const percent = quotaMinutes > 0 ? Math.min(100, Math.round((totalMinutes / quotaMinutes) * 100)) : 0
 
-    // Handle no shift - render inline instead of early return to preserve hooks order
     if (!startTime) {
         return <div className="text-zinc-500 text-sm">Not on shift</div>
     }
@@ -82,7 +67,6 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
                 Current Session
             </div>
 
-            {/* Quota Progress */}
             {quotaMinutes > 0 && (
                 <div className="w-full border-t border-white/5 pt-3">
                     <div className="flex justify-between items-center mb-1 text-xs">

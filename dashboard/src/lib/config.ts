@@ -14,7 +14,7 @@ const GLOBAL_DEFAULTS = {
     QUEUE_INTERVAL_MS: 3000,
     SYSTEM_ACTOR: "pow-system",
     MAX_DB_BUFFER_SIZE: 1000,
-    PRC_BASE_URL: "https://api.policeroleplay.community/v1",
+    PRC_BASE_URL: "https://api.policeroleplay.community/v2",
     ROBLOX_OPEN_CLOUD_BASE: "https://apis.roblox.com/cloud/v2",
 }
 

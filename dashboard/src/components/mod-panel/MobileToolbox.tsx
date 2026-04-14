@@ -1,8 +1,10 @@
 "use client"
 
 import React, { useState } from "react"
-import { Command, Calendar, X, Send, Loader2, Check, Terminal, ClipboardList, Bell, ChevronRight } from "lucide-react"
+import { Command, Calendar, X, Send, Loader2, Check, Terminal, ClipboardList, Bell, ChevronRight, Phone, Map } from "lucide-react"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
+import { CallsModal } from "./calls-modal"
+import { MapModal } from "./map-modal"
 
 interface MobileToolboxProps {
     serverId: string
@@ -23,6 +25,8 @@ export function MobileToolbox({
     const [commandOpen, setCommandOpen] = useState(false)
     const [permLogOpen, setPermLogOpen] = useState(false)
     const [staffRequestOpen, setStaffRequestOpen] = useState(false)
+    const [callsOpen, setCallsOpen] = useState(false)
+    const [mapOpen, setMapOpen] = useState(false)
 
     // LOA form state
     const [startDate, setStartDate] = useState("")
@@ -224,6 +228,28 @@ export function MobileToolbox({
             borderClass: "border-red-500/20",
             show: permissions.canUseToolbox && featureStaffReq,
             onClick: () => setStaffRequestOpen(true),
+        },
+        {
+            id: "calls",
+            name: "Live Calls",
+            description: "View emergency & mod calls",
+            icon: Phone,
+            colorClass: "text-indigo-400",
+            bgClass: "bg-indigo-500/10",
+            borderClass: "border-indigo-500/20",
+            show: true,
+            onClick: () => setCallsOpen(true),
+        },
+        {
+            id: "map",
+            name: "Real-time Map",
+            description: "Satellite player tracking",
+            icon: Map,
+            colorClass: "text-indigo-400",
+            bgClass: "bg-indigo-500/10",
+            borderClass: "border-indigo-500/20",
+            show: true,
+            onClick: () => setMapOpen(true),
         },
     ]
 
@@ -512,6 +538,16 @@ export function MobileToolbox({
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Calls Modal */}
+            {callsOpen && (
+                <CallsModal serverId={serverId} onClose={() => setCallsOpen(false)} />
+            )}
+
+            {/* Map Modal */}
+            {mapOpen && (
+                <MapModal serverId={serverId} onClose={() => setMapOpen(false)} />
             )}
         </>
     )

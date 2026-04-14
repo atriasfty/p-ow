@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Save, Trash2, Plus, GripVertical, Settings2, Eye, Share2, Copy, Check, ExternalLink, BarChart3 } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Plus, GripVertical, Settings2, Eye, Share2, Copy, Check, ExternalLink, BarChart3, ChevronUp, ChevronDown, UserMinus } from "lucide-react"
 import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Question {
@@ -85,12 +85,16 @@ export default function EditFormPage({
     const [lastSaved, setLastSaved] = useState<Date | null>(null)
     const [error, setError] = useState("")
     const [showSettings, setShowSettings] = useState(false)
+    const [openAddMenu, setOpenAddMenu] = useState<string | null>(null) // sectionId
     const [copied, setCopied] = useState<string | null>(null)
     const [resolvedParams, setResolvedParams] = useState<{ serverId: string; formId: string } | null>(null)
     const { showConfirm } = useDialog()
 
     const [availableRoles, setAvailableRoles] = useState<DiscordRole[]>([])
     const [availableChannels, setAvailableChannels] = useState<DiscordChannel[]>([])
+
+    const [editors, setEditors] = useState<{ userId: string; grantedAt: string; robloxUsername?: string; imageUrl?: string }[]>([])
+    const [loadingEditors, setLoadingEditors] = useState(false)
 
     useEffect(() => {
         params.then(p => {
@@ -99,6 +103,44 @@ export default function EditFormPage({
             loadDiscordData(p.serverId)
         })
     }, [params])
+
+    useEffect(() => {
+        if (showSettings && resolvedParams) {
+            fetchEditors()
+        }
+    }, [showSettings, resolvedParams])
+
+    const fetchEditors = async () => {
+        if (!resolvedParams) return
+        setLoadingEditors(true)
+        try {
+            const res = await fetch(`/api/forms/editor-access?formId=${resolvedParams.formId}&listAll=true`)
+            if (res.ok) {
+                setEditors(await res.json())
+            }
+        } catch (e) {
+            console.error("Failed to fetch editors", e)
+        } finally {
+            setLoadingEditors(false)
+        }
+    }
+
+    const removeEditor = async (userId: string) => {
+        if (!resolvedParams || !form) return
+        const confirmed = await showConfirm("Remove Editor", `Are you sure you want to remove edit access for this user?`, "Remove", "destructive")
+        if (!confirmed) return
+
+        try {
+            const res = await fetch(`/api/forms/editor-access?formId=${form.id}&userId=${userId}`, {
+                method: "DELETE"
+            })
+            if (res.ok) {
+                setEditors(prev => prev.filter(e => e.userId !== userId))
+            }
+        } catch (e) {
+            console.error("Failed to remove editor", e)
+        }
+    }
 
     const loadDiscordData = async (serverId: string) => {
         try {
@@ -305,6 +347,89 @@ export default function EditFormPage({
         setTimeout(() => setCopied(null), 2000)
     }
 
+    const moveQuestion = async (questionId: string, direction: "up" | "down") => {
+        if (!form) return
+
+        // Find current section and question
+        let sectionIndex = -1
+        let questionIndex = -1
+        for (let i = 0; i < form.sections.length; i++) {
+            const idx = form.sections[i].questions.findIndex(q => q.id === questionId)
+            if (idx !== -1) {
+                sectionIndex = i
+                questionIndex = idx
+                break
+            }
+        }
+
+        if (sectionIndex === -1 || questionIndex === -1) return
+
+        const questions = [...form.sections[sectionIndex].questions]
+        const newIndex = direction === "up" ? questionIndex - 1 : questionIndex + 1
+
+        if (newIndex < 0 || newIndex >= questions.length) return
+
+        // Swap
+        const [moved] = questions.splice(questionIndex, 1)
+        questions.splice(newIndex, 0, moved)
+
+        // Update orders
+        const updatedQuestions = questions.map((q, i) => ({ ...q, order: i }))
+
+        // Optimistic update
+        const updatedSections = [...form.sections]
+        updatedSections[sectionIndex] = { ...updatedSections[sectionIndex], questions: updatedQuestions }
+        setForm({ ...form, sections: updatedSections })
+
+        // Save to server
+        try {
+            await fetch(`/api/forms/${form.id}/questions`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    questions: updatedQuestions.map(q => ({ id: q.id, order: q.order }))
+                })
+            })
+        } catch (e) {
+            console.error("Failed to reorder questions", e)
+            loadForm(form.id) // Rollback
+        }
+    }
+
+    const moveSection = async (sectionId: string, direction: "up" | "down") => {
+        if (!form) return
+
+        const sectionIndex = form.sections.findIndex(s => s.id === sectionId)
+        if (sectionIndex === -1) return
+
+        const newIndex = direction === "up" ? sectionIndex - 1 : sectionIndex + 1
+        if (newIndex < 0 || newIndex >= form.sections.length) return
+
+        const sections = [...form.sections]
+        const [moved] = sections.splice(sectionIndex, 1)
+        sections.splice(newIndex, 0, moved)
+
+        // Update orders
+        const updatedSections = sections.map((s, i) => ({ ...s, order: i }))
+
+        // Optimistic update
+        setForm({ ...form, sections: updatedSections })
+
+        // Save to server
+        try {
+            await fetch(`/api/forms/${form.id}/sections`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sections: updatedSections.map(s => ({ id: s.id, order: s.order }))
+                })
+            })
+        } catch (e) {
+            console.error("Failed to reorder sections", e)
+            loadForm(form.id) // Rollback
+        }
+    }
+
     const deleteForm = async () => {
         if (!form || !resolvedParams) return
         const confirmed = await showConfirm("Delete Form", "Are you sure you want to delete this form? All responses will be lost.", "Delete", "destructive")
@@ -382,10 +507,10 @@ export default function EditFormPage({
                         </Link>
                         <button
                             onClick={() => setShowSettings(!showSettings)}
-                            className={`p-2 rounded-lg transition-colors ${showSettings ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors whitespace-nowrap ${showSettings ? "bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-400 hover:text-white"}`}
                         >
                             <Settings2 className="h-4 w-4" />
-                            <span className="hidden sm:inline whitespace-nowrap">Settings</span>
+                            <span className="hidden sm:inline">Settings</span>
                         </button>
                         <select
                             value={form.status}
@@ -414,45 +539,92 @@ export default function EditFormPage({
                         </div>
 
                         {/* Sharing */}
-                        <div className="space-y-3">
-                            <h4 className="text-sm font-medium text-zinc-400">Share Links</h4>
-                            <div className="space-y-2">
-                                <p className="text-sm text-white mb-1">Public Link</p>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={publicUrl}
-                                        className="flex-1 bg-[#222] px-3 py-2 rounded text-sm text-zinc-300 outline-none"
-                                    />
-                                    <button
-                                        onClick={() => copyToClipboard(publicUrl, "public")}
-                                        className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded"
-                                    >
-                                        {copied === "public" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
-                                    </button>
-                                    <a href={publicUrl} target="_blank" className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded">
-                                        <ExternalLink className="h-4 w-4 text-zinc-400" />
-                                    </a>
+                        <div className="space-y-4">
+                            <div className="space-y-3">
+                                <h4 className="text-sm font-medium text-zinc-400">Share Links</h4>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-white mb-1">Public Link</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={publicUrl}
+                                            className="flex-1 bg-[#222] px-3 py-2 rounded text-sm text-zinc-300 outline-none"
+                                        />
+                                        <button
+                                            onClick={() => copyToClipboard(publicUrl, "public")}
+                                            className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+                                        >
+                                            {copied === "public" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                                        </button>
+                                        <a href={publicUrl} target="_blank" className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded">
+                                            <ExternalLink className="h-4 w-4 text-zinc-400" />
+                                        </a>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-white mb-1">Editor Link (Grants edit access)</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={editorUrl}
+                                            className="flex-1 bg-[#222] px-3 py-2 rounded text-sm text-zinc-300 outline-none"
+                                        />
+                                        <button
+                                            onClick={() => copyToClipboard(editorUrl, "editor")}
+                                            className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+                                        >
+                                            {copied === "editor" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-zinc-600">Editor link grants edit access to POW users who open it</p>
                                 </div>
                             </div>
-                            <div className="space-y-2">
-                                <p className="text-sm text-white mb-1">Editor Link (Grants edit access)</p>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={editorUrl}
-                                        className="flex-1 bg-[#222] px-3 py-2 rounded text-sm text-zinc-300 outline-none"
-                                    />
-                                    <button
-                                        onClick={() => copyToClipboard(editorUrl, "editor")}
-                                        className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded"
-                                    >
-                                        {copied === "editor" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
-                                    </button>
-                                </div>
-                                <p className="text-xs text-zinc-600">Editor link grants edit access to POW users who open it</p>
+
+                            {/* Current Editors */}
+                            <div className="space-y-3 pt-4 border-t border-[#333]">
+                                <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                                    <Share2 className="h-4 w-4 text-indigo-400" />
+                                    Current Editors
+                                </h4>
+                                {loadingEditors ? (
+                                    <div className="text-xs text-zinc-500 animate-pulse">Loading editors...</div>
+                                ) : editors.length === 0 ? (
+                                    <div className="text-xs text-zinc-600 italic">No additional editors added yet.</div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {editors.map((editor: { userId: string; grantedAt: string; robloxUsername?: string; imageUrl?: string }) => (
+                                            <div key={editor.userId} className="flex items-center justify-between bg-[#222] p-3 rounded-lg border border-[#333]">
+                                                <div className="flex items-center gap-3">
+                                                    {editor.imageUrl ? (
+                                                        <img
+                                                            src={editor.imageUrl}
+                                                            alt=""
+                                                            className="w-8 h-8 rounded-full object-cover border border-zinc-700"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-xs text-indigo-400 font-medium">
+                                                            {(editor.robloxUsername || editor.userId).slice(0, 2).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <p className="text-sm text-white font-medium">{editor.robloxUsername || editor.userId}</p>
+                                                        <p className="text-[10px] text-zinc-500">Added {new Date(editor.grantedAt).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => removeEditor(editor.userId)}
+                                                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                                                    title="Remove access"
+                                                >
+                                                    <UserMinus className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                <div className="border-t border-[#333] pt-2 mt-4" />
                             </div>
                         </div>
 
@@ -669,7 +841,20 @@ export default function EditFormPage({
                         {form.sections.map((section) => (
                             <div key={section.id} className="bg-[#1a1a1a] border border-[#333] rounded-xl overflow-hidden">
                                 <div className="flex items-center gap-3 p-4 border-b border-[#333] bg-[#222]">
-                                    <GripVertical className="h-4 w-4 text-zinc-600" />
+                                    <div className="flex flex-col gap-1">
+                                        <button
+                                            onClick={() => moveSection(section.id, "up")}
+                                            className="text-zinc-600 hover:text-white"
+                                        >
+                                            <ChevronUp className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => moveSection(section.id, "down")}
+                                            className="text-zinc-600 hover:text-white"
+                                        >
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                     <input
                                         type="text"
                                         value={section.title}
@@ -694,27 +879,49 @@ export default function EditFormPage({
                                 </div>
 
                                 <div className="p-4 space-y-4">
-                                    {section.questions.map((q) => (
+                                    {section.questions.map((q: any) => (
                                         <QuestionCard
                                             key={q.id}
                                             question={q}
-                                            allQuestions={form.sections.flatMap(s => s.questions.filter(qq => qq.id !== q.id))}
-                                            onUpdate={(updates) => updateQuestion(q.id, updates)}
+                                            allQuestions={form.sections.flatMap((s: any) => s.questions.filter((qq: any) => qq.id !== q.id))}
+                                            onUpdate={(updates: Partial<Question>) => updateQuestion(q.id, updates)}
                                             onDelete={() => deleteQuestion(q.id)}
+                                            onMove={(dir: "up" | "down") => moveQuestion(q.id, dir)}
                                         />
                                     ))}
 
-                                    <div className="flex flex-wrap gap-2 pt-2">
-                                        {QUESTION_TYPES.map((type) => (
-                                            <button
-                                                key={type.value}
-                                                onClick={() => addQuestion(section.id, type.value)}
-                                                className="flex items-center gap-2 px-3 py-2 bg-[#222] hover:bg-[#333] text-zinc-400 hover:text-white rounded-lg text-sm transition-colors"
-                                            >
-                                                <span>{type.icon}</span>
-                                                {type.label}
-                                            </button>
-                                        ))}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setOpenAddMenu(openAddMenu === section.id ? null : section.id)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm transition-colors shadow-lg shadow-indigo-500/20"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            Add Question
+                                        </button>
+
+                                        {openAddMenu === section.id && (
+                                            <>
+                                                <div
+                                                    className="fixed inset-0 z-10"
+                                                    onClick={() => setOpenAddMenu(null)}
+                                                />
+                                                <div className="absolute bottom-full left-0 mb-2 w-48 bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl py-2 z-20 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                    {QUESTION_TYPES.map((type) => (
+                                                        <button
+                                                            key={type.value}
+                                                            onClick={() => {
+                                                                addQuestion(section.id, type.value)
+                                                                setOpenAddMenu(null)
+                                                            }}
+                                                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors group/item"
+                                                        >
+                                                            <span className="text-lg grayscale group-hover/item:grayscale-0">{type.icon}</span>
+                                                            {type.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -738,12 +945,14 @@ function QuestionCard({
     question,
     allQuestions,
     onUpdate,
-    onDelete
+    onDelete,
+    onMove
 }: {
     question: Question
     allQuestions: Question[]
     onUpdate: (updates: Partial<Question>) => void
     onDelete: () => void
+    onMove: (direction: "up" | "down") => void
 }) {
     const [showConditions, setShowConditions] = useState(!!question.conditions?.showIf)
 
@@ -767,7 +976,20 @@ function QuestionCard({
     return (
         <div className="bg-[#252525] border border-[#3a3a3a] rounded-lg p-4 space-y-3">
             <div className="flex items-start gap-3">
-                <GripVertical className="h-4 w-4 text-zinc-600 mt-2" />
+                <div className="flex flex-col gap-0.5 mt-1">
+                    <button
+                        onClick={() => onMove("up")}
+                        className="text-zinc-600 hover:text-white"
+                    >
+                        <ChevronUp className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => onMove("down")}
+                        className="text-zinc-600 hover:text-white"
+                    >
+                        <ChevronDown className="h-4 w-4" />
+                    </button>
+                </div>
                 <div className="flex-1 space-y-2">
                     <input
                         type="text"

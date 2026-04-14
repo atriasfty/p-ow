@@ -4,7 +4,8 @@ import { PrcPlayer, PrcJoinLog, PrcKillLog, PrcCommandLog, parsePrcPlayer } from
 import { getRobloxUser } from "@/lib/roblox"
 import { RaidDetectorService, Detection } from "@/lib/raid-detector"
 import { findMemberByRobloxId } from "@/lib/clerk-lookup"
-import { Prisma } from "@prisma/client"
+import { eventBus } from "@/lib/event-bus"
+// import { Prisma } from "@prisma/client"
 
 async function getAutomationEngine() {
     const { AutomationEngine } = await import("@/lib/automation-engine")
@@ -13,32 +14,36 @@ async function getAutomationEngine() {
 
 function logToDbFormat(log: any, serverId: string): any {
     if (log._type === "join") {
+        const p = parsePrcPlayer(log.Player || "")
         return {
             serverId,
             type: "join",
-            playerName: log.PlayerName,
-            playerId: log.PlayerId,
+            playerName: p.name,
+            playerId: p.id,
             isJoin: log.Join !== false,
-            prcTimestamp: log.timestamp
+            prcTimestamp: log.Timestamp || log.timestamp
         }
     } else if (log._type === "kill") {
+        const killer = parsePrcPlayer(log.Killer || "")
+        const victim = parsePrcPlayer(log.Killed || "")
         return {
             serverId,
             type: "kill",
-            killerName: log.KillerName,
-            killerId: log.KillerId,
-            victimName: log.VictimName,
-            victimId: log.VictimId,
-            prcTimestamp: log.timestamp
+            killerName: killer.name,
+            killerId: killer.id,
+            victimName: victim.name,
+            victimId: victim.id,
+            prcTimestamp: log.Timestamp || log.timestamp
         }
     } else if (log._type === "command") {
+        const p = parsePrcPlayer(log.Player || "")
         return {
             serverId,
             type: "command",
-            playerName: log.PlayerName,
-            playerId: log.PlayerId,
+            playerName: p.name,
+            playerId: p.id,
             command: log.Command,
-            prcTimestamp: log.timestamp
+            prcTimestamp: log.Timestamp || log.timestamp
         }
     }
     return null
@@ -94,7 +99,7 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
                     where: { userId: member.userId, serverId, endTime: null }
                 })
                 if (existing) throw new Error("Shift already active")
-                
+
                 await tx.shift.create({
                     data: { userId: member.userId, serverId, startTime: new Date() }
                 })
@@ -255,7 +260,7 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
         })
 
         await client.executeCommand(`:pm ${playerName} [POW] ${punishmentType} logged for ${target.name}`).catch(() => { })
-        
+
         const engine = await getAutomationEngine()
         engine.trigger("PUNISHMENT_ISSUED", {
             serverId,
@@ -272,11 +277,20 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
     const client = new PrcClient(apiKey)
 
     try {
-        const [join, kill, command] = await Promise.all([
-            client.getJoinLogs().catch(() => [] as PrcJoinLog[]),
-            client.getKillLogs().catch(() => [] as PrcKillLog[]),
-            client.getCommandLogs().catch(() => [] as PrcCommandLog[])
-        ])
+        const v2 = await client.getServerV2({
+            Players: true,
+            Staff: true,
+            JoinLogs: true,
+            KillLogs: true,
+            CommandLogs: true,
+            ModCalls: true,
+            EmergencyCalls: true,
+            Vehicles: true
+        })
+
+        const join = v2.JoinLogs || []
+        const kill = v2.KillLogs || []
+        const command = v2.CommandLogs || []
 
         const parsedLogs = [
             ...join.map((l: any) => {
@@ -297,11 +311,11 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
         if (parsedLogs.length === 0) return { parsedLogs: [], newLogsCount: 0 }
 
         const dbLogs = parsedLogs.map(l => logToDbFormat(l, serverId)).filter((l): l is any => l !== null)
-        
+
         // Manual deduplication for SQLite (which doesn't support skipDuplicates: true)
         // 1. Get all timestamps from the logs we're trying to insert
         const timestamps = dbLogs.map(l => l.prcTimestamp).filter(t => t !== null) as number[]
-        
+
         // 2. Fetch existing logs with those timestamps for this server
         const existingLogs = await prisma.log.findMany({
             where: {
@@ -319,36 +333,261 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
         // 4. Filter out logs that already exist
         const uniqueDbLogs = dbLogs.filter(l => !existingKeys.has(getLogKey(l)))
 
-        if (uniqueDbLogs.length === 0) return { parsedLogs, newLogsCount: 0 }
+        if (uniqueDbLogs.length > 0) {
+            // Batch create unique logs
+            await prisma.log.createMany({
+                data: uniqueDbLogs
+            })
+            // Push new logs to SSE clients
+            const logsForSSE = parsedLogs.filter(l => uniqueDbLogs.some(d => `${d.type}_${d.prcTimestamp}` === `${(l as any)._type}_${l.timestamp}`))
+            if (logsForSSE.length > 0) {
+                eventBus.emit(serverId, 'logs', logsForSSE as any)
+            }
+        }
 
-        // Batch create unique logs
-        const { count: newLogsCount } = await prisma.log.createMany({
-            data: uniqueDbLogs
-        })
+        // --- PRC V2 DATA SYNC ---
 
+        // 1. Player Locations
+        if (v2.Players && v2.Players.length > 0) {
+            const locationData = v2.Players.filter(p => p.Location).map(p => {
+                const details = parsePrcPlayer(p.Player)
+                return {
+                    serverId,
+                    userId: details.id,
+                    playerName: details.name,
+                    locationX: p.Location!.LocationX,
+                    locationZ: p.Location!.LocationZ,
+                    postalCode: p.Location!.PostalCode,
+                    streetName: p.Location!.StreetName,
+                    buildingNumber: p.Location!.BuildingNumber
+                }
+            })
+            if (locationData.length > 0) {
+                await prisma.playerLocation.createMany({ data: locationData })
+
+                // Push player list to all SSE clients for this server
+                const parsedForSSE = v2.Players!.map(p => {
+                    const details = parsePrcPlayer(p.Player)
+                    return {
+                        id: details.id,
+                        name: details.name,
+                        team: p.Team,
+                        permission: p.Permission,
+                        vehicle: p.Vehicle,
+                        callsign: p.Callsign,
+                        location: p.Location ? {
+                            x: p.Location.LocationX,
+                            z: p.Location.LocationZ,
+                            postal: p.Location.PostalCode,
+                            street: p.Location.StreetName,
+                            building: p.Location.BuildingNumber
+                        } : null
+                    }
+                })
+                eventBus.emit(serverId, 'players', parsedForSSE)
+
+                // Push server-stats
+                eventBus.emit(serverId, 'server-stats', {
+                    players: parsedForSSE.length,
+                    maxPlayers: (v2 as any).MaxPlayers || 0,
+                    online: parsedForSSE.length > 0
+                })
+            }
+        }
+
+        // 2. Mod Calls
+        if (v2.ModCalls && v2.ModCalls.length > 0) {
+            // Find recent mod calls for this server (within last hour)
+            const hourAgo = new Date(Date.now() - 60 * 60 * 1000)
+            const recentCalls = await prisma.modCall.findMany({
+                where: { serverId, createdAt: { gte: hourAgo } },
+                orderBy: { createdAt: "desc" }
+            })
+
+            for (const c of v2.ModCalls) {
+                const caller = parsePrcPlayer(c.Caller)
+                const moderator = c.Moderator ? parsePrcPlayer(c.Moderator) : null
+
+                // Try to find an existing call by this caller
+                // Best match is one with the exact timestamp, otherwise the most recent one
+                let existingCall = recentCalls.find(call => call.callerId === caller.id && call.timestamp === c.Timestamp)
+                if (!existingCall) {
+                    existingCall = recentCalls.find(call => call.callerId === caller.id)
+                }
+
+                let newResponders: string[] = []
+                if (moderator) {
+                    newResponders = [moderator.id]
+                }
+
+                if (existingCall) {
+                    // Call exists. Check if we need to update responders
+                    let currentResponders: string[] = []
+                    if (existingCall.respondingPlayers) {
+                        try { currentResponders = JSON.parse(existingCall.respondingPlayers) } catch { }
+                    }
+
+                    if (moderator && !currentResponders.includes(moderator.id)) {
+                        currentResponders.push(moderator.id)
+                        const newRespondersStr = JSON.stringify(currentResponders)
+                        await prisma.modCall.update({
+                            where: { id: existingCall.id },
+                            data: { respondingPlayers: newRespondersStr }
+                        })
+                        // update local cache so we don't spam updates
+                        existingCall.respondingPlayers = newRespondersStr
+                    }
+                } else {
+                    // Call doesn't exist at all (webhook must have missed it). Create a fallback record.
+                    const newCall = await prisma.modCall.create({
+                        data: {
+                            serverId,
+                            callerId: caller.id,
+                            callerName: caller.name,
+                            respondingPlayers: newResponders.length > 0 ? JSON.stringify(newResponders) : null,
+                            timestamp: c.Timestamp
+                        }
+                    })
+                    recentCalls.push(newCall) // add to cache
+
+                    const AutomationEngine = await getAutomationEngine()
+                    AutomationEngine.trigger("MOD_CALL", {
+                        serverId,
+                        player: {
+                            name: caller.name || "Unknown",
+                            id: caller.id,
+                            location: { x: 0, z: 0, postal: null, street: null }
+                        },
+                        details: { description: null, callNumber: null }
+                    }).catch(() => { })
+                }
+            }
+        }
+
+        // 3. Emergency Calls
+        if (v2.EmergencyCalls && v2.EmergencyCalls.length > 0) {
+            const emerCallTimestamps = v2.EmergencyCalls.map(c => c.Timestamp)
+            const existingEmerCalls = await prisma.emergencyCall.findMany({
+                where: { serverId, timestamp: { in: emerCallTimestamps } },
+                select: { timestamp: true, callNumber: true }
+            })
+            const existingEmerKeys = new Set(existingEmerCalls.map((c: any) => `${c.timestamp}_${c.callNumber}`))
+
+            const newEmerCalls = v2.EmergencyCalls.filter(c => !existingEmerKeys.has(`${c.Timestamp}_${c.CallNumber}`)).map(c => {
+                const details = parsePrcPlayer(c.Caller)
+                return {
+                    serverId,
+                    team: c.Team,
+                    callerId: details.id,
+                    callerName: details.name,
+                    description: c.Description,
+                    callNumber: c.CallNumber,
+                    positionX: c.Position ? c.Position[0] : 0,
+                    positionZ: c.Position ? c.Position[1] : 0,
+                    positionDescriptor: c.PositionDescriptor,
+                    timestamp: c.Timestamp
+                }
+            })
+            if (newEmerCalls.length > 0) {
+                await prisma.emergencyCall.createMany({ data: newEmerCalls })
+                const AutomationEngine = await getAutomationEngine()
+                for (const call of newEmerCalls) {
+                    AutomationEngine.trigger("EMERGENCY_CALL", {
+                        serverId,
+                        player: {
+                            name: call.callerName || "Unknown",
+                            id: call.callerId,
+                            location: { x: call.positionX || 0, z: call.positionZ || 0, postal: null, street: null }
+                        },
+                        details: { team: call.team, description: call.description, callNumber: call.callNumber, positionDescriptor: call.positionDescriptor }
+                    }).catch(() => { })
+                }
+            }
+        }
+
+        // Push updated calls snapshot to SSE clients after all call saves
+        if (v2.ModCalls?.length || v2.EmergencyCalls?.length) {
+            try {
+                const [rawModCalls, latestEmerCalls] = await Promise.all([
+                    prisma.modCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: 400 }),
+                    prisma.emergencyCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: 50 })
+                ])
+
+                // Deduplicate ModCalls based on timestamp and callerId (to handle past loop duplicates safely)
+                const uniqueCallsMap = new Map<string, any>()
+                for (const call of rawModCalls) {
+                    const key = `${call.timestamp}_${call.callerId}`
+                    const existing = uniqueCallsMap.get(key)
+                    if (!existing) {
+                        uniqueCallsMap.set(key, call)
+                    } else if (!existing.respondingPlayers && call.respondingPlayers) {
+                        // Prefer duplicate that has responders
+                        uniqueCallsMap.set(key, call)
+                    } else if (existing.respondingPlayers && call.respondingPlayers) {
+                        // Safely merge responders if both exist on duplicates
+                        try {
+                            const eResp = JSON.parse(existing.respondingPlayers)
+                            const cResp = JSON.parse(call.respondingPlayers)
+                            existing.respondingPlayers = JSON.stringify(Array.from(new Set([...eResp, ...cResp])))
+                        } catch { }
+                    }
+                }
+                const latestModCalls = Array.from(uniqueCallsMap.values()).slice(0, 50)
+
+                eventBus.emit(serverId, 'calls', { modCalls: latestModCalls, emergencyCalls: latestEmerCalls })
+            } catch { /* non-critical */ }
+        }
+
+        // 4. Vehicles
+        if (v2.Vehicles && v2.Vehicles.length > 0) {
+            const vehicleData = v2.Vehicles.map(v => {
+                const details = parsePrcPlayer(v.Owner)
+                return {
+                    serverId,
+                    ownerId: details.id,
+                    ownerName: details.name,
+                    vehicleName: v.Name,
+                    licensePlate: v.LicensePlate,
+                    color: v.Color,
+                    livery: v.Livery,
+                    positionX: v.Position ? v.Position[0] : 0,
+                    positionZ: v.Position ? v.Position[1] : 0,
+                    timestamp: v.Timestamp
+                }
+            })
+            // For vehicles, we just snapshot for now (or could deduplicate like calls)
+            if (vehicleData.length > 0) {
+                await prisma.vehicleLog.createMany({ data: vehicleData })
+            }
+        }
+
+        const newLogsCount = uniqueDbLogs.length
         if (newLogsCount > 0) {
             const AutomationEngine = await getAutomationEngine()
             const newCommandLogsForDetection: any[] = []
 
-            // Trigger automations for the new logs
+            // Trigger automations and handlers ONLY for logs that were determined to be new
             for (const log of parsedLogs) {
-                const type = log._type
-                const context = {
-                    serverId,
-                    player: { name: (log as any).PlayerName || (log as any).KillerName || "Unknown", id: (log as any).PlayerId || (log as any).KillerId || "" }
-                }
+                const logKey = getLogKey(logToDbFormat(log, serverId))
+                if (!existingKeys.has(logKey)) {
+                    const type = log._type
+                    const context = {
+                        serverId,
+                        player: { name: (log as any).PlayerName || (log as any).KillerName || "Unknown", id: (log as any).PlayerId || (log as any).KillerId || "" }
+                    }
 
-                if (type === "join") {
-                    AutomationEngine.trigger(log.Join !== false ? "PLAYER_JOIN" : "PLAYER_LEAVE", context).catch(() => {})
-                } else if (type === "command") {
-                    const cmd = log.Command?.toLowerCase()
-                    if (cmd?.startsWith(":log ")) await handleLogCommand(log, serverId, client)
-                    if (cmd === ":shutdown" || cmd?.startsWith(":shutdown ")) await handleShutdownCommand(log, serverId)
-                    
-                    newCommandLogsForDetection.push({ ...log, playerName: log.PlayerName, playerId: log.PlayerId, command: log.Command })
-                    AutomationEngine.trigger("COMMAND_USED", { ...context, details: { command: log.Command } }).catch(() => {})
-                } else if (type === "kill") {
-                    AutomationEngine.trigger("PLAYER_KILL", { ...context, target: { name: log.VictimName, id: log.VictimId } }).catch(() => {})
+                    if (type === "join") {
+                        AutomationEngine.trigger(log.Join !== false ? "PLAYER_JOIN" : "PLAYER_LEAVE", context).catch(() => { })
+                    } else if (type === "command") {
+                        const cmd = log.Command?.toLowerCase()
+                        if (cmd?.startsWith(":log ")) await handleLogCommand(log, serverId, client)
+                        if (cmd === ":shutdown" || cmd?.startsWith(":shutdown ")) await handleShutdownCommand(log, serverId)
+
+                        newCommandLogsForDetection.push({ ...log, playerName: log.PlayerName, playerId: log.PlayerId, command: log.Command })
+                        AutomationEngine.trigger("COMMAND_USED", { ...context, details: { command: log.Command } }).catch(() => { })
+                    } else if (type === "kill") {
+                        AutomationEngine.trigger("PLAYER_KILL", { ...context, target: { name: log.VictimName, id: log.VictimId } }).catch(() => { })
+                    }
                 }
             }
 

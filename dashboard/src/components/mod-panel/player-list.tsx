@@ -9,10 +9,17 @@ export interface ParsedPlayer {
     name: string
     id: string
     team?: string
-    permission?: number
+    permission?: string | number
     avatar?: string
     vehicle?: string
     callsign?: string
+    location?: {
+        x: number
+        z: number
+        postal: string | null
+        street: string | null
+        building: string | null
+    } | null
 }
 
 export function PlayerList({ serverId, players: externalPlayers }: { serverId: string, players?: ParsedPlayer[] }) {
@@ -127,11 +134,19 @@ export function PlayerList({ serverId, players: externalPlayers }: { serverId: s
                                 {player.name}
                             </p>
                         </div>
-                        <p className="text-[10px] text-zinc-500 truncate">
-                            {player.vehicle && player.vehicle !== "Unknown" && player.vehicle !== "None" && player.vehicle.trim() !== "" ? (
-                                <span className="text-zinc-400">{player.vehicle}</span>
-                            ) : (
-                                player.team || "Civilian"
+                        <p className="text-[10px] text-zinc-500 truncate flex items-center gap-1">
+                            {player.location?.postal && (
+                                <span className="text-sky-400 font-bold">[{player.location.postal}]</span>
+                            )}
+                            {player.location?.street && (
+                                <span className="text-zinc-400">{player.location.street}</span>
+                            )}
+                            {!player.location?.street && (
+                                player.vehicle && player.vehicle !== "Unknown" && player.vehicle !== "None" && player.vehicle.trim() !== "" ? (
+                                    <span className="text-zinc-400">{player.vehicle}</span>
+                                ) : (
+                                    player.team || "Civilian"
+                                )
                             )}
                         </p>
                     </div>
