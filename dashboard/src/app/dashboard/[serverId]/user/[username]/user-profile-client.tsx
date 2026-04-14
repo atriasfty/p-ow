@@ -581,7 +581,10 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
                                                             // Quick client-side update for responsiveness, then refresh
                                                             await fetch(`/api/resolve-bolo?id=${p.id}`, {
                                                                 method: 'POST',
-                                                                headers: { 'x-csrf-check': '1' }
+                                                                headers: {
+                                                                    'x-csrf-check': '1',
+                                                                    'Origin': window.location.origin
+                                                                }
                                                             })
                                                             window.location.reload()
                                                         }}

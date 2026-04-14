@@ -293,6 +293,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                     setOpenMenu(null)
                                                                 }}
                                                                 className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                                                                aria-label={`Edit reason for ${user?.name || p.userId}`}
                                                             >
                                                                 <Pencil className="h-3 w-3" /> Edit Reason
                                                             </button>
@@ -307,6 +308,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                         setOpenMenu(null)
                                                                     }}
                                                                     className="w-full px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-zinc-700 flex items-center gap-2"
+                                                                    aria-label={`Complete ban bolo for ${user?.name || p.userId}`}
                                                                 >
                                                                     <CheckCircle2 className="h-3 w-3" /> Complete
                                                                 </button>
@@ -321,6 +323,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                     setOpenMenu(null)
                                                                 }}
                                                                 className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-zinc-700 flex items-center gap-2"
+                                                                aria-label={`Delete punishment for ${user?.name || p.userId}`}
                                                             >
                                                                 <Trash2 className="h-3 w-3" /> Delete
                                                             </button>

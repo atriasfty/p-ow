@@ -171,14 +171,18 @@ async function handleShutdownCommand(log: any, serverId: string) {
         where: { serverId, endTime: null }
     })
 
+    // ⚡ Bolt: Using $transaction to batch all individual shift updates into a single database transaction,
+    // drastically reducing overhead from N+1 concurrent transactions during server shutdowns.
     if (activeShifts.length > 0) {
-        await Promise.all(activeShifts.map((shift: any) => {
-            const duration = Math.floor((now.getTime() - shift.startTime.getTime()) / 1000)
-            return prisma.shift.update({
-                where: { id: shift.id },
-                data: { endTime: now, duration }
+        await prisma.$transaction(
+            activeShifts.map((shift: any) => {
+                const duration = Math.floor((now.getTime() - shift.startTime.getTime()) / 1000)
+                return prisma.shift.update({
+                    where: { id: shift.id },
+                    data: { endTime: now, duration }
+                })
             })
-        }))
+        )
     }
 
     const shutdownEventKey = `ssd_${serverId}`

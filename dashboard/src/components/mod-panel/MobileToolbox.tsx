@@ -295,7 +295,8 @@ export function MobileToolbox({
                             </div>
                             <button
                                 onClick={() => { setPermLogOpen(false); setPermLogMessage(null) }}
-                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400"
+                                aria-label="Close Permission Log"
+                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -369,8 +370,12 @@ export function MobileToolbox({
                                     <p className="text-xs text-zinc-500">Your quota will be paused</p>
                                 </div>
                             </div>
-                            <button onClick={() => setLoaOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
-                                <X className="h-4 w-4 text-zinc-400" />
+                            <button
+                                onClick={() => setLoaOpen(false)}
+                                aria-label="Close LOA Request"
+                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            >
+                                <X className="h-5 w-5" />
                             </button>
                         </div>
 
@@ -446,7 +451,8 @@ export function MobileToolbox({
                             </div>
                             <button
                                 onClick={() => { setCommandOpen(false); setCommandMessage(null); setCommandInput("") }}
-                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400"
+                                aria-label="Close Run Command"
+                                className="p-2 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -500,7 +506,8 @@ export function MobileToolbox({
                             </div>
                             <button
                                 onClick={() => setStaffRequestOpen(false)}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-500"
+                                aria-label="Close Staff Request"
+                                className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>

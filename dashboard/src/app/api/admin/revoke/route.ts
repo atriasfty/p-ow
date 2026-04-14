@@ -3,11 +3,20 @@ import { prisma } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Revoke admin access - superadmin only
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF verification failed", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
+    if (!verifyCsrf(req)) {
+        return new NextResponse("Forbidden: CSRF check failed", { status: 403 })
+    }
 
     // Only superadmin can revoke access
     if (!isSuperAdmin(session.user)) {

@@ -357,6 +357,8 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
                                             <button
                                                 onClick={() => removeAction(idx)}
                                                 className="absolute top-2 right-2 p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                                aria-label={`Remove ${action.type.replace("_", " ")} action`}
+                                                title={`Remove ${action.type.replace("_", " ")} action`}
                                             >
                                                 <Trash2 className="h-3.5 w-3.5" />
                                             </button>

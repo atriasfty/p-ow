@@ -304,7 +304,8 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                                         <button
                                             onClick={() => handleCopy(key.key, key.id)}
                                             className="ml-1 text-zinc-500 hover:text-white transition-colors"
-                                            title="Copy masked key"
+                                            title={`Copy API key ${key.name}`}
+                                            aria-label={`Copy API key ${key.name}`}
                                         >
                                             {copiedId === key.id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                                         </button>
@@ -318,7 +319,8 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                                         onBlur={(e) => handleUpdate(key.id, { allowedIps: e.target.value })}
                                         placeholder="Allow any IP (or specify e.g. 192.168.1.1)"
                                         className="w-full bg-black/50 border border-white/5 rounded-lg px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500/50 transition-colors"
-                                        title="Comma-separated IPv4/IPv6 addresses"
+                                        title={`Comma-separated IPv4/IPv6 addresses for API key ${key.name}`}
+                                        aria-label={`Comma-separated IPv4/IPv6 addresses for API key ${key.name}`}
                                     />
                                 </div>
                             </div>
@@ -326,7 +328,8 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                                 <button
                                     onClick={() => handleDelete(key.id)}
                                     className="rounded-lg p-2 text-zinc-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                                    title="Revoke Key"
+                                    title={`Revoke API key ${key.name}`}
+                                    aria-label={`Revoke API key ${key.name}`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
