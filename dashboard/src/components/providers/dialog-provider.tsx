@@ -109,7 +109,8 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                         {/* Close Button */}
                         <button
                             onClick={() => close(false)}
-                            className="absolute top-4 right-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                            aria-label="Close dialog"
+                            className="absolute top-4 right-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                         >
                             <X className="h-4 w-4" />
                         </button>
