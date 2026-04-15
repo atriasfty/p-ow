@@ -114,7 +114,7 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
                         <h3 className="text-xl font-bold text-white">{automation ? "Edit Automation" : "New Automation"}</h3>
                         <p className="text-xs text-zinc-500">Configure triggers and automated actions</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                    <button onClick={onClose} aria-label="Close automation editor" className="p-2 hover:bg-white/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400">
                         <X className="h-5 w-5 text-zinc-400" />
                     </button>
                 </div>
