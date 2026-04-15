@@ -37,30 +37,52 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
-    // Fetch Clerk users
-    const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
-
-    const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
-        const discordAccount = user.externalAccounts.find(
-            a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
-        )
-        const robloxAccount = user.externalAccounts.find(
-            a => ["roblox", "oauth_roblox", "oauth_custom_roblox", "custom_roblox"].includes(a.provider as string)
-        )
-
-        return {
-            id: user.id,
-            username: user.username,
-            name: user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName}`
-                : user.firstName || user.username,
-            image: user.imageUrl,
-            discordId: discordAccount?.externalId,
-            robloxId: robloxAccount?.externalId,
-            robloxUsername: robloxAccount?.username || undefined
-        }
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
     })
+
+    // Fetch Clerk users only for server members
+    const client = await clerkClient()
+    const uniqueUserIds = Array.from(new Set(members.map((m: any) => m.userId as string)))
+    const clerkUsers: ClerkUser[] = []
+
+    if (uniqueUserIds.length > 0) {
+        // Chunk requests to handle Clerk's 100 limit per request
+        const chunks: string[][] = []
+        for (let i = 0; i < uniqueUserIds.length; i += 100) {
+            chunks.push(uniqueUserIds.slice(i, i + 100) as string[])
+        }
+
+        const responses = await Promise.all(
+            chunks.map((chunk: string[]) => client.users.getUserList({ userId: chunk, limit: 100 }))
+        )
+
+        responses.forEach(response => {
+            const mappedUsers = response.data.map(user => {
+                const discordAccount = user.externalAccounts.find(
+                    a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
+                )
+                const robloxAccount = user.externalAccounts.find(
+                    a => ["roblox", "oauth_roblox", "oauth_custom_roblox", "custom_roblox"].includes(a.provider as string)
+                )
+
+                return {
+                    id: user.id,
+                    username: user.username,
+                    name: user.firstName && user.lastName
+                        ? `${user.firstName} ${user.lastName}`
+                        : user.firstName || user.username,
+                    image: user.imageUrl,
+                    discordId: discordAccount?.externalId,
+                    robloxId: robloxAccount?.externalId,
+                    robloxUsername: robloxAccount?.username || undefined
+                }
+            })
+            clerkUsers.push(...mappedUsers)
+        })
+    }
 
     // Helper to get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {
@@ -84,12 +106,6 @@ export default async function AdminQuotaPage({
         )
         return user?.image || null
     }
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
 
     // Calculate week start based on offset (Monday)
     const now = new Date()
