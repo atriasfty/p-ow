@@ -55,16 +55,6 @@ export default async function FormSettingsPage({
                         Back to Forms
                     </Link>
                 </div>
-
-                <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-8">
-                    <FormAutomationSettings 
-                        serverId={serverId}
-                        initialData={{
-                            loaChannelId: server.loaChannelId || "",
-                            onLoaRoleId: server.onLoaRoleId || "",
-                        }}
-                    />
-                </div>
             </div>
         </div>
     )
