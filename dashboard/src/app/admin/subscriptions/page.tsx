@@ -46,7 +46,7 @@ export default function AdminSubscriptionsPage() {
         try {
             await fetch("/api/admin/subscriptions", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
                 body: JSON.stringify({ type: "server", targetId: serverId, plan })
             })
             await fetchServers()
@@ -63,7 +63,7 @@ export default function AdminSubscriptionsPage() {
         try {
             await fetch("/api/admin/subscriptions", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
                 body: JSON.stringify({ type: "user", targetId: userIdInput.trim(), plan: "pow-pro-user" })
             })
             setUserIdInput("")

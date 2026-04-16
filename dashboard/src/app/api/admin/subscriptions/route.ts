@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { auth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/db"
 import {
@@ -47,6 +48,7 @@ export async function GET() {
 
 // Grant/revoke subscription
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     try {
         const { userId } = await auth()
         if (!userId || !isSuperAdmin({ id: userId } as any)) {
