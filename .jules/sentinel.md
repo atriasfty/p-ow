@@ -13,3 +13,8 @@ State-modifying API routes (POST, PATCH, DELETE) in the Next.js dashboard must b
 **Vulnerability:** Cookie-based App Router API endpoints that change state (POST/PATCH/DELETE) lack Next.js's built-in Server Actions CSRF protections. Endpoints like `admin/grant/route.ts` were missing CSRF validation entirely.
 **Learning:** The Next.js dashboard uses a custom `verifyCsrf` helper for cookie-based API routes because `route.ts` files do not inherit Next.js Server Actions CSRF protections inherently.
 **Prevention:** Always ensure `verifyCsrf(req)` is imported from `@/lib/auth-permissions` and called at the top of any state-modifying API route that authenticates via `getSession()`.
+
+## 2026-04-15 - Missing CSRF Protection on Automations API Route
+**Vulnerability:** The `/api/admin/automations` route (POST and DELETE) was missing the required CSRF protection.
+**Learning:** Even internal admin-only API endpoints handling subscriptions and automations are susceptible to CSRF if they rely solely on `getSession()`, as session cookies are sent automatically by the browser regardless of origin.
+**Prevention:** Consistently apply `if (!verifyCsrf(req))` at the top of all state-modifying handlers (POST, PATCH, DELETE) in the Next.js App Router, and ensure corresponding frontend fetch requests include the `x-csrf-check: '1'` header.
