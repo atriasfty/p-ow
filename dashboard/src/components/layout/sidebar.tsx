@@ -37,7 +37,7 @@ export function Sidebar({ serverId }: { serverId: string }) {
                             key={item.name}
                             href={href}
                             className={clsx(
-                                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                                 isActive
                                     ? "bg-indigo-500/10 text-indigo-400"
                                     : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -53,7 +53,7 @@ export function Sidebar({ serverId }: { serverId: string }) {
                 <Link
                     href={`/dashboard/subscription`}
                     className={clsx(
-                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                         pathname === "/dashboard/subscription"
                             ? "bg-indigo-500/10 text-indigo-400"
                             : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -68,7 +68,7 @@ export function Sidebar({ serverId }: { serverId: string }) {
                     <Link
                         href={`/admin/subscriptions`}
                         className={clsx(
-                            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                            "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
                             pathname.startsWith("/admin")
                                 ? "bg-indigo-500/10 text-indigo-400"
                                 : "text-zinc-400 hover:bg-white/5 hover:text-white"
@@ -83,7 +83,7 @@ export function Sidebar({ serverId }: { serverId: string }) {
             <div className="border-t border-white/5 p-4">
                 <SignOutButton>
                     <button
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                     >
                         <LogOut className="h-5 w-5" />
                         Sign Out
