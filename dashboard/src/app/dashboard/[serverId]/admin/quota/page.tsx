@@ -37,16 +37,41 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
+    })
+
+    // Extract unique user IDs from members
+    const memberUserIds = Array.from(new Set(members.map(m => m.userId).filter(Boolean)))
+
     // Fetch Clerk users
     const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
+    let rawClerkUsers: any[] = []
 
-    const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
+    // Fetch in chunks of 100 to respect Clerk API limits
+    const chunkSize = 100
+    const fetchPromises = []
+
+    for (let i = 0; i < memberUserIds.length; i += chunkSize) {
+        const chunk = memberUserIds.slice(i, i + chunkSize)
+        if (chunk.length > 0) {
+            fetchPromises.push(client.users.getUserList({ userId: chunk }))
+        }
+    }
+
+    const chunkResponses = await Promise.all(fetchPromises)
+    chunkResponses.forEach(res => {
+        rawClerkUsers = [...rawClerkUsers, ...res.data]
+    })
+
+    const clerkUsers: ClerkUser[] = rawClerkUsers.map(user => {
         const discordAccount = user.externalAccounts.find(
-            a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
+            (a: any) => a.provider === "discord" || a.provider === "oauth_discord"
         )
         const robloxAccount = user.externalAccounts.find(
-            a => ["roblox", "oauth_roblox", "oauth_custom_roblox", "custom_roblox"].includes(a.provider as string)
+            (a: any) => ["roblox", "oauth_roblox", "oauth_custom_roblox", "custom_roblox"].includes(a.provider)
         )
 
         return {
@@ -58,17 +83,21 @@ export default async function AdminQuotaPage({
             image: user.imageUrl,
             discordId: discordAccount?.externalId,
             robloxId: robloxAccount?.externalId,
-            robloxUsername: robloxAccount?.username || undefined
+            robloxUsername: (robloxAccount as any)?.username || undefined
         }
+    })
+
+    // Map for O(1) lookups
+    const clerkUserMap = new Map<string, ClerkUser>()
+    clerkUsers.forEach(u => {
+        clerkUserMap.set(u.id, u)
+        if (u.discordId) clerkUserMap.set(u.discordId, u)
+        if (u.robloxId) clerkUserMap.set(u.robloxId, u)
     })
 
     // Helper to get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = clerkUserMap.get(userId)
 
         if (user?.robloxUsername) return user.robloxUsername
         if (user?.name || user?.username) return user.name || user.username || userId
@@ -77,19 +106,9 @@ export default async function AdminQuotaPage({
 
     // Helper to get user avatar
     const getUserAvatar = (userId: string): string | null => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = clerkUserMap.get(userId)
         return user?.image || null
     }
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
 
     // Calculate week start based on offset (Monday)
     const now = new Date()
