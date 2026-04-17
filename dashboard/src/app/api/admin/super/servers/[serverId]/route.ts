@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth-clerk"
 import { isSuperAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 
@@ -11,6 +12,7 @@ export async function PATCH(
     if (!session || !isSuperAdmin(session.user as any)) {
         return new NextResponse("Unauthorized", { status: 401 })
     }
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
 
     const { serverId } = await params
 
@@ -45,6 +47,7 @@ export async function DELETE(
     if (!session || !isSuperAdmin(session.user as any)) {
         return new NextResponse("Unauthorized", { status: 401 })
     }
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
 
     const { serverId } = await params
 
