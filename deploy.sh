@@ -563,8 +563,17 @@ echo "Verifying symlink:"
 ls -la "${CURRENT_SYMLINK}"
 
 # Use PM2 to restart the apps (delete + start to ensure fresh process)
-echo "Restarting applications with PM2..."
-pm2 delete all 2>/dev/null || true
+echo "Restarting applications for ${TARGET_ENV^^} with PM2..."
+pm2 delete pow-dashboard-${TARGET_ENV} 2>/dev/null || true
+pm2 delete pow-bot-${TARGET_ENV} 2>/dev/null || true
+pm2 delete pow-sync-${TARGET_ENV} 2>/dev/null || true
+
+# Clean up legacy PM2 naming if transitioning prod for the first time
+if [ "$TARGET_ENV" == "prod" ]; then
+    pm2 delete pow-dashboard 2>/dev/null || true
+    pm2 delete pow-bot 2>/dev/null || true
+    pm2 delete pow-sync 2>/dev/null || true
+fi
 pm2 start ecosystem.config.js
 pm2 save
 echo -e "${GREEN}Applications reloaded successfully! Your new version is LIVE.${NC}"
