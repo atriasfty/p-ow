@@ -338,7 +338,9 @@ else
     if ! grep -q "GARMIN_API_URL=" "${SHARED_ENV_FILE}"; then
         echo "GARMIN_API_URL=\"https://garminapi.ciankelly.xyz\"" >> "${SHARED_ENV_FILE}"
     fi
-    if ! grep -q "NEXT_PUBLIC_POSTHOG_HOST=" "${SHARED_ENV_FILE}"; then
+    if grep -q "NEXT_PUBLIC_POSTHOG_HOST=" "${SHARED_ENV_FILE}"; then
+        sed -i "s|^NEXT_PUBLIC_POSTHOG_HOST=.*|NEXT_PUBLIC_POSTHOG_HOST=\"https://a.atriasafety.org\"|" "${SHARED_ENV_FILE}"
+    else
         echo "NEXT_PUBLIC_POSTHOG_HOST=\"https://a.atriasafety.org\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "NEXT_PUBLIC_LEGAL_URL=" "${SHARED_ENV_FILE}"; then
