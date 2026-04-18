@@ -18,7 +18,29 @@ interface ModCallDetectorProps {
 export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps) {
     const { calls } = useServerEventsContext()
     const [activePanelCallId, setActivePanelCallId] = useState<string | null>(null)
-    const seenCallIds = useRef<Set<string>>(new Set())
+    const [seenCallIds, setSeenCallIds] = useState<Set<string>>(new Set())
+
+    // Load from session storage roughly
+    useEffect(() => {
+        try {
+            const saved = sessionStorage.getItem("seen_mod_calls")
+            if (saved) {
+                const parsed = JSON.parse(saved)
+                setSeenCallIds(new Set(parsed))
+            }
+        } catch { }
+    }, [])
+
+    const markAsSeen = (id: string) => {
+        setSeenCallIds(prev => {
+            const next = new Set(prev)
+            next.add(id)
+            try {
+                sessionStorage.setItem("seen_mod_calls", JSON.stringify(Array.from(next)))
+            } catch { }
+            return next
+        })
+    }
 
     // Open manually (e.g., from the calls modal)
     // Expose via a module-level setter
@@ -32,7 +54,7 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
         if (!calls?.modCalls || !userRobloxId) return
 
         for (const call of calls.modCalls) {
-            if (seenCallIds.current.has(call.id)) continue
+            if (seenCallIds.has(call.id)) continue
 
             // Parse respondingPlayers if it's a JSON string
             let responders: string[] = []
@@ -45,12 +67,12 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
             }
 
             if (responders.includes(userRobloxId)) {
-                seenCallIds.current.add(call.id)
+                markAsSeen(call.id)
                 setActivePanelCallId(call.id)
                 break // only open one at a time
             }
         }
-    }, [calls, userRobloxId])
+    }, [calls, userRobloxId, seenCallIds])
 
     if (!activePanelCallId) return null
 
