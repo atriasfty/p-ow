@@ -12,3 +12,7 @@
 ## 2025-04-10 - [Eliminating N+1 Read Queries for Fallback Data]
 **Learning:** Found a severe N+1 query issue in `dashboard/src/app/api/calls/route.ts` where `prisma.playerLocation.findFirst` was called inside `Promise.all` loops over `modCalls` and `emergencyCalls` (up to 100 iterations) just to append a fallback `positionDescriptor`. Even though `Promise.all` is concurrent, this spawns dozens of individual database read transactions.
 **Action:** Replaced the N+1 iterative queries with a single batched `prisma.playerLocation.findMany` containing a `userId: { in: callerIds }` clause and an overall `lte` date bound. Grouped the results by `userId` using a `Map` so fallback locations could be synchronously assigned in memory. This greatly reduces database connection thrashing when rendering the live call dashboard.
+
+## 2024-05-18 - [Optimizing Concurrent API Fetches and Limit Circumvention]
+**Learning:** In scenarios involving external API limitations like Clerk's 100-user limit, fetching large datasets via simple limits without filtering bypasses limits and fetches unrelated data. Calling endpoints with large arrays can also fail.
+**Action:** Instead of fetching users blindly, query database members for exact IDs. Break the IDs into chunks of the maximum allowed size (e.g., 100). Fetch the chunks concurrently using `Promise.all` while explicitly specifying the `limit` parameter within the request to match the chunk size, ensuring data is not dropped and rate limits are respected without data gaps.

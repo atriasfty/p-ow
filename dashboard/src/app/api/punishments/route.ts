@@ -64,15 +64,22 @@ export async function GET(req: Request) {
             })
         }
 
+
         // 4. Fetch User Details from Clerk
         const client = await clerkClient()
         let users: any[] = []
         try {
-            const userList = await client.users.getUserList({ userId: clerkIds })
-            users = userList.data
+            const userPromises = []
+            for (let i = 0; i < clerkIds.length; i += 100) {
+                const chunk = clerkIds.slice(i, i + 100) as string[]
+                userPromises.push(client.users.getUserList({ userId: chunk, limit: 100 }))
+            }
+            const userResponses = await Promise.all(userPromises)
+            users = userResponses.flatMap(res => res.data)
         } catch (e) {
             console.error("Clerk fetch error", e)
         }
+
 
         // 5. Build Map: ModeratorID -> { name, avatar }
         const modMap = new Map()
