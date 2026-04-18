@@ -109,7 +109,8 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                         {/* Close Button */}
                         <button
                             onClick={() => close(false)}
-                            className="absolute top-4 right-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                            aria-label="Close dialog"
+                            className="absolute top-4 right-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -132,14 +133,14 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                             {dialog.type === "confirm" && (
                                 <button
                                     onClick={() => close(false)}
-                                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-white/10 transition-colors"
+                                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                                 >
                                     {dialog.cancelLabel}
                                 </button>
                             )}
                             <button
                                 onClick={() => close(true)}
-                                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${confirmColorMap[dialog.variant]}`}
+                                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 ${confirmColorMap[dialog.variant]}`}
                                 autoFocus
                             >
                                 {dialog.type === "confirm" ? dialog.confirmLabel : "OK"}
