@@ -306,8 +306,12 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
                                 <span className="text-sm font-medium text-white">{role.name}</span>
                             </div>
                             <button
+                                type="button"
+                                role="switch"
+                                aria-checked={role.canAccessAdmin}
+                                aria-label={`Allow admin access for ${role.name}`}
                                 onClick={() => toggleRoleAdmin(role.id, role.canAccessAdmin)}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${role.canAccessAdmin ? 'bg-indigo-500' : 'bg-zinc-700'
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${role.canAccessAdmin ? 'bg-indigo-500' : 'bg-zinc-700'
                                     }`}
                             >
                                 <span
