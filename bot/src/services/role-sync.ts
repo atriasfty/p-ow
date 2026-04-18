@@ -107,20 +107,45 @@ async function syncAllServerRoles(client: Client, prisma: PrismaClient) {
             // Track if we've already alerted for this server in this sync cycle
             let hasAlertedForPermissions = false
 
-            // Process each member
+            // Group members by Discord ID to prevent fighting if a user has multiple Clerk accounts
+            // linked to the same Discord ID.
+            const memberGroups = new Map<string, typeof members>()
             for (const member of members) {
                 if (!member.discordId) continue
+                const list = memberGroups.get(member.discordId) || []
+                list.push(member)
+                memberGroups.set(member.discordId, list)
+            }
 
+            // Process each Discord user only ONCE per sync cycle
+            for (const [discordId, groupMembers] of memberGroups.entries()) {
                 try {
                     // Use cache if possible, otherwise fetch
-                    const guildMember = guild.members.cache.get(member.discordId) ||
-                        await guild.members.fetch(member.discordId).catch(() => null)
+                    const guildMember = guild.members.cache.get(discordId) ||
+                        await guild.members.fetch(discordId).catch(() => null)
 
                     if (!guildMember) continue
 
+                    // Determine aggregate status for this Discord developer
+                    // They are ON DUTY if ANY of their linked Clerk accounts are on shift
+                    const isOnDuty = groupMembers.some(m => 
+                        activeShiftUserIds.has(m.discordId!) || activeShiftUserIds.has(m.userId)
+                    )
+                    
+                    // They are ON LOA if ANY of their linked Clerk accounts have an active LOA
+                    const isOnLoa = groupMembers.some(m => 
+                        activeLoaUserIds.has(m.discordId!) || activeLoaUserIds.has(m.userId)
+                    )
+
+                    // Aggregate best role permissions and total shift time across all accounts
+                    let maxTotalMinutes = 0
+                    for (const m of groupMembers) {
+                        const mins = userTotalMinutes.get(m.userId) || 0
+                        if (mins > maxTotalMinutes) maxTotalMinutes = mins
+                    }
+
                     // Handle on-duty role
                     if (server.onDutyRoleId) {
-                        const isOnDuty = activeShiftUserIds.has(member.discordId) || activeShiftUserIds.has(member.userId)
                         const hasRole = guildMember.roles.cache.has(server.onDutyRoleId)
 
                         if (isOnDuty && !hasRole) {
@@ -132,7 +157,6 @@ async function syncAllServerRoles(client: Client, prisma: PrismaClient) {
 
                     // Handle On-LOA role
                     if (server.onLoaRoleId) {
-                        const isOnLoa = activeLoaUserIds.has(member.discordId) || activeLoaUserIds.has(member.userId)
                         const hasRole = guildMember.roles.cache.has(server.onLoaRoleId)
 
                         if (isOnLoa && !hasRole) {
@@ -142,19 +166,17 @@ async function syncAllServerRoles(client: Client, prisma: PrismaClient) {
                         }
                     }
 
-                    // Handle Milestones
+                    // Handle Milestones (use the best total minutes)
                     if (milestones.length > 0) {
-                        const totalMinutes = userTotalMinutes.get(member.userId) || 0
                         for (const milestone of milestones) {
                             if (!milestone.rewardRoleId) continue
 
-                            const reached = totalMinutes >= milestone.requiredMinutes
+                            const reached = maxTotalMinutes >= milestone.requiredMinutes
                             const hasRole = guildMember.roles.cache.has(milestone.rewardRoleId)
 
                             if (reached && !hasRole) {
                                 await guildMember.roles.add(milestone.rewardRoleId)
                             }
-                            // Note: We don't remove milestone roles if they drop below (shouldn't happen anyway)
                         }
                     }
                 } catch (memberError: any) {
