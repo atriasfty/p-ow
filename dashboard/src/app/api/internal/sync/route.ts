@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     const authHeader = req.headers.get("x-internal-secret")
 
     if (!authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
+        console.error(`[SYNC 401] Auth header length: ${authHeader?.length}. Expected length: ${INTERNAL_SECRET?.length}. Evaluated INTERNAL_SECRET: ${INTERNAL_SECRET ? 'Exists' : 'Undefined'} | Header: ${authHeader ? 'Exists' : 'Undefined'}`)
         return new NextResponse("Unauthorized", { status: 401 })
     }
 

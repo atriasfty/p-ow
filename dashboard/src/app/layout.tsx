@@ -14,14 +14,16 @@ import { EnsureConnections } from "@/components/auth/ensure-connections";
 import { DialogProvider } from "@/components/providers/dialog-provider";
 
 const montserrat = Montserrat({ subsets: ["latin"] });
+const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
+
 export const metadata: Metadata = {
-  title: "Project Overwatch",
+  title: isStaging ? "POW STAGING" : "Project Overwatch",
   description: "ERLC Multi-Server Dashboard",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "POW",
+    title: isStaging ? "POW STAGING" : "POW",
   },
   formatDetection: {
     telephone: false,

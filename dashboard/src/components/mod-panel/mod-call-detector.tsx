@@ -18,25 +18,50 @@ interface ModCallDetectorProps {
 export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps) {
     const { calls } = useServerEventsContext()
     const [activePanelCallId, setActivePanelCallId] = useState<string | null>(null)
-    const [seenCallIds, setSeenCallIds] = useState<Set<string>>(new Set())
+    const [seenCalls, setSeenCalls] = useState<Record<string, number>>({}) // ID -> timestamp
 
-    // Load from session storage roughly
+    const runCleanup = (currentData: Record<string, number>) => {
+        const now = Date.now()
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000
+        const entries = Object.entries(currentData)
+        const filtered = entries.filter(([_, timestamp]) => (now - timestamp) < ONE_DAY_MS)
+
+        if (entries.length !== filtered.length) {
+            const next = Object.fromEntries(filtered)
+            setSeenCalls(next)
+            try {
+                sessionStorage.setItem("seen_mod_calls_v2", JSON.stringify(next))
+            } catch { }
+            return next
+        }
+        return currentData
+    }
+
+    // Load from session storage & setup hourly cleanup
     useEffect(() => {
+        let current: Record<string, number> = {}
         try {
-            const saved = sessionStorage.getItem("seen_mod_calls")
+            const saved = sessionStorage.getItem("seen_mod_calls_v2")
             if (saved) {
-                const parsed = JSON.parse(saved)
-                setSeenCallIds(new Set(parsed))
+                current = JSON.parse(saved)
             }
         } catch { }
+        
+        const cleaned = runCleanup(current)
+        setSeenCalls(cleaned)
+
+        const interval = setInterval(() => {
+            setSeenCalls(prev => runCleanup(prev))
+        }, 60 * 60 * 1000) // Every hour
+
+        return () => clearInterval(interval)
     }, [])
 
     const markAsSeen = (id: string) => {
-        setSeenCallIds(prev => {
-            const next = new Set(prev)
-            next.add(id)
+        setSeenCalls(prev => {
+            const next = { ...prev, [id]: Date.now() }
             try {
-                sessionStorage.setItem("seen_mod_calls", JSON.stringify(Array.from(next)))
+                sessionStorage.setItem("seen_mod_calls_v2", JSON.stringify(next))
             } catch { }
             return next
         })
@@ -54,7 +79,7 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
         if (!calls?.modCalls || !userRobloxId) return
 
         for (const call of calls.modCalls) {
-            if (seenCallIds.has(call.id)) continue
+            if (seenCalls[call.id]) continue
 
             // Parse respondingPlayers if it's a JSON string
             let responders: string[] = []
@@ -72,7 +97,7 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
                 break // only open one at a time
             }
         }
-    }, [calls, userRobloxId, seenCallIds])
+    }, [calls, userRobloxId, seenCalls])
 
     if (!activePanelCallId) return null
 

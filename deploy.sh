@@ -174,6 +174,7 @@ if [ ! -f "${SHARED_ENV_FILE}" ]; then
 DATABASE_URL="${DB_PATH}"
 DATA_DIR="${DATA_DIR}"
 PORT="${PORT}"
+NEXT_PUBLIC_APP_ENV="${TARGET_ENV}"
 
 # Discord Config
 DISCORD_TOKEN="${DISCORD_BOT_TOKEN}"
@@ -362,9 +363,16 @@ else
         read -p "Missing PostHog Personal API Key - for status dashboard: " VAL
         echo "POSTHOG_PERSONAL_API_KEY=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
-    if ! grep -q "POSTHOG_PROJECT_ID=" "${SHARED_ENV_FILE}"; then
-        read -p "Missing PostHog Project ID - number from URL: " VAL
-        echo "POSTHOG_PROJECT_ID=\"$VAL\"" >> "${SHARED_ENV_FILE}"
+    if grep -q "POSTHOG_PROJECT_ID=" "${SHARED_ENV_FILE}"; then
+        sed -i "s|^POSTHOG_PROJECT_ID=.*|POSTHOG_PROJECT_ID=\"${VAL}\"|" "${SHARED_ENV_FILE}"
+    else
+        echo "POSTHOG_PROJECT_ID=\"${VAL}\"" >> "${SHARED_ENV_FILE}"
+    fi
+
+    if grep -q "NEXT_PUBLIC_APP_ENV=" "${SHARED_ENV_FILE}"; then
+        sed -i "s|^NEXT_PUBLIC_APP_ENV=.*|NEXT_PUBLIC_APP_ENV=\"${TARGET_ENV}\"|" "${SHARED_ENV_FILE}"
+    else
+        echo "NEXT_PUBLIC_APP_ENV=\"${TARGET_ENV}\"" >> "${SHARED_ENV_FILE}"
     fi
     
     echo -e "${GREEN}All required environment variables verified.${NC}"
