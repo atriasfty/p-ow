@@ -82,8 +82,32 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+            {/* Mobile App-Style Canvas */}
+            <div className="md:hidden relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-violet-50">
+                <div className="relative z-10 flex flex-col items-center text-center w-full max-w-sm">
+                    <img src="/logo.png" alt="POW" className="w-24 h-24 mb-6 drop-shadow-xl invert opacity-90" />
+                    <h1 className="text-4xl font-black tracking-tighter text-zinc-900 mb-3">Project Overwatch</h1>
+                    <p className="text-zinc-500 mb-10 text-sm">Professional server management.</p>
+
+                    <div className="flex flex-col w-full gap-4">
+                        {isLoaded && isSignedIn ? (
+                            <Link href="/dashboard" className="w-full py-4 bg-zinc-900 text-white font-bold rounded-2xl shadow-lg hover:bg-zinc-800 transition-colors">
+                                Open Dashboard
+                            </Link>
+                        ) : (
+                            <Link href="/login" className="w-full py-4 bg-zinc-900 text-white font-bold rounded-2xl shadow-lg hover:bg-zinc-800 transition-colors">
+                                Secure Login
+                            </Link>
+                        )}
+                        <a href="https://powdocs.atriasafety.org/" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-white text-zinc-700 font-bold rounded-2xl shadow-sm border border-zinc-200">
+                            Documentation
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {/* Desktop Hero Section */}
+            <section className="hidden md:flex relative min-h-screen items-center justify-center overflow-hidden">
                 {/* Gradient Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-violet-50" />
 
@@ -135,7 +159,7 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
             </section>
 
             {/* Features Section */}
-            <section id="features" className="py-32 bg-white">
+            <section id="features" className="hidden md:block py-32 bg-white">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8">
                     {/* Section Header */}
                     <div className="text-center mb-20">
@@ -220,7 +244,7 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
             </section>
 
             {/* About / Mission Section */}
-            <section id="about" className="py-32 bg-zinc-900 text-white relative overflow-hidden">
+            <section id="about" className="hidden md:block py-32 bg-zinc-900 text-white relative overflow-hidden">
                 {/* Background Elements */}
                 <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
                 <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
@@ -258,7 +282,7 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
             </section>
 
             {/* CTA Section */}
-            <section id="cta" className="py-32 bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 relative overflow-hidden">
+            <section id="cta" className="hidden md:block py-32 bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-700 relative overflow-hidden">
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-10">
                     <div className="absolute inset-0" style={{
@@ -291,7 +315,7 @@ export function LandingPage({ showPricing = false }: { showPricing?: boolean }) 
             </section>
 
             {/* Footer */}
-            <footer className="py-16 bg-white border-t border-zinc-200">
+            <footer className="hidden md:block py-16 bg-white border-t border-zinc-200">
                 <div className="max-w-7xl mx-auto px-6 lg:px-8">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-8">
                         <div className="flex items-center gap-3">

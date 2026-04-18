@@ -1,9 +1,15 @@
 const port = process.env.PORT || 41729;
+const syncPort = process.env.SYNC_PORT || 41730;
+
+// The deployment script sets "APP_ENV" (e.g. "prod" or "staging")
+// Default to the directory basename if APP_ENV is explicitly missing
+const dirName = require('path').basename(process.cwd());
+const envPrefix = process.env.APP_ENV || (dirName.includes('staging') ? 'staging' : (dirName.includes('prod') ? 'prod' : dirName));
 
 module.exports = {
   apps: [
     {
-      name: 'pow-dashboard',
+      name: `pow-dashboard-${envPrefix}`,
       script: 'npm',
       args: `run start -- -p ${port}`,
       cwd: './current/dashboard',
@@ -11,7 +17,7 @@ module.exports = {
       autorestart: true,
     },
     {
-      name: 'pow-bot',
+      name: `pow-bot-${envPrefix}`,
       script: 'npm',
       args: 'run start',
       cwd: './current/bot',
@@ -19,14 +25,14 @@ module.exports = {
       autorestart: true,
     },
     {
-      name: 'pow-sync',
+      name: `pow-sync-${envPrefix}`,
       script: 'node',
       args: 'src/sync-server.js',
       cwd: './current/dashboard',
       watch: false,
       autorestart: true,
       env: {
-        SYNC_PORT: 41730
+        SYNC_PORT: syncPort
       }
     },
   ],

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 import * as Y from "yjs"
+// @ts-ignore
 import { WebsocketProvider } from "y-websocket"
 import { useUser } from "@clerk/nextjs"
 

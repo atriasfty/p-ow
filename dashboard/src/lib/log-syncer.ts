@@ -57,8 +57,9 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
     const playerId = log.PlayerId
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
 
+    // Use robloxId as log.PlayerId represents the in-game Roblox profile, not Clerk user
     const member = await prisma.member.findFirst({
-        where: { serverId, userId: playerId },
+        where: { serverId, robloxId: String(playerId) },
         include: { role: true, server: true }
     })
 
@@ -94,20 +95,37 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         }
 
         try {
-            await prisma.$transaction(async (tx: any) => {
+            const shiftId = await prisma.$transaction(async (tx: any) => {
                 const existing = await tx.shift.findFirst({
                     where: { userId: member.userId, serverId, endTime: null }
                 })
                 if (existing) throw new Error("Shift already active")
 
-                await tx.shift.create({
+                const shift = await tx.shift.create({
                     data: { userId: member.userId, serverId, startTime: new Date() }
                 })
+                return shift.id
             })
+            
+            const newShift = await prisma.shift.findUnique({ where: { id: shiftId } })
+            
+            const engine = await getAutomationEngine()
+            engine.trigger("SHIFT_START", {
+                serverId,
+                player: { name: playerName, id: member.userId }
+            }).catch(() => {})
+
+            if (newShift) {
+                eventBus.emit(serverId, 'shift-status', {
+                    shift: { id: newShift.id, startTime: newShift.startTime.toISOString() }
+                })
+            }
+            const onDutyNow = await prisma.shift.findMany({ where: { serverId, endTime: null }, select: { userId: true } })
+            eventBus.emit(serverId, 'staff-on-duty-ids', onDutyNow.map(s => s.userId))
+
             await client.executeCommand(`:pm ${playerName} [POW] Shift started on ${serverName}.`).catch(() => { })
         } catch (e: any) {
-            // If the transaction fails because a shift became active in the meantime, we ignore it.
-            // The first request will have successfully sent the start message.
+            // If the transaction fails because a shift became active, we ignore it.
         }
 
     } else if (subcommand === "end") {
@@ -127,6 +145,20 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             where: { id: activeShift.id },
             data: { endTime: now, duration }
         })
+
+        const engine = await getAutomationEngine()
+        engine.trigger("SHIFT_END", {
+            serverId,
+            player: { name: playerName, id: member.userId },
+            details: { duration }
+        }).catch(() => {})
+
+        const { processMilestones } = await import("@/lib/milestones")
+        await processMilestones(member.userId, serverId).catch(() => {})
+
+        eventBus.emit(serverId, 'shift-status', { shift: null })
+        const onDutyNow = await prisma.shift.findMany({ where: { serverId, endTime: null }, select: { userId: true } })
+        eventBus.emit(serverId, 'staff-on-duty-ids', onDutyNow.map(s => s.userId))
 
         const h = Math.floor(duration / 3600)
         const m = Math.floor((duration % 3600) / 60)
@@ -183,6 +215,22 @@ async function handleShutdownCommand(log: any, serverId: string) {
                 })
             })
         )
+
+        const engine = await getAutomationEngine()
+        const { processMilestones } = await import("@/lib/milestones")
+
+        for (const shift of activeShifts) {
+            const duration = Math.floor((now.getTime() - shift.startTime.getTime()) / 1000)
+            engine.trigger("SHIFT_END", {
+                serverId,
+                player: { name: "System Shutdown", id: shift.userId },
+                details: { duration }
+            }).catch(() => {})
+            
+            processMilestones(shift.userId, serverId).catch(() => {})
+        }
+
+        eventBus.emit(serverId, 'staff-on-duty-ids', [])
     }
 
     const shutdownEventKey = `ssd_${serverId}`
@@ -249,8 +297,14 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
         }
 
         if (!target) {
-            await client.executeCommand(`:pm ${playerName} [POW] Player not found.`).catch(() => { })
-            return
+            // Un-cached full lookup via Roblox API (useful for offline users or custom manual commands)
+            const rbxUser = await getRobloxUser(parts[1])
+            if (rbxUser) {
+                target = { name: rbxUser.name, id: String(rbxUser.id) }
+            } else {
+                await client.executeCommand(`:pm ${playerName} [POW] Player not found on Roblox or in-game.`).catch(() => { })
+                return
+            }
         }
 
         await prisma.punishment.create({

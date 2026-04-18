@@ -64,9 +64,9 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="min-h-screen bg-[#111] text-zinc-100 font-sans">
+        <div className="min-h-[100dvh] bg-[#111] text-zinc-100 font-sans pb-[env(safe-area-inset-bottom)]">
             {/* Header */}
-            <div className="border-b border-[#222] bg-[#1a1a1a]">
+            <div className="border-b border-[#222] bg-[#1a1a1a] pt-[max(0px,env(safe-area-inset-top))]">
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -110,7 +110,7 @@ export default async function AdminLayout({
             </div>
 
             {/* Footer */}
-            <footer className="py-4 text-center border-t border-[#222]">
+            <footer className="py-4 text-center border-t border-[#222] mb-[env(safe-area-inset-bottom)]">
                 <p className="text-xs text-zinc-600">© 2026 Project Overwatch - erlc moderation but better™</p>
             </footer>
         </div>

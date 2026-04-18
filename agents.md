@@ -22,6 +22,13 @@ Project Overwatch is composed of three interconnected systems sharing a single s
 - **Role:** Desktop HUD for Roblox players.
 - **Mechanism:** Screen capture + OCR to detect usernames, fetching player history via HMAC-signed API calls.
 
+### CI/CD Deployment Architecture (CRITICAL)
+POW strictly enforces a zero-downtime, dual-environment Git deployment via `./deploy.sh [target]`.
+- **Production (`./deploy.sh prod`):** Isolates strictly to the `main` git branch, port 41729, and `/root/data/pow.db`.
+- **Staging (`./deploy.sh staging`):** Isolates strictly to the `staging` branch, port 41731, and `/root/data/pow-staging.db` (which perfectly clones Prod data on its first build).
+- PM2 processes automatically inject environment tags (e.g. `pow-dashboard-staging`) to prevent cross-process collisions.
+- **NEVER** instruct the user to upload `Archive.zip`. The deploy script authentically uses `git fetch` and `--hard reset` natively on the VPS.
+
 ---
 
 ## 2. Database & Schema Management (CRITICAL)
@@ -170,4 +177,4 @@ The `PWAGate.tsx` component blocks mobile browser access to force PWA installati
 - `EMERGENCY_CALL` (Triggered when a new 911 call is created)
 
 ---
-*Last updated: April 14, 2026*
+*Last updated: April 18, 2026*

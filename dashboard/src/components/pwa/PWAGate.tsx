@@ -42,16 +42,17 @@ export function PWAGate({ children }: { children: React.ReactNode }) {
 
     // Mobile browser - show install gate
     return (
-        <div className="min-h-screen bg-[#111] flex flex-col items-center justify-center p-6 text-center">
-            {/* Logo/Icon */}
-            <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-indigo-500/30">
-                <span className="text-4xl font-bold text-white">P</span>
-            </div>
+        <div className="min-h-[100dvh] w-full bg-[#111] flex flex-col items-center justify-center px-4 py-12 text-center overflow-y-auto">
+            <div className="flex flex-col items-center w-full max-w-[340px] mx-auto">
+                {/* Logo/Icon */}
+                <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2rem] flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/20">
+                    <span className="text-3xl font-bold text-white">P</span>
+                </div>
 
-            <h1 className="text-3xl font-bold text-white mb-2">Project Overwatch</h1>
-            <p className="text-zinc-400 mb-8 max-w-sm">
-                Install the app for the best experience on mobile
-            </p>
+                <h1 className="text-2xl font-bold text-white mb-2">Project Overwatch</h1>
+                <p className="text-zinc-400 mb-8 text-sm">
+                    Installation required for the mobile engine
+                </p>
 
             {/* iOS Instructions */}
             {isIOS && (
@@ -143,9 +144,10 @@ export function PWAGate({ children }: { children: React.ReactNode }) {
                 </div>
             )}
 
-            <p className="text-zinc-600 text-sm mt-8">
-                This app requires installation for optimal mobile experience
+            <p className="text-zinc-600 text-xs mt-8">
+                Optimized specifically for PWA wrappers
             </p>
+            </div>
         </div>
     )
 }

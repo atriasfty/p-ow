@@ -77,6 +77,57 @@ const QUESTION_TYPES = [
     { value: "file_upload", label: "File Upload", icon: "📎" },
 ]
 
+function FastLiveInput({ 
+    value, 
+    onChange, 
+    onBlur, 
+    className, 
+    placeholder, 
+    multiline = false 
+}: { 
+    value: string; 
+    onChange: (val: string) => void;
+    onBlur?: () => void;
+    className?: string;
+    placeholder?: string;
+    multiline?: boolean;
+}) {
+    const [localValue, setLocalValue] = useState(value)
+    const typingTimeout = useRef<NodeJS.Timeout | null>(null)
+    
+    useEffect(() => {
+        setLocalValue(value)
+    }, [value])
+
+    const Component = multiline ? "textarea" : "input"
+
+    return (
+        <Component
+            value={localValue}
+            onChange={(e: any) => {
+                const val = e.target.value
+                setLocalValue(val)
+                if (typingTimeout.current) clearTimeout(typingTimeout.current)
+                
+                // Extremely short debounce (100ms) handles live-collab without blocking the thread
+                typingTimeout.current = setTimeout(() => {
+                    onChange(val)
+                }, 100)
+            }}
+            onBlur={() => {
+                if (typingTimeout.current) clearTimeout(typingTimeout.current)
+                onChange(localValue)
+                if (onBlur) onBlur()
+            }}
+            className={className}
+            placeholder={placeholder}
+            // @ts-ignore
+            rows={multiline ? 3 : undefined}
+            type={multiline ? undefined : "text"}
+        />
+    )
+}
+
 export default function EditFormPageWrapper({
     params,
 }: {
@@ -132,12 +183,17 @@ function EditFormInner({
     }, [resolvedParams])
 
     // --- YJS Syncing Logic ---
+    const isTypingRef = useRef(false)
+    const broadcastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const typingResetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
     useEffect(() => {
         if (!doc) return
         const yMap = doc.getMap("formState")
 
         const handleSync = (event: Y.YEvent<any>, transaction: Y.Transaction) => {
-            if (!transaction.local) {
+            // Only accept remote changes if we aren't actively typing
+            if (!transaction.local && !isTypingRef.current) {
                 const updatedForm = yMap.get("data") as Form | undefined
                 if (updatedForm) setForm(updatedForm)
             }
@@ -149,10 +205,24 @@ function EditFormInner({
 
     const broadcastFormState = (newState: Form) => {
         if (!doc) return
-        const yMap = doc.getMap("formState")
-        doc.transact(() => {
-            yMap.set("data", newState)
-        }, "local")
+        
+        // Mark local tree as mutating to prevent inbound overwrites
+        isTypingRef.current = true
+        
+        // Clear typing lock after 800ms of user idleness
+        if (typingResetTimeoutRef.current) clearTimeout(typingResetTimeoutRef.current)
+        typingResetTimeoutRef.current = setTimeout(() => {
+            isTypingRef.current = false
+        }, 800)
+
+        // Debounce the heavy Yjs generic map serialization so it doesn't block React typing
+        if (broadcastTimeoutRef.current) clearTimeout(broadcastTimeoutRef.current)
+        broadcastTimeoutRef.current = setTimeout(() => {
+            const yMap = doc.getMap("formState")
+            doc.transact(() => {
+                yMap.set("data", newState)
+            }, "local")
+        }, 150)
     }
 
     useEffect(() => {
@@ -279,8 +349,10 @@ function EditFormInner({
                 requiredRoleIds: safeJSONParse(data.requiredRoleIds, []),
                 ignoredRoleIds: safeJSONParse(data.ignoredRoleIds, [])
             }
-            setForm(parsedForm)
-            broadcastFormState(parsedForm)
+            // DO NOT OVERWRITE LOCAL STATE DURING LIVE EDITING
+            // A remote sync might be typing fast, and this DB snapshot is already old!
+            // setForm(parsedForm)
+            // broadcastFormState(parsedForm)
         } catch (e: any) {
             setError(e.message)
         } finally {
@@ -528,25 +600,25 @@ function EditFormInner({
     const editorUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/forms/editor/${form.editorShareId}`
 
     return (
-        <div className="min-h-screen bg-[#111]">
+        <div className="min-h-[100dvh] bg-[#111] pb-[calc(6rem+env(safe-area-inset-bottom))]">
+            <LiveCursors />
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-[#111]/95 backdrop-blur border-b border-[#333] px-6 py-4">
+            <div className="sticky top-0 z-40 bg-[#111]/95 backdrop-blur border-b border-[#333] px-4 md:px-6 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
                 <div className="max-w-4xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link href={`/dashboard/${resolvedParams.serverId}/forms`} className="text-zinc-400 hover:text-white">
                             <ArrowLeft className="h-5 w-5" />
                         </Link>
                         <div>
-                            <input
-                                type="text"
+                            <FastLiveInput
                                 value={form.title}
-                                onChange={(e) => {
-                                    const nf = { ...form, title: e.target.value }
+                                onChange={(val) => {
+                                    const nf = { ...form, title: val }
                                     setForm(nf)
                                     broadcastFormState(nf)
                                 }}
                                 onBlur={() => saveForm({ title: form.title })}
-                                className="bg-transparent text-lg font-semibold text-white outline-none"
+                                className="bg-transparent text-lg font-semibold text-white outline-none w-full"
                             />
                             <div className="flex items-center gap-3 text-sm">
                                 <span className={`px-2 py-0.5 rounded text-xs ${form.status === "published" ? "bg-emerald-500/20 text-emerald-400" :
@@ -599,8 +671,6 @@ function EditFormInner({
             </div>
 
             <div className="max-w-4xl mx-auto p-6 space-y-6 relative">
-                <LiveCursors />
-                
                 {showSettings ? (
                     <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-6 space-y-6">
                         <div className="flex items-center justify-between">
@@ -888,17 +958,17 @@ function EditFormInner({
                             <h4 className="text-sm font-medium text-white">Post-Submission</h4>
                             <div className="bg-[#222] p-3 rounded-lg">
                                 <p className="text-sm text-white mb-2">Custom Thank You Message</p>
-                                <textarea
+                                <FastLiveInput
+                                    multiline
                                     value={form.thankYouMessage || ""}
-                                    onChange={(e) => {
-                                        const nf = { ...form, thankYouMessage: e.target.value || null }
+                                    onChange={(val) => {
+                                        const nf = { ...form, thankYouMessage: val || null }
                                         setForm(nf)
                                         broadcastFormState(nf)
                                     }}
                                     onBlur={() => saveForm({ thankYouMessage: form.thankYouMessage })}
                                     placeholder="Thanks for submitting! We have received your response."
                                     className="w-full bg-[#1a1a1a] px-3 py-2 rounded text-sm text-white outline-none resize-none"
-                                    rows={2}
                                 />
                             </div>
                         </div>
@@ -916,17 +986,17 @@ function EditFormInner({
                     <>
                         {/* Description */}
                         <div className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
-                            <textarea
+                            <FastLiveInput
+                                multiline
                                 value={form.description || ""}
-                                onChange={(e) => {
-                                    const nf = { ...form, description: e.target.value }
+                                onChange={(val) => {
+                                    const nf = { ...form, description: val }
                                     setForm(nf)
                                     broadcastFormState(nf)
                                 }}
                                 onBlur={() => saveForm({ description: form.description })}
                                 placeholder="Add a description..."
                                 className="w-full bg-transparent text-zinc-400 placeholder:text-zinc-600 outline-none resize-none"
-                                rows={2}
                             />
                         </div>
 
@@ -948,11 +1018,10 @@ function EditFormInner({
                                             <ChevronDown className="h-4 w-4" />
                                         </button>
                                     </div>
-                                    <input
-                                        type="text"
+                                    <FastLiveInput
                                         value={section.title}
-                                        onChange={(e) => updateSection(section.id, { title: e.target.value })}
-                                        className="flex-1 bg-transparent text-lg font-semibold text-white outline-none"
+                                        onChange={(val) => updateSection(section.id, { title: val })}
+                                        className="flex-1 bg-transparent text-lg font-semibold text-white outline-none min-w-[200px]"
                                     />
                                     {form.sections.length > 1 && (
                                         <button onClick={() => deleteSection(section.id)} className="p-2 text-zinc-500 hover:text-red-400">
@@ -962,11 +1031,10 @@ function EditFormInner({
                                 </div>
 
                                 <div className="px-4 py-2 border-b border-[#333]">
-                                    <input
-                                        type="text"
+                                    <FastLiveInput
                                         placeholder="Section description (optional)"
                                         value={section.description || ""}
-                                        onChange={(e) => updateSection(section.id, { description: e.target.value })}
+                                        onChange={(val) => updateSection(section.id, { description: val })}
                                         className="w-full bg-transparent text-sm text-zinc-400 placeholder:text-zinc-600 outline-none"
                                     />
                                 </div>
@@ -1084,16 +1152,14 @@ function QuestionCard({
                     </button>
                 </div>
                 <div className="flex-1 space-y-2">
-                    <input
-                        type="text"
+                    <FastLiveInput
                         value={question.label}
-                        onChange={(e) => onUpdate({ label: e.target.value })}
+                        onChange={(val) => onUpdate({ label: val })}
                         className="w-full bg-transparent text-white font-medium outline-none"
                     />
-                    <input
-                        type="text"
+                    <FastLiveInput
                         value={question.description || ""}
-                        onChange={(e) => onUpdate({ description: e.target.value })}
+                        onChange={(val) => onUpdate({ description: val })}
                         className="w-full bg-transparent text-sm text-zinc-500 outline-none"
                         placeholder="Description (optional)"
                     />
@@ -1114,10 +1180,9 @@ function QuestionCard({
                     {(question.config.options || []).map((opt: string, i: number) => (
                         <div key={i} className="flex items-center gap-2">
                             <span className="text-zinc-500">{question.type === "checkbox" ? "☐" : "○"}</span>
-                            <input
-                                type="text"
+                            <FastLiveInput
                                 value={opt}
-                                onChange={(e) => updateOption(i, e.target.value)}
+                                onChange={(val) => updateOption(i, val)}
                                 className="flex-1 bg-[#1a1a1a] px-3 py-1.5 rounded text-sm text-white outline-none"
                             />
                             <button onClick={() => removeOption(i)} className="text-zinc-600 hover:text-red-400">

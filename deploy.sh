@@ -30,31 +30,54 @@ RELEASES_TO_KEEP=3
 
 # Database location (stored outside of releases to persist)
 DATA_DIR="/root/data"
-DB_FILE="${DATA_DIR}/pow.db"
+
+# Target Environment Argument
+TARGET_ENV=$1
+if [ -z "$TARGET_ENV" ]; then
+    echo -e "${RED}[ERROR] Missing environment argument.${NC}"
+    echo "Usage: ./deploy.sh [prod|staging]"
+    exit 1
+fi
+
+if [ "$TARGET_ENV" == "prod" ]; then
+    BRANCH="main"
+    PORT="41729"
+    SYNC_PORT="41730"
+    APP_URL="https://pow.ciankelly.xyz"
+    WS_URL=""
+    DB_FILE="${DATA_DIR}/pow.db"
+elif [ "$TARGET_ENV" == "staging" ]; then
+    BRANCH="staging"
+    PORT="41731"
+    SYNC_PORT="41732"
+    APP_URL="https://staging.atriasafety.org"
+    WS_URL="wss://powsyncstaging.atriasafety.org"
+    DB_FILE="${DATA_DIR}/pow-staging.db"
+    MAIN_DB_FILE="${DATA_DIR}/pow.db"
+else
+    echo -e "${RED}[ERROR] Invalid environment. Use 'prod' or 'staging'.${NC}"
+    exit 1
+fi
+
 DB_PATH="file:${DB_FILE}"
 
-# Port for the dashboard
-PORT="41729"
+export APP_ENV="$TARGET_ENV"
+export PORT="$PORT"
+export SYNC_PORT="$SYNC_PORT"
 
 echo -e "${BLUE}==================================================${NC}"
 echo -e "${BLUE} MISTER NETANYAHU PLEASE LET THIS DEPLOYMENT WORK ${NC}"
+echo -e "${BLUE} TARGETING ENVIRONMENT: ${YELLOW}${TARGET_ENV^^}${BLUE} (${BRANCH}) ${NC}"
 echo -e "${BLUE}==================================================${NC}"
 
 # --- Pre-flight Checks ---
 # Check for required commands
-if ! command -v unzip &> /dev/null; then
-    echo -e "${RED}[ERROR] 'unzip' command not found. Please install it to proceed.${NC}"
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}[ERROR] 'git' command not found. Please install it to proceed.${NC}"
     exit 1
 fi
 if ! command -v npm &> /dev/null; then
     echo -e "${RED}[ERROR] 'npm' command not found. Please install Node.js and npm.${NC}"
-    exit 1
-fi
-
-# Check for Archive.zip
-if [ ! -f "Archive.zip" ]; then
-    echo -e "${RED}[ERROR] Archive.zip not found.${NC}"
-    echo "Please upload your project files as Archive.zip before running."
     exit 1
 fi
 
@@ -97,20 +120,24 @@ NEW_RELEASE_DIR="${RELEASES_DIR}/${RELEASE_NAME}"
 mkdir -p "${NEW_RELEASE_DIR}"
 echo -e "New release directory: ${GREEN}${NEW_RELEASE_DIR}${NC}"
 
-# --- 2. Unpack and Prepare ---
-echo -e "${YELLOW}[2/8] Unzipping project files...${NC}"
-unzip -o -q Archive.zip -d "${NEW_RELEASE_DIR}"
+# --- 2. Fetch Code From GitHub ---
+echo -e "${YELLOW}[2/8] Fetching code from GitHub...${NC}"
+GIT_TMP_DIR="${RELEASES_DIR}/.git_tmp_${RELEASE_NAME}"
+git clone -b ${BRANCH} https://github.com/atriasfty/p-ow.git "${GIT_TMP_DIR}"
 
-# Handle case where user zips the parent folder instead of the contents
-if [ -d "${NEW_RELEASE_DIR}/p-ow" ]; then
-    echo "Note: Nested 'p-ow' directory found. Moving contents up."
-    # Use shopt dotglob to include hidden files, or use find (more compatible)
-    shopt -s dotglob 2>/dev/null || true
-    mv "${NEW_RELEASE_DIR}/p-ow/"* "${NEW_RELEASE_DIR}/" 2>/dev/null || true
-    shopt -u dotglob 2>/dev/null || true
-    rm -rf "${NEW_RELEASE_DIR}/p-ow"
+if [ ! -d "${GIT_TMP_DIR}" ]; then
+    echo -e "${RED}[ERROR] Failed to clone the repository. Check Git authentication.${NC}"
+    exit 1
 fi
-echo -e "${GREEN}Files extracted successfully.${NC}"
+
+# Move the contents to the release directory
+shopt -s dotglob 2>/dev/null || true
+mv "${GIT_TMP_DIR}/"* "${NEW_RELEASE_DIR}/" 2>/dev/null || true
+shopt -u dotglob 2>/dev/null || true
+
+# Cleanup git dir
+rm -rf "${GIT_TMP_DIR}"
+echo -e "${GREEN}Code successfully checked out from branch '${BRANCH}'.${NC}"
 
 # --- 3. Environment Configuration ---
 echo -e "${YELLOW}[3/8] Configuring environment...${NC}"
@@ -159,9 +186,10 @@ ROBLOX_API_KEY="${ROBLOX_API_KEY}"
 
 # Dashboard Config
 DASHBOARD_URL="http://127.0.0.1:${PORT}"
-NEXT_PUBLIC_APP_URL="https://pow.ciankelly.xyz"
-NEXTAUTH_URL="https://pow.ciankelly.xyz"
+NEXT_PUBLIC_APP_URL="${APP_URL}"
+NEXTAUTH_URL="${APP_URL}"
 NEXTAUTH_SECRET="${NEXTAUTH_SECRET}"
+NEXT_PUBLIC_SYNC_URL="${WS_URL}"
 
 # Clerk Auth
 CLERK_SECRET_KEY="${CLERK_SECRET_KEY}"
@@ -282,15 +310,29 @@ else
         echo "NEXT_PUBLIC_POSTHOG_KEY=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
     
-    # Auto-set URLs if missing
+    # Auto-set URLs if missing or invalid based on branch target
     if ! grep -q "DASHBOARD_URL=" "${SHARED_ENV_FILE}"; then
         echo "DASHBOARD_URL=\"http://127.0.0.1:${PORT}\"" >> "${SHARED_ENV_FILE}"
     fi
-    if ! grep -q "NEXT_PUBLIC_APP_URL=" "${SHARED_ENV_FILE}"; then
-        echo "NEXT_PUBLIC_APP_URL=\"https://pow.ciankelly.xyz\"" >> "${SHARED_ENV_FILE}"
+
+    if grep -q "NEXT_PUBLIC_APP_URL=" "${SHARED_ENV_FILE}"; then
+        sed -i "s|^NEXT_PUBLIC_APP_URL=.*|NEXT_PUBLIC_APP_URL=\"${APP_URL}\"|" "${SHARED_ENV_FILE}"
+    else
+        echo "NEXT_PUBLIC_APP_URL=\"${APP_URL}\"" >> "${SHARED_ENV_FILE}"
     fi
-    if ! grep -q "NEXTAUTH_URL=" "${SHARED_ENV_FILE}"; then
-        echo "NEXTAUTH_URL=\"https://pow.ciankelly.xyz\"" >> "${SHARED_ENV_FILE}"
+
+    if grep -q "NEXTAUTH_URL=" "${SHARED_ENV_FILE}"; then
+        sed -i "s|^NEXTAUTH_URL=.*|NEXTAUTH_URL=\"${APP_URL}\"|" "${SHARED_ENV_FILE}"
+    else
+        echo "NEXTAUTH_URL=\"${APP_URL}\"" >> "${SHARED_ENV_FILE}"
+    fi
+
+    if [ -n "$WS_URL" ]; then
+        if grep -q "NEXT_PUBLIC_SYNC_URL=" "${SHARED_ENV_FILE}"; then
+            sed -i "s|^NEXT_PUBLIC_SYNC_URL=.*|NEXT_PUBLIC_SYNC_URL=\"${WS_URL}\"|" "${SHARED_ENV_FILE}"
+        else
+            echo "NEXT_PUBLIC_SYNC_URL=\"${WS_URL}\"" >> "${SHARED_ENV_FILE}"
+        fi
     fi
     if ! grep -q "GARMIN_API_URL=" "${SHARED_ENV_FILE}"; then
         echo "GARMIN_API_URL=\"https://garminapi.ciankelly.xyz\"" >> "${SHARED_ENV_FILE}"
@@ -343,13 +385,13 @@ echo ""
 
 # Verify DATABASE_URL points to the correct file
 echo "Verifying DATABASE_URL in .env..."
-if grep -q "DATABASE_URL=\"file:/root/data/pow.db\"" "${SHARED_ENV_FILE}"; then
-    echo -e "${GREEN}DATABASE_URL is correctly set to: file:/root/data/pow.db${NC}"
+if grep -q "DATABASE_URL=\"${DB_PATH}\"" "${SHARED_ENV_FILE}"; then
+    echo -e "${GREEN}DATABASE_URL is correctly set to: ${DB_PATH}${NC}"
 else
     echo -e "${RED}WARNING: DATABASE_URL may not be correct. Current value:${NC}"
     grep "DATABASE_URL" "${SHARED_ENV_FILE}" || echo "DATABASE_URL not found!"
     echo -e "${YELLOW}Fixing DATABASE_URL...${NC}"
-    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"file:/root/data/pow.db\"|" "${SHARED_ENV_FILE}"
+    sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"${DB_PATH}\"|" "${SHARED_ENV_FILE}"
 fi
 
 # Copy the shared .env to ALL required locations in the new release
@@ -412,17 +454,25 @@ echo -e "${YELLOW}[5/8] Setting up database...${NC}"
 # PROJECT_ROOT was already set in step 4
 
 # CRITICAL: Set DATABASE_URL explicitly for all prisma commands
-export DATABASE_URL="file:/root/data/pow.db"
+export DATABASE_URL="${DB_PATH}"
 echo "DATABASE_URL set to: ${DATABASE_URL}"
 
 # Check if the database file exists
 if [ ! -f "${DB_FILE}" ]; then
-    echo -e "${YELLOW}No production database found at ${DB_FILE}.${NC}"
-    echo -e "${YELLOW}Creating new database with schema...${NC}"
-    # Only for FIRST TIME deployment - create empty database
-    cd "${PROJECT_ROOT}/${NEW_RELEASE_DIR}/dashboard"
-    npx prisma migrate deploy || npx prisma db push --skip-generate
-    echo -e "${GREEN}New database created successfully.${NC}"
+    if [ "$TARGET_ENV" == "staging" ] && [ -f "${MAIN_DB_FILE}" ]; then
+        echo -e "${YELLOW}Staging database not found. Replicating from production dataset...${NC}"
+        cp "${MAIN_DB_FILE}" "${DB_FILE}"
+        echo -e "${GREEN}Production database successfully cloned to Staging.${NC}"
+        cd "${PROJECT_ROOT}/${NEW_RELEASE_DIR}/dashboard"
+        npx prisma migrate deploy || true
+    else
+        echo -e "${YELLOW}No database found at ${DB_FILE}.${NC}"
+        echo -e "${YELLOW}Creating new database with schema...${NC}"
+        # Only for FIRST TIME deployment - create empty database
+        cd "${PROJECT_ROOT}/${NEW_RELEASE_DIR}/dashboard"
+        npx prisma migrate deploy || npx prisma db push --skip-generate
+        echo -e "${GREEN}New database created successfully.${NC}"
+    fi
 else
     DB_SIZE=$(ls -lh "${DB_FILE}" | awk '{print $5}')
     echo -e "${GREEN}Existing database found at ${DB_FILE} [size: ${DB_SIZE}]${NC}"
@@ -463,15 +513,15 @@ fi
 
 echo "Generating Prisma Clients..."
 # Explicitly set DATABASE_URL for prisma generate
-export DATABASE_URL="file:/root/data/pow.db"
+export DATABASE_URL="${DB_PATH}"
 echo "Using DATABASE_URL: ${DATABASE_URL}"
 
 # Verify database file exists
-if [ -f "/root/data/pow.db" ]; then
-    DB_SIZE=$(ls -lh "/root/data/pow.db" | awk '{print $5}')
-    echo -e "${GREEN}Database file exists at /root/data/pow.db [size: ${DB_SIZE}]${NC}"
+if [ -f "${DB_FILE}" ]; then
+    DB_SIZE=$(ls -lh "${DB_FILE}" | awk '{print $5}')
+    echo -e "${GREEN}Database file exists at ${DB_FILE} [size: ${DB_SIZE}]${NC}"
 else
-    echo -e "${RED}[ERROR] Database file NOT FOUND at /root/data/pow.db!${NC}"
+    echo -e "${RED}[ERROR] Database file NOT FOUND at ${DB_FILE}!${NC}"
     echo "This will cause the application to fail. Please restore the database."
     exit 1
 fi

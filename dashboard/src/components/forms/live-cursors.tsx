@@ -12,6 +12,8 @@ export function LiveCursors() {
     useEffect(() => {
         if (!awareness || !connected) return
 
+        let idleTimeout: NodeJS.Timeout
+
         const handlePointerMove = (e: PointerEvent) => {
             // Use absolute page coordinates so scrolling is synced
             const cursor = {
@@ -19,9 +21,15 @@ export function LiveCursors() {
                 y: e.pageY
             }
             awareness.setLocalStateField("cursor", cursor)
+
+            if (idleTimeout) clearTimeout(idleTimeout)
+            idleTimeout = setTimeout(() => {
+                awareness.setLocalStateField("cursor", null)
+            }, 4000)
         }
 
         const handlePointerLeave = () => {
+            if (idleTimeout) clearTimeout(idleTimeout)
             awareness.setLocalStateField("cursor", null) // hide cursor
         }
 
@@ -29,6 +37,7 @@ export function LiveCursors() {
         document.addEventListener("pointerleave", handlePointerLeave)
 
         return () => {
+            if (idleTimeout) clearTimeout(idleTimeout)
             document.removeEventListener("pointermove", handlePointerMove)
             document.removeEventListener("pointerleave", handlePointerLeave)
         }
@@ -68,7 +77,10 @@ export function LiveCursors() {
     if (!connected || others.length === 0) return null
 
     return (
-        <div className="pointer-events-none absolute inset-0 z-50 overflow-hidden">
+        <div 
+            className="pointer-events-none absolute top-0 left-0 w-full z-[9999] overflow-hidden" 
+            style={{ height: "max(100vh, 100%)" }}
+        >
             <AnimatePresence>
                 {others.map(other => {
                     if (!other.cursor) return null
@@ -86,28 +98,34 @@ export function LiveCursors() {
                             exit={{ opacity: 0 }}
                             transition={{
                                 type: "spring",
-                                damping: 30,
-                                mass: 0.8,
-                                stiffness: 300
+                                damping: 40,
+                                mass: 0.5,
+                                stiffness: 400
                             }}
                         >
                             <svg 
-                                width="24" 
-                                height="36" 
-                                viewBox="0 0 24 36" 
+                                width="20" 
+                                height="20" 
+                                viewBox="0 0 20 20" 
                                 fill="none" 
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="relative -top-[2px] -left-[9px]"
+                                className="relative drop-shadow"
+                                style={{
+                                    transform: 'rotate(-5deg)',
+                                    transformOrigin: 'top left'
+                                }}
                             >
                                 <path 
-                                    d="M5.65376 2.50085L21.4391 18.2861C22.6105 19.4576 21.849 21.4939 20.1983 21.5976L13.8823 21.9942C13.5684 22.0139 13.2778 22.1587 13.0645 22.4034L8.7904 27.3093C7.69837 28.562 5.56875 27.9157 5.37894 26.2779L3.58509 10.8A3.08051 3.08051 0 015.65376 2.50085Z" 
+                                    d="M2.5 2.5L18.5 8.5L10.5 11.5L7.5 19.5L2.5 2.5Z" 
                                     fill={other.user?.color || "#5c6ac4"}
                                     stroke="white" 
-                                    strokeWidth="2"
+                                    strokeWidth="1.5"
+                                    strokeLinejoin="round" 
+                                    strokeLinecap="round"
                                 />
                             </svg>
                             <div 
-                                className="px-2 py-0.5 mt-1 text-[10px] font-bold text-white rounded-full whitespace-nowrap"
+                                className="px-2 py-0.5 mt-1 text-[11px] font-bold text-white rounded-full whitespace-nowrap shadow-sm ml-3"
                                 style={{ backgroundColor: other.user?.color || "#5c6ac4" }}
                             >
                                 {other.user?.name || "Unknown"}
