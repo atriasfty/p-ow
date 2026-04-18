@@ -89,13 +89,13 @@ if [ ! -f "ecosystem.config.js" ]; then
 fi
 
 # PRE-FLIGHT CHECK: Verify Clerk keys exist in shared .env (if it exists)
-if [ -f "${SHARED_DIR}/.env" ]; then
+if [ -f "shared/${TARGET_ENV}.env" ]; then
     echo -e "${YELLOW}[PRE-FLIGHT] Checking existing environment configuration...${NC}"
-    if ! grep -q "CLERK_SECRET_KEY=" "${SHARED_DIR}/.env"; then
-        echo -e "${RED}[WARNING] CLERK_SECRET_KEY not found in ${SHARED_DIR}/.env${NC}"
+    if ! grep -q "CLERK_SECRET_KEY=" "shared/${TARGET_ENV}.env"; then
+        echo -e "${RED}[WARNING] CLERK_SECRET_KEY not found in shared/${TARGET_ENV}.env${NC}"
     fi
-    if ! grep -q "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=" "${SHARED_DIR}/.env"; then
-        echo -e "${RED}[WARNING] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not found in ${SHARED_DIR}/.env${NC}"
+    if ! grep -q "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=" "shared/${TARGET_ENV}.env"; then
+        echo -e "${RED}[WARNING] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not found in shared/${TARGET_ENV}.env${NC}"
     fi
 fi
 
@@ -141,18 +141,19 @@ echo -e "${GREEN}Code successfully checked out from branch '${BRANCH}'.${NC}"
 
 # --- 3. Environment Configuration ---
 echo -e "${YELLOW}[3/8] Configuring environment...${NC}"
-SHARED_ENV_FILE="${SHARED_DIR}/.env"
+SHARED_ENV_FILE="${SHARED_DIR}/${TARGET_ENV}.env"
 
 if [ ! -f "${SHARED_ENV_FILE}" ]; then
-    echo -e "${YELLOW}No existing .env file found. Starting first-time setup...${NC}"
+    echo -e "${YELLOW}No existing .env file found for ${TARGET_ENV^^}. Starting first-time setup...${NC}"
     
-    read -p "Discord Bot Token: " DISCORD_BOT_TOKEN
-    read -p "Discord Client ID: " CLIENT_ID
-    read -p "Discord Guild ID: " GUILD_ID
-    read -p "Clerk Secret Key: " CLERK_SECRET_KEY
-    read -p "Clerk Publishable Key: " NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-    read -p "Roblox API Key - Open Cloud: " ROBLOX_API_KEY
-    read -p "Discord Punishment Webhook URL: " DISCORD_PUNISHMENT_WEBHOOK
+    echo -e "${BLUE}=== ENTERING SECRETS FOR: ${TARGET_ENV^^} ===${NC}"
+    read -p "Discord Bot Token [${TARGET_ENV^^}]: " DISCORD_BOT_TOKEN
+    read -p "Discord Client ID [${TARGET_ENV^^}]: " CLIENT_ID
+    read -p "Discord Guild ID [${TARGET_ENV^^}]: " GUILD_ID
+    read -p "Clerk Secret Key [${TARGET_ENV^^}]: " CLERK_SECRET_KEY
+    read -p "Clerk Publishable Key [${TARGET_ENV^^}]: " NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+    read -p "Roblox API Key - Open Cloud [${TARGET_ENV^^}]: " ROBLOX_API_KEY
+    read -p "Discord Punishment Webhook URL [${TARGET_ENV^^}]: " DISCORD_PUNISHMENT_WEBHOOK
     read -p "Mistral API Key: " MISTRAL_API_KEY
     read -p "Garmin API Key: " GARMIN_API_KEY
     read -p "PostHog Project API Key: " POSTHOG_KEY
@@ -250,20 +251,20 @@ else
     
     # Discord Config
     if ! grep -q "DISCORD_TOKEN=" "${SHARED_ENV_FILE}" && ! grep -q "DISCORD_BOT_TOKEN=" "${SHARED_ENV_FILE}"; then
-        read -p "Missing Discord Bot Token: " VAL
+        read -p "Missing Discord Bot Token [${TARGET_ENV^^}]: " VAL
         echo "DISCORD_TOKEN=\"$VAL\"" >> "${SHARED_ENV_FILE}"
         echo "DISCORD_BOT_TOKEN=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "CLIENT_ID=" "${SHARED_ENV_FILE}"; then
-        read -p "Missing Discord Client ID: " VAL
+        read -p "Missing Discord Client ID [${TARGET_ENV^^}]: " VAL
         echo "CLIENT_ID=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "GUILD_ID=" "${SHARED_ENV_FILE}"; then
-        read -p "Missing Discord Guild ID: " VAL
+        read -p "Missing Discord Guild ID [${TARGET_ENV^^}]: " VAL
         echo "GUILD_ID=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "DISCORD_PUNISHMENT_WEBHOOK=" "${SHARED_ENV_FILE}"; then
-        read -p "Missing Discord Punishment Webhook URL: " VAL
+        read -p "Missing Discord Punishment Webhook URL [${TARGET_ENV^^}]: " VAL
         echo "DISCORD_PUNISHMENT_WEBHOOK=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
     
@@ -283,11 +284,11 @@ else
         echo "Without these, the API routes will return 404 errors."
         echo ""
         if [ "$CLERK_SECRET_MISSING" = true ]; then
-            read -p "Clerk Secret Key - CLERK_SECRET_KEY: " VAL
+            read -p "Clerk Secret Key [${TARGET_ENV^^}] - CLERK_SECRET_KEY: " VAL
             echo "CLERK_SECRET_KEY=\"$VAL\"" >> "${SHARED_ENV_FILE}"
         fi
         if [ "$CLERK_PUBLISHABLE_MISSING" = true ]; then
-            read -p "Clerk Publishable Key - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: " VAL
+            read -p "Clerk Publishable Key [${TARGET_ENV^^}] - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: " VAL
             echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=\"$VAL\"" >> "${SHARED_ENV_FILE}"
         fi
     fi
@@ -361,23 +362,23 @@ fi
 
 # FINAL VALIDATION: Absolutely ensure Clerk keys exist before proceeding
 echo ""
-echo -e "${YELLOW}[FINAL CHECK] Verifying critical Clerk authentication keys...${NC}"
+echo -e "${YELLOW}[FINAL CHECK] Verifying critical Clerk authentication keys for ${TARGET_ENV^^}...${NC}"
 if ! grep -q "CLERK_SECRET_KEY=" "${SHARED_ENV_FILE}"; then
-    echo -e "${RED}[CRITICAL] CLERK_SECRET_KEY is MISSING from .env file!${NC}"
+    echo -e "${RED}[CRITICAL] CLERK_SECRET_KEY is MISSING from ${TARGET_ENV^^} .env file!${NC}"
     echo "This must be configured for the API to work correctly."
-    read -p "Enter your Clerk Secret Key - CLERK_SECRET_KEY: " CLERK_SK
+    read -p "Enter your Clerk Secret Key specifically for ${TARGET_ENV^^} - CLERK_SECRET_KEY: " CLERK_SK
     sed -i "/^CLERK_SECRET_KEY=/d" "${SHARED_ENV_FILE}" 2>/dev/null || true
     echo "CLERK_SECRET_KEY=\"${CLERK_SK}\"" >> "${SHARED_ENV_FILE}"
-    echo -e "${GREEN}Added CLERK_SECRET_KEY${NC}"
+    echo -e "${GREEN}Added CLERK_SECRET_KEY for ${TARGET_ENV^^}${NC}"
 fi
 
 if ! grep -q "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=" "${SHARED_ENV_FILE}"; then
-    echo -e "${RED}[CRITICAL] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is MISSING from .env file!${NC}"
+    echo -e "${RED}[CRITICAL] NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is MISSING from ${TARGET_ENV^^} .env file!${NC}"
     echo "This must be configured for the API to work correctly."
-    read -p "Enter your Clerk Publishable Key - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: " CLERK_PK
+    read -p "Enter your Clerk Publishable Key specifically for ${TARGET_ENV^^} - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: " CLERK_PK
     sed -i "/^NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=/d" "${SHARED_ENV_FILE}" 2>/dev/null || true
     echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=\"${CLERK_PK}\"" >> "${SHARED_ENV_FILE}"
-    echo -e "${GREEN}Added NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY${NC}"
+    echo -e "${GREEN}Added NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY for ${TARGET_ENV^^}${NC}"
 fi
 
 echo -e "${GREEN}[OK] Clerk keys verified and present in configuration.${NC}"
