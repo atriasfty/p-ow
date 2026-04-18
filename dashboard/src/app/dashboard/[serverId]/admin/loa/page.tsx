@@ -34,15 +34,22 @@ export default async function AdminLoaPage({ params }: { params: Promise<{ serve
     const uniqueUserIds = Array.from(new Set(loas.map((l: any) => l.userId)))
     let clerkUsers: any[] = []
 
+
     if (uniqueUserIds.length > 0) {
         try {
             const client = await clerkClient()
-            const usersResponse = await client.users.getUserList({
-                userId: uniqueUserIds,
-                limit: 100
-            })
+            const userPromises = []
+
+            for (let i = 0; i < uniqueUserIds.length; i += 100) {
+                const chunk = uniqueUserIds.slice(i, i + 100) as string[]
+                userPromises.push(client.users.getUserList({ userId: chunk, limit: 100 }))
+            }
+
+            const userResponses = await Promise.all(userPromises)
+            const clerkUsersRaw = userResponses.flatMap(res => res.data)
             
-            clerkUsers = usersResponse.data.map(user => {
+            clerkUsers = clerkUsersRaw.map(user => {
+
                 const discordAccount = user.externalAccounts.find(
                     a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
                 )

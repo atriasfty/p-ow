@@ -102,13 +102,19 @@ export async function GET(request: NextRequest) {
 
             const userIds = editors.map((e: any) => e.userId)
 
+
             // Batch fetch Clerk users for profile pictures
             const client = await clerkClient()
-            const clerkUsersRes = await client.users.getUserList({
-                userId: userIds,
-                limit: 100
-            })
-            const clerkUsers = clerkUsersRes.data
+            const userPromises = []
+
+            for (let i = 0; i < userIds.length; i += 100) {
+                const chunk = userIds.slice(i, i + 100) as string[]
+                userPromises.push(client.users.getUserList({ userId: chunk, limit: 100 }))
+            }
+
+            const userResponses = await Promise.all(userPromises)
+            const clerkUsers = userResponses.flatMap(res => res.data)
+
 
             // Batch fetch Member records for Roblox usernames
             const members = await prisma.member.findMany({

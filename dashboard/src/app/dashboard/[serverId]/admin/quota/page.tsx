@@ -37,11 +37,31 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
-    // Fetch Clerk users
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
+    })
+    // Fetch Clerk users in chunks of 100 to avoid API limits concurrently
     const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
+    const uniqueUserIds = Array.from(new Set(members.map((m: any) => m.userId))) as string[]
 
-    const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
+    const userPromises = []
+    for (let i = 0; i < uniqueUserIds.length; i += 100) {
+        const chunk = uniqueUserIds.slice(i, i + 100)
+        userPromises.push(client.users.getUserList({ userId: chunk, limit: 100 }))
+    }
+
+    let clerkUsersRaw: any[] = []
+    try {
+        const userResponses = await Promise.all(userPromises)
+        clerkUsersRaw = userResponses.flatMap(res => res.data)
+    } catch (e) {
+        console.error("Clerk fetch error", e)
+    }
+
+    const clerkUsers: ClerkUser[] = clerkUsersRaw.map(user => {
+
         const discordAccount = user.externalAccounts.find(
             a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
         )
@@ -84,12 +104,6 @@ export default async function AdminQuotaPage({
         )
         return user?.image || null
     }
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
 
     // Calculate week start based on offset (Monday)
     const now = new Date()
