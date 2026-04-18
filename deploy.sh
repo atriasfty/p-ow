@@ -478,20 +478,12 @@ echo "DATABASE_URL set to: ${DATABASE_URL}"
 
 # Check if the database file exists
 if [ ! -f "${DB_FILE}" ]; then
-    if [ "$TARGET_ENV" == "staging" ] && [ -f "${MAIN_DB_FILE}" ]; then
-        echo -e "${YELLOW}Staging database not found. Replicating from production dataset...${NC}"
-        cp "${MAIN_DB_FILE}" "${DB_FILE}"
-        echo -e "${GREEN}Production database successfully cloned to Staging.${NC}"
-        cd "${PROJECT_ROOT}/${NEW_RELEASE_DIR}/dashboard"
-        npx prisma migrate deploy || true
-    else
-        echo -e "${YELLOW}No database found at ${DB_FILE}.${NC}"
-        echo -e "${YELLOW}Creating new database with schema...${NC}"
-        # Only for FIRST TIME deployment - create empty database
-        cd "${PROJECT_ROOT}/${NEW_RELEASE_DIR}/dashboard"
-        npx prisma migrate deploy || npx prisma db push --skip-generate
-        echo -e "${GREEN}New database created successfully.${NC}"
-    fi
+    echo -e "${YELLOW}No database found at ${DB_FILE}.${NC}"
+    echo -e "${YELLOW}Creating new database with schema...${NC}"
+    # Only for FIRST TIME deployment - create empty database
+    cd "${PROJECT_ROOT}/${NEW_RELEASE_DIR}/dashboard"
+    npx prisma migrate deploy || npx prisma db push --skip-generate
+    echo -e "${GREEN}New database created successfully.${NC}"
 else
     DB_SIZE=$(ls -lh "${DB_FILE}" | awk '{print $5}')
     echo -e "${GREEN}Existing database found at ${DB_FILE} [size: ${DB_SIZE}]${NC}"
