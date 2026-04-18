@@ -491,8 +491,11 @@ export function ServerSettingsForm({
                                                 </div>
                                                 <button
                                                     type="button"
+                                                    role="switch"
+                                                    aria-checked={webhookEnabled}
+                                                    aria-label="Enable Ingestion"
                                                     onClick={() => setWebhookEnabled(!webhookEnabled)}
-                                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${webhookEnabled ? 'bg-sky-500' : 'bg-zinc-800'}`}
+                                                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${webhookEnabled ? 'bg-sky-500' : 'bg-zinc-800'}`}
                                                 >
                                                     <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${webhookEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
                                                 </button>
@@ -546,8 +549,11 @@ export function ServerSettingsForm({
                                             </div>
                                             <button
                                                 type="button"
+                                                role="switch"
+                                                aria-checked={feature.state}
+                                                aria-label={feature.name}
                                                 onClick={() => feature.setState(!feature.state)}
-                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${feature.state ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${feature.state ? 'bg-indigo-500' : 'bg-zinc-800'}`}
                                             >
                                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${feature.state ? 'translate-x-6' : 'translate-x-1'}`} />
                                             </button>
@@ -628,8 +634,11 @@ export function ServerSettingsForm({
                                         </div>
                                         <button
                                             type="button"
+                                            role="switch"
+                                            aria-checked={autoSyncRoles}
+                                            aria-label="Auto Role Sync"
                                             onClick={() => setAutoSyncRoles(!autoSyncRoles)}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${autoSyncRoles ? 'bg-indigo-500' : 'bg-zinc-800'}`}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${autoSyncRoles ? 'bg-indigo-500' : 'bg-zinc-800'}`}
                                         >
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoSyncRoles ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
@@ -708,8 +717,11 @@ export function ServerSettingsForm({
                                                 </div>
                                                 <button
                                                     type="button"
+                                                    role="switch"
+                                                    aria-checked={customBotEnabled}
+                                                    aria-label="Enable Custom Bot"
                                                     onClick={() => setCustomBotEnabled(!customBotEnabled)}
-                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${customBotEnabled ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${customBotEnabled ? 'bg-emerald-500' : 'bg-zinc-800'}`}
                                                 >
                                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${customBotEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                                                 </button>
