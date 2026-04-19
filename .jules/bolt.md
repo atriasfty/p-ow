@@ -1,0 +1,3 @@
+## 2025-04-19 - Optimizing Clerk User Fetching for Server Contexts
+**Learning:** Fetching users unconditionally with `client.users.getUserList({ limit: 100 })` on server-specific pages (like Quota tracking) pulls irrelevant users and quickly hits limits, leading to missed relevant users and wasted processing. Clerk `getUserList` supports fetching by a batch of user IDs up to 100 at a time.
+**Action:** Always fetch the server's specific member user IDs from Prisma first, then chunk these IDs and fetch related user details directly from Clerk via `client.users.getUserList({ userId: chunk })` to optimize latency and reliability.

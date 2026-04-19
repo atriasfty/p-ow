@@ -37,11 +37,60 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
-    // Fetch Clerk users
-    const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
+    })
 
-    const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
+    // Calculate week start based on offset (Monday)
+    const now = new Date()
+    const currentDay = now.getDay()
+    const currentDiff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
+    const weekStart = new Date(now)
+    weekStart.setDate(currentDiff + (weekOffset * 7))
+    weekStart.setHours(0, 0, 0, 0)
+
+    // Calculate week end
+    const weekEnd = new Date(weekStart)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+
+    // Get shifts for this week - across ALL servers for global quota
+    const shifts = await prisma.shift.findMany({
+        where: {
+            startTime: { gte: weekStart, lt: weekEnd }
+        }
+    })
+
+    // Get LOAs that were active during the selected week
+    const activeLoas = await prisma.leaveOfAbsence.findMany({
+        where: {
+            serverId,
+            status: "approved",
+            startDate: { lte: weekEnd },
+            endDate: { gte: weekStart }
+        }
+    })
+
+    // Collect all unique user IDs that need to be fetched
+    const uniqueUserIds = Array.from(new Set([
+        ...members.map(m => m.userId),
+        ...shifts.map(s => s.userId),
+        ...activeLoas.map(l => l.userId)
+    ]))
+
+    // Fetch Clerk users in batches of 100
+    const client = await clerkClient()
+    const clerkUserResponses = await Promise.all(
+        Array.from({ length: Math.ceil(uniqueUserIds.length / 100) }, (_, i) =>
+            client.users.getUserList({
+                userId: uniqueUserIds.slice(i * 100, (i + 1) * 100),
+                limit: 100
+            })
+        )
+    )
+
+    const clerkUsers: ClerkUser[] = clerkUserResponses.flatMap(res => res.data).map(user => {
         const discordAccount = user.externalAccounts.find(
             a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
         )
@@ -84,41 +133,6 @@ export default async function AdminQuotaPage({
         )
         return user?.image || null
     }
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
-
-    // Calculate week start based on offset (Monday)
-    const now = new Date()
-    const currentDay = now.getDay()
-    const currentDiff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-    const weekStart = new Date(now)
-    weekStart.setDate(currentDiff + (weekOffset * 7))
-    weekStart.setHours(0, 0, 0, 0)
-
-    // Calculate week end
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 7)
-
-    // Get shifts for this week - across ALL servers for global quota
-    const shifts = await prisma.shift.findMany({
-        where: {
-            startTime: { gte: weekStart, lt: weekEnd }
-        }
-    })
-
-    // Get LOAs that were active during the selected week
-    const activeLoas = await prisma.leaveOfAbsence.findMany({
-        where: {
-            serverId,
-            status: "approved",
-            startDate: { lte: weekEnd },
-            endDate: { gte: weekStart }
-        }
-    })
     const onLoaUserIds = new Set(activeLoas.map((l: any) => l.userId))
 
     // Deduplicate members and aggregate stats
