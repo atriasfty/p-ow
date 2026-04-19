@@ -1,0 +1,4 @@
+## 2025-02-24 - Missing CSRF Protection in Super Admin API Routes
+**Vulnerability:** Super Admin API endpoints (`/api/admin/super/*`) completely lacked CSRF validation, relying only on session cookies and the `isSuperAdmin` check.
+**Learning:** Even highly privileged routes restricted to `isSuperAdmin` must enforce CSRF checks if they use state-modifying methods (POST, PATCH, DELETE) because session cookies are sent automatically by the browser. Without CSRF, a logged-in super admin could be tricked into executing destructive actions (like deleting a server or modifying global config) via an attacker-controlled site.
+**Prevention:** Enforce `verifyCsrf(req)` from `@/lib/auth-permissions` on all state-modifying Next.js API routes that utilize cookie-based authentication, regardless of how strict the subsequent authorization checks are.

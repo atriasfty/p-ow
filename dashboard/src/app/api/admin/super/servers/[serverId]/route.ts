@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth-clerk"
 import { isSuperAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 
@@ -7,6 +8,10 @@ export async function PATCH(
     req: Request,
     { params }: { params: Promise<{ serverId: string }> }
 ) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("CSRF Token Missing or Invalid", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session || !isSuperAdmin(session.user as any)) {
         return new NextResponse("Unauthorized", { status: 401 })
@@ -41,6 +46,10 @@ export async function DELETE(
     req: Request,
     { params }: { params: Promise<{ serverId: string }> }
 ) {
+    if (!verifyCsrf(req)) {
+        return new NextResponse("CSRF Token Missing or Invalid", { status: 403 })
+    }
+
     const session = await getSession()
     if (!session || !isSuperAdmin(session.user as any)) {
         return new NextResponse("Unauthorized", { status: 401 })

@@ -37,7 +37,7 @@ export function SuperConfigForm() {
         try {
             const res = await fetch("/api/admin/super/config", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
                 body: JSON.stringify({ key, value })
             })
 
@@ -65,7 +65,8 @@ export function SuperConfigForm() {
         setLoading(true)
         try {
             const res = await fetch(`/api/admin/super/config?key=${encodeURIComponent(key)}`, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: { "x-csrf-check": "1" }
             })
             if (res.ok) {
                 setMessage({ type: 'success', text: "Configuration deleted successfully." })

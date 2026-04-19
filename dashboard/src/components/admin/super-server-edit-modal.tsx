@@ -33,7 +33,7 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
         try {
             const res = await fetch(`/api/admin/super/servers/${server.id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
                 body: JSON.stringify(formData)
             })
 
