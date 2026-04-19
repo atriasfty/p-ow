@@ -31,7 +31,8 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
         setUpdatingId(deletingId)
         try {
             const res = await fetch(`/api/admin/super/servers/${deletingId}`, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: { "x-csrf-check": "1" }
             })
 
             if (res.ok) {
