@@ -197,7 +197,9 @@ export function ModCallPanel({
                             </div>
                             <button
                                 onClick={handleClose}
-                                className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-500 hover:text-red-400 transition-all active:scale-95"
+                                className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-500 hover:text-red-400 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                                aria-label="Close call details"
+                                title="Close call details"
                             >
                                 <X className="h-6 w-6" />
                             </button>
