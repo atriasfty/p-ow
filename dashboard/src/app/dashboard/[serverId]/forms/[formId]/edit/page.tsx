@@ -719,6 +719,7 @@ function EditFormInner({
                                         <button
                                             onClick={() => copyToClipboard(editorUrl, "editor")}
                                             className="p-2 bg-zinc-700 hover:bg-zinc-600 rounded"
+                                            aria-label="Copy editor URL"
                                         >
                                             {copied === "editor" ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4 text-zinc-400" />}
                                         </button>
@@ -1008,12 +1009,14 @@ function EditFormInner({
                                         <button
                                             onClick={() => moveSection(section.id, "up")}
                                             className="text-zinc-600 hover:text-white"
+                                            aria-label="Move section up"
                                         >
                                             <ChevronUp className="h-4 w-4" />
                                         </button>
                                         <button
                                             onClick={() => moveSection(section.id, "down")}
                                             className="text-zinc-600 hover:text-white"
+                                            aria-label="Move section down"
                                         >
                                             <ChevronDown className="h-4 w-4" />
                                         </button>
@@ -1024,7 +1027,7 @@ function EditFormInner({
                                         className="flex-1 bg-transparent text-lg font-semibold text-white outline-none min-w-[200px]"
                                     />
                                     {form.sections.length > 1 && (
-                                        <button onClick={() => deleteSection(section.id)} className="p-2 text-zinc-500 hover:text-red-400">
+                                        <button onClick={() => deleteSection(section.id)} className="p-2 text-zinc-500 hover:text-red-400" aria-label="Delete section">
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     )}
@@ -1141,12 +1144,14 @@ function QuestionCard({
                     <button
                         onClick={() => onMove("up")}
                         className="text-zinc-600 hover:text-white"
+                        aria-label="Move question up"
                     >
                         <ChevronUp className="h-4 w-4" />
                     </button>
                     <button
                         onClick={() => onMove("down")}
                         className="text-zinc-600 hover:text-white"
+                        aria-label="Move question down"
                     >
                         <ChevronDown className="h-4 w-4" />
                     </button>
@@ -1167,10 +1172,11 @@ function QuestionCard({
                 <button
                     onClick={() => setShowConditions(!showConditions)}
                     className={`p-2 rounded ${showConditions ? "bg-indigo-600 text-white" : "text-zinc-500 hover:text-white"}`}
+                    aria-label="Toggle conditional logic"
                 >
                     <Settings2 className="h-4 w-4" />
                 </button>
-                <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400">
+                <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400" aria-label="Delete question">
                     <Trash2 className="h-4 w-4" />
                 </button>
             </div>
@@ -1185,7 +1191,7 @@ function QuestionCard({
                                 onChange={(val) => updateOption(i, val)}
                                 className="flex-1 bg-[#1a1a1a] px-3 py-1.5 rounded text-sm text-white outline-none"
                             />
-                            <button onClick={() => removeOption(i)} className="text-zinc-600 hover:text-red-400">
+                            <button onClick={() => removeOption(i)} className="text-zinc-600 hover:text-red-400" aria-label="Remove option">
                                 <Trash2 className="h-3 w-3" />
                             </button>
                         </div>
