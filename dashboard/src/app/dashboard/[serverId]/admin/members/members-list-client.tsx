@@ -364,7 +364,8 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
                             </div>
                             <button
                                 onClick={() => setViewingHeatmapUser(null)}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                                aria-label="Close heatmap modal"
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                             >
                                 <X className="h-5 w-5" />
                             </button>
