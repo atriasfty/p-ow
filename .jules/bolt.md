@@ -1,0 +1,3 @@
+## 2024-05-18 - Replacing Sequential db reads with batched reads mapped locally
+**Learning:** In endpoints that require fallback resolution fetching sequential temporal data within loops natively scales poorly and generates N+1 queries. E.g. finding fallback locations via individual `.findFirst` calls mapped over arrays of up to 100 API elements.
+**Action:** Extract relational properties globally across the response array (`in` query) using max bounding on time windows to gather relevant records in one query and then establish a `Map` structure to do lookup/fallback locally without further DB calls.
