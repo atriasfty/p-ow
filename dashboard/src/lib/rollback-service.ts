@@ -17,9 +17,12 @@ export class RollbackService {
 
             const parts = log.command.split(" ");
             const cmd = parts[0].toLowerCase();
-            const target = parts[1]; // Assuming target is always the second argument
+            const target = parts[1];
 
             if (!target) continue;
+
+            // Reject targets that don't look like valid Roblox usernames
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(target)) continue;
 
             if (cmd === ":ban") {
                 reversals.push({

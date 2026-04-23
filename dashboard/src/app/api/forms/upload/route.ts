@@ -39,8 +39,25 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: `File too large (max ${Math.floor(maxSize / 1024 / 1024)}MB)` }, { status: 400 })
         }
 
-        // Generate unique filename
-        const ext = path.extname(file.name) || ""
+        // Strict extension → MIME allowlist; reject anything not on the list
+        const ALLOWED: Record<string, string[]> = {
+            ".jpg":  ["image/jpeg"],
+            ".jpeg": ["image/jpeg"],
+            ".png":  ["image/png"],
+            ".gif":  ["image/gif"],
+            ".webp": ["image/webp"],
+            ".pdf":  ["application/pdf"],
+            ".txt":  ["text/plain"],
+            ".mp4":  ["video/mp4"],
+            ".mov":  ["video/quicktime"],
+            ".mp3":  ["audio/mpeg"],
+            ".wav":  ["audio/wav"],
+        }
+        const ext = path.extname(file.name).toLowerCase()
+        const allowedMimes = ALLOWED[ext]
+        if (!allowedMimes || !allowedMimes.includes(file.type)) {
+            return NextResponse.json({ error: "File type not allowed" }, { status: 400 })
+        }
         const uniqueId = randomBytes(16).toString("hex")
         const filename = `${uniqueId}${ext}`
 

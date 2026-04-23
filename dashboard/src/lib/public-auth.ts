@@ -35,7 +35,10 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
 
     // --- IP ALLOWLIST CHECK ---
     if (apiKey.allowedIps) {
-        const incomingIp = head.get("x-forwarded-for")?.split(",")[0]?.trim() || head.get("x-real-ip") || "unknown"
+        // Prefer trusted proxy-set headers; last XFF entry is appended by our own proxy (client cannot forge it)
+        const xff = head.get("x-forwarded-for")
+        const lastXff = xff ? xff.split(",").at(-1)?.trim() : undefined
+        const incomingIp = head.get("cf-connecting-ip") || head.get("x-real-ip") || lastXff || "unknown"
         const allowedList = apiKey.allowedIps.split(",").map((ip: string) => ip.trim()).filter(Boolean)
 
         if (allowedList.length > 0 && !allowedList.includes(incomingIp)) {
@@ -138,7 +141,9 @@ export async function resolveServer(apiKey: any) {
  */
 export async function logApiAccess(apiKey: any, event: string, details?: string) {
     const head = await headers()
-    const ip = head.get("x-forwarded-for") || "unknown"
+    const xff = head.get("x-forwarded-for")
+    const lastXff = xff ? xff.split(",").at(-1)?.trim() : undefined
+    const ip = head.get("cf-connecting-ip") || head.get("x-real-ip") || lastXff || "unknown"
 
     await prisma.securityLog.create({
         data: {
