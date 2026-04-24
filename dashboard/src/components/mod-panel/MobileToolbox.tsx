@@ -62,7 +62,10 @@ export function MobileToolbox({
         try {
             const res = await fetch("/api/perm-log", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-csrf-check": "1"
+                },
                 body: JSON.stringify({ serverId, ...permLogData })
             })
 
