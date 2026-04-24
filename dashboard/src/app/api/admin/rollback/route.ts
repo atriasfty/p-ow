@@ -6,8 +6,11 @@ import { NextResponse } from "next/server"
 import { RollbackService } from "@/lib/rollback-service"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
