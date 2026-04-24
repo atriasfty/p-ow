@@ -50,7 +50,7 @@ export async function GET(req: Request) {
 
         // Paginating on our DB and searching on Clerk is tricky if they mismatch.
         // For accurate searching, it's best to let Clerk do the search, but pass all allowedUserIds (capped at 500 for URL length limits)
-        let queryParams: any = {
+        const queryParams: any = {
             limit,
             offset,
             userId: allowedUserIds.slice(0, 500),

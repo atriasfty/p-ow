@@ -1,9 +1,11 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Ensure user's Discord ID is saved to their Member records
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -27,7 +29,7 @@ export async function POST(req: Request) {
         // 2. By Roblox ID (some older code might use this)
         // 3. By Discord ID (already linked)
 
-        let existingMember = await prisma.member.findFirst({
+        const existingMember = await prisma.member.findFirst({
             where: {
                 serverId,
                 OR: [

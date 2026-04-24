@@ -109,7 +109,7 @@ class ServerEventBus {
 
 // Module-singleton — shared across all Next.js Route Handlers in the same process
 declare global {
-    // eslint-disable-next-line no-var
+
     var __powEventBus: ServerEventBus | undefined
 }
 
