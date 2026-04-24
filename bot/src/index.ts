@@ -39,6 +39,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         return
     }
 
+    if (interaction.isModalSubmit()) {
+        const { handleModalSubmitInteraction } = await import("./events/interaction-buttons")
+        await handleModalSubmitInteraction(interaction)
+        return
+    }
+
     // Handle Autocomplete for 'server' option
     if (interaction.isAutocomplete()) {
         try {

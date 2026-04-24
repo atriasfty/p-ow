@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
-import { isServerAdmin } from "@/lib/admin"
+import { isServerAdmin, isServerMember } from "@/lib/admin"
 import { clerkClient } from "@clerk/nextjs/server"
 
 // POST /api/forms/editor-access - Claim editor access via share link
@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
 
         if (!form) {
             return NextResponse.json({ error: "Invalid share link" }, { status: 404 })
+        }
+
+        // Require the claimer to be a member of the server that owns this form.
+        // Without this check, any Clerk user who obtains the share link gains form
+        // editor rights regardless of their relationship to the server.
+        const member = await isServerMember({ id: session.user.id } as any, form.serverId)
+        if (!member) {
+            return NextResponse.json({ error: "You must be a member of this server to claim editor access" }, { status: 403 })
         }
 
         // Check if already has access

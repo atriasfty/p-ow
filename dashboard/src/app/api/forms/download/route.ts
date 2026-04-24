@@ -31,18 +31,22 @@ export async function GET(request: NextRequest) {
             where: { formId_userId: { formId, userId: session.user.id } }
         })
 
-        // Check if user is the respondent who uploaded the file
-        // (This is a bit expensive but necessary for security)
-        const isRespondent = await prisma.formResponse.findFirst({
-            where: {
-                formId,
-                respondentId: session.user.id,
-                answers: {
-                    some: {
-                        value: { contains: filename }
-                    }
-                }
-            }
+        // Check if user is the respondent who uploaded the file.
+        // Parse stored answer values and check the url field exactly — a substring
+        // check on just the filename would be bypassable by pasting the filename into
+        // a text answer on a different response.
+        const fileUrl = `/api/forms/download?formId=${formId}&file=${filename}`
+        const userAnswers = await prisma.formAnswer.findMany({
+            where: { response: { formId, respondentId: session.user.id } },
+            select: { value: true }
+        })
+        const isRespondent = userAnswers.some(a => {
+            try {
+                const parsed = JSON.parse(a.value)
+                if (typeof parsed === "string") return parsed === fileUrl
+                if (typeof parsed === "object" && parsed !== null) return parsed.url === fileUrl
+                return false
+            } catch { return false }
         })
 
         if (!isStaff && !hasEditorAccess && !isRespondent) {

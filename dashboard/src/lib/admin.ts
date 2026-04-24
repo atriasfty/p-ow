@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db"
 
 // The superadmin ID - only this user can grant admin access
-const SUPER_ADMIN_ID = "user_36ogKIU3qHTwhGT3mrVtvUrTgbW"
+export const SUPER_ADMIN_ID = "user_36ogKIU3qHTwhGT3mrVtvUrTgbW"
 
 export interface SessionUser {
     id: string

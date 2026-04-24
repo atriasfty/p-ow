@@ -45,6 +45,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const baseError = await verifyPermissionOrError(session.user, punishment.serverId, "canViewPunishments")
     if (baseError) return baseError
 
+    // Reason edits require ban permission to prevent history tampering
+    if (body.reason !== undefined) {
+        const banError = await verifyPermissionOrError(session.user, punishment.serverId, "canBan")
+        if (banError) return banError
+    }
+
     if (body.resolved !== undefined && punishment.type === "Ban Bolo") {
         const boloError = await verifyPermissionOrError(session.user, punishment.serverId, "canManageBolos")
         if (boloError) return boloError

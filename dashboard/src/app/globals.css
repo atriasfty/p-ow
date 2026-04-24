@@ -94,6 +94,17 @@ html {
   }
 }
 
+/* Mod call panel animations — defined globally so re-renders inside the component
+   don't reinject and reset the keyframe timer mid-animation. */
+@keyframes diagonal-wipe-in {
+    from { clip-path: polygon(0% 100%, 0% 100%, 0% 100%); }
+    to   { clip-path: polygon(-30% 130%, 130% -30%, 130% 130%); }
+}
+@keyframes diagonal-wipe-out {
+    from { clip-path: polygon(-30% 130%, 130% -30%, 130% 130%); }
+    to   { clip-path: polygon(0% 100%, 0% 100%, 0% 100%); }
+}
+
 /* Standalone PWA status bar area */
 @supports (padding-top: env(safe-area-inset-top)) {
   .pwa-status-bar-padding {

@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invalid form or form is not accepting uploads" }, { status: 403 })
         }
 
-        if (form.requiresAuth && !session) {
-            return NextResponse.json({ error: "Authentication required for this form" }, { status: 401 })
+        if (!session) {
+            return NextResponse.json({ error: "Authentication required to upload files" }, { status: 401 })
         }
 
         // Validate file size using server override
