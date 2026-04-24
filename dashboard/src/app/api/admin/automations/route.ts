@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { isServerAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -94,6 +96,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
