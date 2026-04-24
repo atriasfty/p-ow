@@ -44,10 +44,6 @@ p-ow/
   - System tray support with hotkey toggle
 
 
-## 📄 License
-
-This project is licensed under a custom restrictive license. See [LICENSE](LICENSE) for details.
-
 ---
 
 Built with ❤️ by the Atria Team
