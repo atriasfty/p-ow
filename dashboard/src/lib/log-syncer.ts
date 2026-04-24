@@ -281,7 +281,7 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
 
     try {
         const players = await client.getPlayers().catch(() => [] as any[])
-        let matches = players.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
+        const matches = players.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
         let target: { name: string; id: string } | null = null
 
         if (matches.length === 1) {
