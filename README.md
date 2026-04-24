@@ -1,4 +1,3 @@
-# ⚠️ THIS PROJECT IS NOT MEANT TO BE DEPLOYED ON OTHER SYSTEMS. OWNED AND OPERATED BY ATRIA
 ### Atria is a fiscally sponsored 501(c)(3) non-profit.
 ### Thanks to The Hack Foundation, d.b.a. Hack Club.
 
