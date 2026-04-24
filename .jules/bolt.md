@@ -1,0 +1,3 @@
+## 2024-05-18 - Replacing N+1 findFirst within map loops using temporally bounded findMany queries
+**Learning:** Using `Promise.all(items.map(...))` to execute concurrent N+1 `.findFirst` database queries (e.g. to attach latest locations to a list of calls) introduces high database overhead.
+**Action:** When joining related temporal records (like logs or locations) to a list of items, compute the strict minimum and maximum time boundaries (`gte` and `lte`) across all items. Use a single `.findMany` to fetch all relevant records within that global window for the unique item owners (`in`), map the results by user in O(1) space, and then attach the closest relevant record to each original item without issuing additional database queries.
