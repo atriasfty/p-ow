@@ -31,41 +31,40 @@ export async function GET(req: Request) {
             })
         ])
 
-        // Fallback location logic: if positionDescriptor is missing, try to find a recent location for that player
-        const processedModCalls = await Promise.all(modCalls.map(async (call) => {
-            if (call.positionDescriptor) return call
-            const recentLoc = await prisma.playerLocation.findFirst({
-                where: {
-                    serverId,
-                    userId: call.callerId,
-                    // Try to find a location within 1 minute of the call
-                    createdAt: {
-                        lte: new Date((call.timestamp || 0) * 1000 + 30000), // +30s
-                    }
-                },
-                orderBy: { createdAt: "desc" }
-            })
-            if (recentLoc && (recentLoc.postalCode || recentLoc.streetName)) {
-                return {
-                    ...call,
-                    positionDescriptor: `${recentLoc.postalCode ? 'Postal ' + recentLoc.postalCode : ''}${recentLoc.postalCode && recentLoc.streetName ? ', ' : ''}${recentLoc.streetName || ''}`
-                }
-            }
-            return call
-        }))
+        // ⚡ Bolt: Pre-fetch fallback locations using tight date bounds to eliminate N+1 DB calls
+        const allCalls = [...modCalls, ...emergencyCalls].filter(c => !c.positionDescriptor)
+        let preFetchedLocations: any[] = []
 
-        const processedEmerCalls = await Promise.all(emergencyCalls.map(async (call) => {
-            if (call.positionDescriptor) return call
-            const recentLoc = await prisma.playerLocation.findFirst({
+        if (allCalls.length > 0) {
+            // Find min/max timestamps across all missing-location calls to bound the query
+            const timestamps = allCalls.map(c => c.timestamp || 0)
+            const minTimestampMs = Math.min(...timestamps) * 1000
+            const maxTimestampMs = Math.max(...timestamps) * 1000
+
+            // Query relevant recent locations within a 2-minute window (1m before min, 30s after max)
+            preFetchedLocations = await prisma.playerLocation.findMany({
                 where: {
                     serverId,
-                    userId: call.callerId,
+                    userId: { in: Array.from(new Set(allCalls.map(c => c.callerId))) },
                     createdAt: {
-                        lte: new Date((call.timestamp || 0) * 1000 + 30000),
+                        gte: new Date(minTimestampMs - 60000),
+                        lte: new Date(maxTimestampMs + 30000),
                     }
                 },
                 orderBy: { createdAt: "desc" }
             })
+        }
+
+        const resolveLocation = (call: any) => {
+            if (call.positionDescriptor) return call
+
+            const targetTimeMs = (call.timestamp || 0) * 1000
+            // Find the most recent location before or up to 30s after the call
+            const recentLoc = preFetchedLocations.find(loc =>
+                loc.userId === call.callerId &&
+                loc.createdAt.getTime() <= targetTimeMs + 30000
+            )
+
             if (recentLoc && (recentLoc.postalCode || recentLoc.streetName)) {
                 return {
                     ...call,
@@ -73,7 +72,10 @@ export async function GET(req: Request) {
                 }
             }
             return call
-        }))
+        }
+
+        const processedModCalls = modCalls.map(resolveLocation)
+        const processedEmerCalls = emergencyCalls.map(resolveLocation)
 
         return NextResponse.json({
             modCalls: processedModCalls,
