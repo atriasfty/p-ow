@@ -18,15 +18,17 @@ export async function checkSecurity(req: Request): Promise<NextResponse | null> 
     const maxRequests = await getGlobalConfig("MAX_REQUESTS_PER_MINUTE")
     const banReason = await getGlobalConfig("BAN_REASON")
 
-    // Robust IP detection - check multiple headers common in proxy setups
+    // IP detection: trust cf-connecting-ip (Cloudflare sets this; nginx must strip it from
+    // direct connections). Fall back to the LAST XFF entry (appended by our own proxy,
+    // not the client). Never trust XFF[0] — it is client-controlled.
+    const cfIp = req.headers.get("cf-connecting-ip")
     const forwarded = req.headers.get("x-forwarded-for")
     const realIp = req.headers.get("x-real-ip")
-    const cfIp = req.headers.get("cf-connecting-ip") // For Cloudflare
-    
+
     let ip = "unknown"
     if (cfIp) ip = cfIp
+    else if (forwarded) ip = forwarded.split(",").at(-1)?.trim() ?? "unknown"
     else if (realIp) ip = realIp
-    else if (forwarded) ip = forwarded.split(',')[0].trim()
 
     console.log(`[SECURITY] Checking request from IP: ${ip}`)
 
@@ -62,31 +64,11 @@ export async function checkSecurity(req: Request): Promise<NextResponse | null> 
         console.log(`[SECURITY] IP ${ip} request count: ${tracker.count}/${maxRequests}`)
 
         if (tracker.count > maxRequests) {
-            // AUTO-BAN logic
-            console.error(`[SECURITY] IP ${ip} exceeded rate limit (${tracker.count}/${maxRequests}). AUTO-BANNING.`)
-
-            try {
-                // Save to database
-                await prisma.bannedIp.upsert({
-                    where: { ip },
-                    update: { reason: banReason },
-                    create: { ip, reason: banReason }
-                })
-
-                // Log the security event
-                await prisma.securityLog.create({
-                    data: {
-                        event: "IP_BANNED",
-                        ip,
-                        details: `Rate limit hit: ${tracker.count} req/min`
-                    }
-                })
-                console.log(`[SECURITY] IP ${ip} banned and saved to database`)
-            } catch (e) {
-                console.error("[SECURITY] Failed to save ban to DB:", e)
-            }
-
-            return new NextResponse("Forbidden: Too many requests. You have been banned.", { status: 403 })
+            // Rate-limit only — no auto-ban. Auto-banning via a spoofable IP header
+            // is a DoS vector: an attacker could ban innocent IPs. Bans must be
+            // applied manually through the dashboard.
+            console.warn(`[SECURITY] IP ${ip} exceeded rate limit (${tracker.count}/${maxRequests}).`)
+            return new NextResponse("Too many requests. Please slow down.", { status: 429 })
         }
     }
 

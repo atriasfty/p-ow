@@ -1,7 +1,7 @@
 
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
-import { isServerAdmin } from "@/lib/admin"
+import { isServerAdmin, SUPER_ADMIN_ID } from "@/lib/admin"
 import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit"
 import { verifyCsrf } from "@/lib/auth-permissions"
@@ -57,6 +57,17 @@ export async function PATCH(req: Request) {
         }
 
         const server = await prisma.server.findUnique({ where: { id: serverId } })
+
+        // discordGuildId changes are restricted to the server owner or superadmin.
+        // Any other admin changing this would redirect role-sync to an attacker-controlled
+        // Discord guild, granting them permanent admin access.
+        if (discordGuildId !== undefined) {
+            const isOwner = server?.subscriberUserId === session.user.id
+            const isSuperAdmin = session.user.id === SUPER_ADMIN_ID
+            if (!isOwner && !isSuperAdmin) {
+                return NextResponse.json({ error: "Only the server owner can change the Discord guild ID" }, { status: 403 })
+            }
+        }
 
         let finalBotToken = undefined
         let finalBotEnabled = undefined

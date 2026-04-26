@@ -48,15 +48,19 @@ export const POST = withMetrics("/api/command", async (req: Request) => {
         const client = new PrcClient(server.apiUrl)
         await client.executeCommand(command)
 
-        // Log to Discord if a channel is configured
+        // Log to Discord if a channel is configured.
+        // Strip Discord markdown/mention chars from user-controlled strings to prevent
+        // @everyone pings, embed injection, or code-span breakout via backticks.
         if (server.commandLogChannelId) {
-            const moderatorName = session.user.robloxUsername || session.user.name || session.user.username || "Unknown"
+            const stripDiscord = (s: string) => s.replace(/[`*_~|@#<>[\]]/g, "").slice(0, 100)
+            const moderatorName = stripDiscord(session.user.robloxUsername || session.user.name || session.user.username || "Unknown")
+            const safeCommand = command.replace(/`/g, "'").slice(0, 500)
             await prisma.botQueue.create({
                 data: {
                     serverId,
                     type: "MESSAGE",
                     targetId: server.commandLogChannelId,
-                    content: `**[Command Log]** \`${moderatorName}\` ran: \`${command}\``,
+                    content: `**[Command Log]** \`${moderatorName}\` ran: \`${safeCommand}\``,
                     status: "PENDING"
                 }
             })

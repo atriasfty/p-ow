@@ -12,7 +12,7 @@ export async function PATCH(
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
     const { formId, responseId } = await params
-    const { status } = await req.json() // "accepted" | "denied" | "completed"
+    const { status, reason } = await req.json() // "accepted" | "denied" | "completed"
 
     try {
         const form = await prisma.form.findUnique({
@@ -22,7 +22,6 @@ export async function PATCH(
 
         if (!form) return NextResponse.json({ error: "Form not found" }, { status: 404 })
 
-        // Auth check
         if (!await isServerAdmin(session.user as any, form.serverId)) {
             return new NextResponse("Forbidden", { status: 403 })
         }
@@ -32,49 +31,61 @@ export async function PATCH(
         })
 
         if (!response) return NextResponse.json({ error: "Response not found" }, { status: 404 })
+        if (response.formId !== formId) return NextResponse.json({ error: "Response not found" }, { status: 404 })
 
-        // Update status
         await prisma.formResponse.update({
             where: { id: responseId },
             data: { status }
         })
 
-        // Handle Automated Acceptance
-        if (status === "accepted" && form.isApplication && response.respondentId) {
-            const clerk = await clerkClient()
-            const user = await clerk.users.getUser(response.respondentId)
-            
-            const discordAccount = user.externalAccounts.find(a => a.provider === 'oauth_discord')
-            const robloxAccount = user.externalAccounts.find(a => a.provider === 'oauth_roblox')
+        if ((status === "accepted" || status === "denied") && form.isApplication && response.respondentId) {
+            const accepted = status === "accepted"
 
-            if (!discordAccount || !robloxAccount) {
-                return NextResponse.json({ 
-                    success: true, 
-                    warning: "User accepted but roles not given (Account not fully linked - Discord/Roblox missing)." 
-                })
+            let discordId: string | null = null
+            let displayName = "Unknown Applicant"
+
+            try {
+                const clerk = await clerkClient()
+                const user = await clerk.users.getUser(response.respondentId)
+                const discordAccount = user.externalAccounts.find(a =>
+                    a.provider === "oauth_discord" || a.provider === "discord"
+                )
+                const robloxAccount = user.externalAccounts.find(a =>
+                    a.provider === "oauth_custom_roblox" || a.provider === "oauth_roblox" || a.provider === "roblox"
+                )
+                discordId = discordAccount?.externalId ?? null
+                displayName = robloxAccount?.username || user.username || displayName
+            } catch (e) {
+                console.error("[FORM STATUS] Failed to fetch user from Clerk:", e)
             }
 
-            // 1. Grant Discord Role if configured
-            if (form.acceptedRoleId) {
+            // Grant Discord role if accepted and configured
+            if (accepted && form.acceptedRoleId && discordId) {
                 await prisma.botQueue.create({
                     data: {
                         serverId: form.serverId,
-                        type: "ROLE_ADD", // We need the bot to handle this type
-                        targetId: discordAccount.externalId,
+                        type: "ROLE_ADD",
+                        targetId: discordId,
                         content: form.acceptedRoleId
                     }
                 })
             }
 
-            // 2. Send Congratulations
+            // Send congrats/denial embed — decoupled from role requirement
             if (form.congratsChannelId) {
+                const mention = discordId ? `<@${discordId}>` : displayName
+                const decisionReason = (reason as string | undefined)?.trim() ||
+                    (accepted ? "No reason provided." : "No reason given.")
+
                 const message = {
-                    content: `🎉 **Congratulations** to <@${discordAccount.externalId}>!`,
                     embeds: [{
-                        title: "New Staff Member!",
-                        description: `**${user.username || user.firstName}**'s application for **${form.title}** has been accepted!`,
-                        color: 0x10b981,
-                        thumbnail: { url: user.imageUrl },
+                        title: accepted ? "🎉 Application Accepted" : "❌ Application Denied",
+                        description: `${mention}'s application for **${form.title}** has been **${accepted ? "accepted" : "denied"}**.`,
+                        color: accepted ? 0x10b981 : 0xef4444,
+                        fields: [
+                            { name: "Reason", value: decisionReason, inline: false },
+                            { name: "Reviewed By", value: session.user.name || "Staff", inline: true }
+                        ],
                         timestamp: new Date().toISOString()
                     }]
                 }

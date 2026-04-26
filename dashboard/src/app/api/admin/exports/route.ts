@@ -29,6 +29,11 @@ export async function GET(req: Request) {
     }
 
     try {
+        // Prefix cells that start with formula-trigger characters to prevent injection
+        // when the CSV is opened in Excel/Sheets.
+        const csvCell = (value: string) =>
+            /^[=+\-@\t\r]/.test(value) ? `'${value}` : value
+
         let csvContent = ""
 
         if (type === "members") {
@@ -58,7 +63,7 @@ export async function GET(req: Request) {
             csvContent = "Roblox Username,Discord Username,Panel Role,Is Admin\n"
             members.forEach((m: any) => {
                 const names = userMap.get(m.userId) || { roblox: "Unknown", discord: "Unknown" }
-                csvContent += `${names.roblox},${names.discord},${m.role?.name || "None"},${m.isAdmin}\n`
+                csvContent += `${csvCell(names.roblox)},${csvCell(names.discord)},${csvCell(m.role?.name || "None")},${m.isAdmin}\n`
             })
 
         } else if (type === "shifts") {
@@ -82,7 +87,7 @@ export async function GET(req: Request) {
             csvContent = "Roblox Username,Start Time,End Time,Duration (Seconds)\n"
             shifts.forEach((s: any) => {
                 const robloxName = userMap.get(s.userId) || "Unknown"
-                csvContent += `${robloxName},${s.startTime.toISOString()},${s.endTime ? s.endTime.toISOString() : "Active"},${s.duration || 0}\n`
+                csvContent += `${csvCell(robloxName)},${s.startTime.toISOString()},${s.endTime ? s.endTime.toISOString() : "Active"},${s.duration || 0}\n`
             })
 
         } else if (type === "roles") {
@@ -93,7 +98,7 @@ export async function GET(req: Request) {
 
             csvContent = "Role Name,Discord Role ID,Member Count,Can Ban,Can Use Toolbox\n"
             roles.forEach((r: any) => {
-                csvContent += `"${r.name}",${r.discordRoleId || "None"},${r._count.members},${r.canBan},${r.canUseToolbox}\n`
+                csvContent += `"${csvCell(r.name).replace(/"/g, '""')}",${r.discordRoleId || "None"},${r._count.members},${r.canBan},${r.canUseToolbox}\n`
             })
 
         } else if (type === "punishments") {
@@ -136,9 +141,10 @@ export async function GET(req: Request) {
 
             csvContent = "User Roblox Username,Moderator Roblox Username,Type,Reason,Resolved,Created At\n"
             punishments.forEach((p: any) => {
-                const userName = identityMap.get(p.userId) || "Unknown"
-                const modName = p.moderatorId ? (identityMap.get(p.moderatorId) || "Unknown") : "System"
-                csvContent += `${userName},${modName},${p.type},"${(p.reason || "").replace(/"/g, '""')}",${p.resolved},${p.createdAt.toISOString()}\n`
+                const userName = csvCell(identityMap.get(p.userId) || "Unknown")
+                const modName = csvCell(p.moderatorId ? (identityMap.get(p.moderatorId) || "Unknown") : "System")
+                const reason = csvCell((p.reason || "").replace(/"/g, '""'))
+                csvContent += `${userName},${modName},${csvCell(p.type)},"${reason}",${p.resolved},${p.createdAt.toISOString()}\n`
             })
 
         } else {

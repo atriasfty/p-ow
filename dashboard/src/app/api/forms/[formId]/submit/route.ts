@@ -188,8 +188,15 @@ export async function POST(
             responseId = existing?.id
         }
 
-        // Validate client-provided responseId to prevent IDOR
+        // Validate client-provided responseId to prevent IDOR.
+        // Anonymous submitters must never supply a responseId — they have no identity to
+        // prove ownership. Authenticated users may only update their own responses, and
+        // cannot claim anonymous (ownerless) responses.
         if (responseId && responseId !== "new") {
+            if (!session) {
+                return NextResponse.json({ error: "Cannot resume a response without authentication" }, { status: 403 })
+            }
+
             const existingResponse = await prisma.formResponse.findUnique({
                 where: { id: responseId }
             })
@@ -200,7 +207,7 @@ export async function POST(
             if (existingResponse.formId !== formId) {
                 return NextResponse.json({ error: "Response does not belong to this form" }, { status: 400 })
             }
-            if (session && existingResponse.respondentId && existingResponse.respondentId !== session.user.id) {
+            if (!existingResponse.respondentId || existingResponse.respondentId !== session.user.id) {
                 return NextResponse.json({ error: "Unauthorized to modify this response" }, { status: 403 })
             }
         }
@@ -246,11 +253,11 @@ export async function POST(
                         answer: answers[q.id]
                     }))
 
-                    const embed = {
+                    const recruitmentMessage = {
                         embeds: [
                             {
                                 title: "📝 New Staff Application",
-                                color: 0x5865F2, // Blurple
+                                color: 0x5865F2,
                                 description: `**Respondent:** ${session?.user?.name || email || "Anonymous"}\n**User ID:** \`${session?.user?.id || "N/A"}\``,
                                 fields: appSummary.slice(0, 10).map((a: any) => ({
                                     name: a.question.substring(0, 256),
@@ -260,6 +267,27 @@ export async function POST(
                                 footer: { text: `Form: ${form.title} • Review on Dashboard` },
                                 timestamp: new Date().toISOString()
                             }
+                        ],
+                        components: [
+                            {
+                                type: 1,
+                                components: [
+                                    {
+                                        type: 2,
+                                        style: 3,
+                                        label: "Accept",
+                                        emoji: { name: "✅" },
+                                        custom_id: `form_accept:${response.id}`
+                                    },
+                                    {
+                                        type: 2,
+                                        style: 4,
+                                        label: "Deny",
+                                        emoji: { name: "❌" },
+                                        custom_id: `form_deny:${response.id}`
+                                    }
+                                ]
+                            }
                         ]
                     }
 
@@ -268,7 +296,7 @@ export async function POST(
                             serverId: form.serverId,
                             type: "MESSAGE",
                             targetId: form.recruitmentChannelId,
-                            content: JSON.stringify(embed)
+                            content: JSON.stringify(recruitmentMessage)
                         }
                     })
                 } catch (e) {

@@ -34,7 +34,15 @@ export async function PATCH(req: Request) {
         }
 
         const dataToUpdate: any = {}
-        if (roleId !== undefined) dataToUpdate.roleId = roleId || null
+        if (roleId !== undefined) {
+            if (roleId) {
+                const role = await prisma.role.findFirst({ where: { id: roleId, serverId: member.serverId } })
+                if (!role) {
+                    return NextResponse.json({ error: "Role not found in this server" }, { status: 400 })
+                }
+            }
+            dataToUpdate.roleId = roleId || null
+        }
         if (isAdmin !== undefined) dataToUpdate.isAdmin = isAdmin
 
         await prisma.member.update({

@@ -133,26 +133,13 @@ export function ModCallPanel({
 
     return (
         <>
-            {/* Diagonal wipe animation */}
-            <style jsx global>{`
-                @keyframes diagonal-wipe-in {
-                    from { clip-path: polygon(0% 100%, 0% 100%, 0% 100%); }
-                    to   { clip-path: polygon(-30% 130%, 130% -30%, 130% 130%); }
-                }
-                @keyframes diagonal-wipe-out {
-                    from { clip-path: polygon(-30% 130%, 130% -30%, 130% 130%); }
-                    to   { clip-path: polygon(0% 100%, 0% 100%, 0% 100%); }
-                }
-                .modcall-panel-enter {
-                    animation: diagonal-wipe-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-                }
-                .modcall-panel-exit {
-                    animation: diagonal-wipe-out 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards;
-                }
-            `}</style>
-
             <div
-                className={`fixed inset-0 z-[200] bg-[#0d0d0d] ${isClosing ? "modcall-panel-exit" : "modcall-panel-enter"}`}
+                className="fixed inset-0 z-[200] bg-[#0d0d0d]"
+                style={{
+                    animation: isClosing
+                        ? "diagonal-wipe-out 0.4s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards"
+                        : "diagonal-wipe-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards"
+                }}
             >
                 {loading ? (
                     <div className="h-full flex items-center justify-center">

@@ -122,9 +122,12 @@ export async function POST(req: Request) {
                 const client = new PrcClient(server.apiUrl)
                 let commandStr = ""
 
-                // Escape double quotes in player name and reason for PRC command safety
-                const safeName = playerUsername.replace(/"/g, '\\"')
-                const safeReason = reason.replace(/"/g, '\\"')
+                // Strip characters that could be used for PRC command injection.
+                // Clerk profile fields (robloxUsername, reason) are attacker-controlled.
+                const sanitizePrc = (s: string) => s.replace(/[\r\n`'"\\;|&]/g, "").slice(0, 200)
+
+                const safeName = sanitizePrc(playerUsername)
+                const safeReason = sanitizePrc(reason)
                 const quotedName = safeName.includes(" ") ? `"${safeName}"` : safeName
 
                 switch (type) {
@@ -148,9 +151,8 @@ export async function POST(req: Request) {
 
                 // Send PM for warnings
                 if (type === "Warn") {
-                    const modName = payload.robloxUsername || payload.username || "Staff"
-                    const safeModName = modName.replace(/"/g, '\\"')
-                    const pmCommand = `:pm ${quotedName} You have been warned by ${safeModName} for ${safeReason} - Project Overwatch`
+                    const modName = sanitizePrc(payload.robloxUsername || payload.username || "Staff")
+                    const pmCommand = `:pm ${quotedName} You have been warned by ${modName} for ${safeReason} - Project Overwatch`
                     promises.push(client.executeCommand(pmCommand))
                 }
 

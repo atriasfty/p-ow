@@ -7,9 +7,16 @@ import { useDialog } from "@/components/providers/dialog-provider"
 
 interface Response {
     id: string
+    status: string
     submittedAt: string
     respondent: { id: string; email?: string; name: string } | null
     answers: Record<string, { questionLabel: string; value: any }>
+}
+
+const StatusBadge = ({ status }: { status: string }) => {
+    if (status === "accepted") return <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Accepted</span>
+    if (status === "denied") return <span className="px-2 py-0.5 rounded text-xs bg-red-500/20 text-red-400 border border-red-500/30">Denied</span>
+    return <span className="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Pending</span>
 }
 
 interface Analytics {
@@ -103,6 +110,10 @@ export default function ResponsesPage({
     const [expandedResponse, setExpandedResponse] = useState<string | null>(null)
     const [resolvedParams, setResolvedParams] = useState<{ serverId: string; formId: string } | null>(null)
     const [deleting, setDeleting] = useState<string | null>(null)
+    const [formIsApplication, setFormIsApplication] = useState(false)
+    const [reviewingResponse, setReviewingResponse] = useState<string | null>(null)
+    const [reviewReason, setReviewReason] = useState("")
+    const [reviewing, setReviewing] = useState<string | null>(null)
 
     const [canExport, setCanExport] = useState(false)
     const { showConfirm } = useDialog()
@@ -125,6 +136,7 @@ export default function ResponsesPage({
             if (responsesRes.ok) {
                 const data = await responsesRes.json()
                 setResponses(data.responses || [])
+                setFormIsApplication(data.form?.isApplication ?? false)
             }
             if (analyticsRes.ok) {
                 setAnalytics(await analyticsRes.json())
@@ -185,6 +197,26 @@ export default function ResponsesPage({
             console.error("Failed to delete all responses", e)
         }
         setDeleting(null)
+    }
+
+    const reviewResponse = async (responseId: string, decision: "accepted" | "denied") => {
+        if (!resolvedParams) return
+        setReviewing(`${responseId}-${decision}`)
+        try {
+            const res = await fetch(`/api/forms/${resolvedParams.formId}/responses/${responseId}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: decision, reason: reviewReason })
+            })
+            if (res.ok) {
+                setResponses(prev => prev.map(r => r.id === responseId ? { ...r, status: decision } : r))
+                setReviewingResponse(null)
+                setReviewReason("")
+            }
+        } catch (e) {
+            console.error("Failed to review response", e)
+        }
+        setReviewing(null)
     }
 
     if (loading) {
@@ -411,9 +443,12 @@ export default function ResponsesPage({
                                                     className="flex-1 flex items-center justify-between text-left"
                                                 >
                                                     <div>
-                                                        <p className="text-white font-medium">
-                                                            {r.respondent ? r.respondent.name : "Anonymous"}
-                                                        </p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-white font-medium">
+                                                                {r.respondent ? r.respondent.name : "Anonymous"}
+                                                            </p>
+                                                            <StatusBadge status={r.status} />
+                                                        </div>
                                                         <p className="text-sm text-zinc-500">
                                                             {new Date(r.submittedAt).toLocaleString()}
                                                         </p>
@@ -424,15 +459,59 @@ export default function ResponsesPage({
                                                         <ChevronDown className="h-5 w-5 text-zinc-500" />
                                                     )}
                                                 </button>
-                                                <button
-                                                    onClick={() => deleteResponse(r.id)}
-                                                    disabled={deleting === r.id}
-                                                    className="ml-3 p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"
-                                                    title="Delete response"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2 ml-3">
+                                                    {formIsApplication && r.status === "completed" && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setReviewingResponse(reviewingResponse === r.id ? null : r.id); setReviewReason("") }}
+                                                            className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 rounded-lg text-sm border border-indigo-600/30"
+                                                        >
+                                                            Review
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => deleteResponse(r.id)}
+                                                        disabled={deleting === r.id}
+                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"
+                                                        title="Delete response"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
+                                            {reviewingResponse === r.id && (
+                                                <div className="border-t border-[#333] bg-[#151515] p-4 space-y-3">
+                                                    <p className="text-sm text-zinc-400 font-medium">Review Application</p>
+                                                    <textarea
+                                                        value={reviewReason}
+                                                        onChange={e => setReviewReason(e.target.value)}
+                                                        placeholder="Reason (optional for accept, required for deny)..."
+                                                        className="w-full bg-[#222] border border-[#444] rounded-lg p-3 text-sm text-white placeholder-zinc-500 resize-none focus:outline-none focus:border-indigo-500"
+                                                        rows={3}
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => reviewResponse(r.id, "accepted")}
+                                                            disabled={reviewing !== null}
+                                                            className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 rounded-lg text-sm border border-emerald-600/30 disabled:opacity-50"
+                                                        >
+                                                            {reviewing === `${r.id}-accepted` ? "Accepting..." : "✅ Accept"}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => reviewResponse(r.id, "denied")}
+                                                            disabled={reviewing !== null}
+                                                            className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg text-sm border border-red-600/30 disabled:opacity-50"
+                                                        >
+                                                            {reviewing === `${r.id}-denied` ? "Denying..." : "❌ Deny"}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => { setReviewingResponse(null); setReviewReason("") }}
+                                                            className="px-4 py-2 text-zinc-500 hover:text-zinc-300 text-sm"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {expandedResponse === r.id && (
                                                 <div className="border-t border-[#333] p-4 space-y-3">
                                                     {Object.entries(r.answers).map(([qId, answer]) => (

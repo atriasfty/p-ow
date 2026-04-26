@@ -15,6 +15,9 @@ const body = await req.json().catch(() => ({}))
     const server = await resolveServer(auth.apiKey)
     if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
 
+    const isMember = await prisma.member.findFirst({ where: { userId, serverId: server.id } })
+    if (!isMember) return withRateLimit(NextResponse.json({ error: "User is not a member of this server" }, { status: 403 }), auth)
+
     const activeShift = await prisma.shift.findFirst({
         where: { userId, serverId: server.id, endTime: null }
     })
