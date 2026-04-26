@@ -243,7 +243,8 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
 
         let totalSeconds = 0
         for (const shift of weeklyShifts) {
-            totalSeconds += shift.duration || (shift.endTime ? 0 : Math.floor((Date.now() - shift.startTime.getTime()) / 1000))
+            // Use nullish coalescing (not ||) so that a valid duration of 0 isn't treated as falsy
+            totalSeconds += shift.duration ?? (shift.endTime ? 0 : Math.floor((Date.now() - shift.startTime.getTime()) / 1000))
         }
 
         const totalH = Math.floor(totalSeconds / 3600)
@@ -532,8 +533,13 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
             await prisma.log.createMany({
                 data: uniqueDbLogs
             })
-            // Push new logs to SSE clients
-            const logsForSSE = parsedLogs.filter(l => uniqueDbLogs.some(d => `${d.type}_${d.prcTimestamp}` === `${(l as any)._type}_${l.timestamp}`))
+            // Push new logs to SSE clients using the same 5-field key used for deduplication,
+            // so we only emit truly new logs (not duplicates that happen to share a timestamp).
+            const uniqueDbKeys = new Set(uniqueDbLogs.map(getLogKey))
+            const logsForSSE = parsedLogs.filter(l => {
+                const dbFmt = logToDbFormat(l, serverId)
+                return dbFmt && uniqueDbKeys.has(getLogKey(dbFmt))
+            })
             if (logsForSSE.length > 0) {
                 eventBus.emit(serverId, 'logs', logsForSSE as any)
             }

@@ -47,19 +47,17 @@ export async function GET(req: Request) {
 
         // 2. Separate into Clerk IDs (user_*) and Discord IDs (numeric)
         const clerkIds = modIds.filter(id => id.startsWith("user_"))
-        const discordIds = modIds.filter(id => !id.startsWith("user_"))
+        const discordModIds = modIds.filter(id => !id.startsWith("user_"))
 
-        // 3. Resolve Discord IDs to Clerk IDs via Member table
-        if (discordIds.length > 0) {
+        // 3. Resolve Discord IDs to Clerk IDs via Member table (single query)
+        const discordToMemberMap = new Map()
+        if (discordModIds.length > 0) {
             const members = await prisma.member.findMany({
-                where: {
-                    discordId: { in: discordIds },
-                    serverId
-                },
-                select: { userId: true, discordId: true }
+                where: { discordId: { in: discordModIds }, serverId },
+                select: { discordId: true, userId: true }
             })
-            // Add resolved Clerk IDs to the list
             members.forEach((m: any) => {
+                discordToMemberMap.set(m.discordId, m.userId)
                 if (m.userId) clerkIds.push(m.userId)
             })
         }
@@ -76,18 +74,6 @@ export async function GET(req: Request) {
 
         // 5. Build Map: ModeratorID -> { name, avatar }
         const modMap = new Map()
-
-        // PRE-LOAD: Resolve all Discord IDs to Members in one go
-        const discordModIds = modIds.filter(id => !id.startsWith("user_"))
-        const discordToMemberMap = new Map()
-
-        if (discordModIds.length > 0) {
-            const members = await prisma.member.findMany({
-                where: { discordId: { in: discordModIds }, serverId },
-                select: { discordId: true, userId: true }
-            })
-            members.forEach((m: any) => discordToMemberMap.set(m.discordId, m.userId))
-        }
 
         for (const modId of modIds) {
             let user = null

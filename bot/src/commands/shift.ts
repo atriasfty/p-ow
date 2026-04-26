@@ -3,6 +3,26 @@ import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 import { findMemberByDiscordId } from "../lib/clerk"
 import { PrcClient } from "../lib/prc"
+import { getBotServerSettings } from "../lib/server-settings"
+
+const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000"
+const INTERNAL_SECRET = process.env.INTERNAL_SYNC_SECRET!
+
+/** Notify the dashboard's SSE layer that a shift started or ended. Fire-and-forget. */
+async function notifyShiftEvent(serverId: string, action: "start" | "end", userId: string) {
+    try {
+        await fetch(`${DASHBOARD_URL}/api/internal/shift-event`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "x-internal-secret": INTERNAL_SECRET
+            },
+            body: JSON.stringify({ serverId, action, userId })
+        })
+    } catch {
+        // Non-critical: SSE update will self-heal on the next sync cycle
+    }
+}
 
 export async function handleShiftCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand()
@@ -37,19 +57,64 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
             return interaction.editReply({ content: "You are already on shift on this server!" })
         }
 
-        // Check if server has players before allowing shift start
-        if (!member.server.apiUrl) {
-            return interaction.editReply({ content: "❌ Server not configured properly." })
+        // Load server settings to enforce per-server rules
+        const s = await getBotServerSettings(serverId)
+
+        // LOA block check
+        if (s.shiftLoaBlocks) {
+            const now = new Date()
+            const activeLoa = await prisma.leaveOfAbsence.findFirst({
+                where: {
+                    serverId,
+                    userId: member.userId,
+                    status: 'approved',
+                    startDate: { lte: now },
+                    endDate: { gte: now }
+                }
+            })
+            if (activeLoa) {
+                return interaction.editReply({ content: "❌ You are on an approved Leave of Absence and cannot start a shift." })
+            }
         }
 
-        try {
-            const prcClient = new PrcClient(member.server.apiUrl)
-            const players = await prcClient.getPlayers()
-            if (players.length === 0) {
-                return interaction.editReply({ content: "❌ Cannot go on duty - server has no players." })
+        // Max on duty check
+        if (s.shiftMaxOnDuty > 0) {
+            const onDutyCount = await prisma.shift.count({ where: { serverId, endTime: null } })
+            if (onDutyCount >= s.shiftMaxOnDuty) {
+                return interaction.editReply({ content: `❌ Maximum staff on duty (${s.shiftMaxOnDuty}) already reached.` })
             }
-        } catch (apiError) {
-            return interaction.editReply({ content: "❌ Cannot go on duty - server appears to be offline." })
+        }
+
+        // Cooldown check
+        if (s.shiftCooldownMinutes > 0) {
+            const lastShift = await prisma.shift.findFirst({
+                where: { userId: member.userId, serverId, endTime: { not: null } },
+                orderBy: { endTime: 'desc' }
+            })
+            if (lastShift?.endTime) {
+                const cooldownMs = s.shiftCooldownMinutes * 60 * 1000
+                const timeSinceEnd = Date.now() - lastShift.endTime.getTime()
+                if (timeSinceEnd < cooldownMs) {
+                    const remainingM = Math.ceil((cooldownMs - timeSinceEnd) / 60000)
+                    return interaction.editReply({ content: `❌ Shift cooldown active — wait ${remainingM} more minute(s) before going on duty.` })
+                }
+            }
+        }
+
+        // Check if server has players before allowing shift start (respects shiftRequirePlayersInGame)
+        if (s.shiftRequirePlayersInGame) {
+            if (!member.server.apiUrl) {
+                return interaction.editReply({ content: "❌ Server not configured properly." })
+            }
+            try {
+                const prcClient = new PrcClient(member.server.apiUrl)
+                const players = await prcClient.getPlayers()
+                if (players.length === 0) {
+                    return interaction.editReply({ content: "❌ Cannot go on duty - server has no players." })
+                }
+            } catch (apiError) {
+                return interaction.editReply({ content: "❌ Cannot go on duty - server appears to be offline." })
+            }
         }
 
         // Start shift
@@ -60,6 +125,9 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
                 startTime: new Date()
             }
         })
+
+        // Notify mod panel SSE clients immediately (fire-and-forget)
+        notifyShiftEvent(serverId, "start", member.userId)
 
         // Add Discord Role if configured
         if (member.server.onDutyRoleId && interaction.guild) {
@@ -113,6 +181,9 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
         // Check for milestones
         const { processMilestones } = await import("../lib/milestones")
         await processMilestones(member.userId, serverId)
+
+        // Notify mod panel SSE clients immediately (fire-and-forget)
+        notifyShiftEvent(serverId, "end", member.userId)
 
         // Remove Discord Role if configured
         if (activeShift.server.onDutyRoleId && interaction.guild) {

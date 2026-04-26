@@ -229,20 +229,34 @@ async function handleLoaAction(interaction: ButtonInteraction, approved: boolean
             }
         }
 
-        const user = await interaction.client.users.fetch(loa.userId).catch(() => null)
-        if (user) {
-            await user.send({
-                embeds: [{
-                    title: `LOA Request ${approved ? "Approved" : "Declined"}`,
-                    description: `Your Leave of Absence request for **${loa.server.customName || loa.server.name}** has been ${status}.`,
-                    color: approved ? 0x10b981 : 0xef4444,
-                    fields: [
-                        { name: "Reason", value: loa.reason },
-                        { name: "Start Date", value: loa.startDate.toLocaleDateString(), inline: true },
-                        { name: "End Date", value: loa.endDate.toLocaleDateString(), inline: true }
-                    ]
-                }]
-            }).catch(() => { })
+        // loa.userId is a Clerk ID (e.g. "user_xxx"), not a Discord ID.
+        // We must resolve the Discord ID via the member table before DMing.
+        const loaMember = await prisma.member.findFirst({
+            where: {
+                serverId: loa.serverId,
+                OR: [
+                    { userId: loa.userId },
+                    { discordId: loa.userId }
+                ]
+            }
+        })
+        const discordUserIdForDm = loaMember?.discordId || (loa.userId.match(/^\d+$/) ? loa.userId : null)
+        if (discordUserIdForDm) {
+            const user = await interaction.client.users.fetch(discordUserIdForDm).catch(() => null)
+            if (user) {
+                await user.send({
+                    embeds: [{
+                        title: `LOA Request ${approved ? "Approved" : "Declined"}`,
+                        description: `Your Leave of Absence request for **${loa.server.customName || loa.server.name}** has been ${status}.`,
+                        color: approved ? 0x10b981 : 0xef4444,
+                        fields: [
+                            { name: "Reason", value: loa.reason },
+                            { name: "Start Date", value: loa.startDate.toLocaleDateString(), inline: true },
+                            { name: "End Date", value: loa.endDate.toLocaleDateString(), inline: true }
+                        ]
+                    }]
+                }).catch(() => { })
+            }
         }
     } catch (e) {
         console.error("[LOA-BUTTON] Error:", e)

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { findMemberByRobloxId } from "@/lib/clerk-lookup"
+import { getServerSettings } from "@/lib/server-settings"
 
 // GET - Get shifts for a user within current quota week
 export async function GET(req: NextRequest) {
@@ -24,20 +25,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Use Clerk lookup to find all possible userIds for this Roblox user
-    const { possibleUserIds, member } = await findMemberByRobloxId(serverId, robloxUserId)
+    const [{ possibleUserIds, member }, s] = await Promise.all([
+        findMemberByRobloxId(serverId, robloxUserId),
+        getServerSettings(serverId)
+    ])
 
     // Ensure the actual member userId is included (crucial if they were logged with an alternative ID)
     if (member && !possibleUserIds.includes(member.userId)) {
         possibleUserIds.push(member.userId)
     }
 
-    // Calculate week start (Monday)
-    const now = new Date()
-    const currentDay = now.getDay()
-    const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-    const weekStart = new Date(now)
-    weekStart.setDate(diff)
-    weekStart.setHours(0, 0, 0, 0)
+    // Calculate week start using configured week start day and timezone
+    const weekStart = getWeekStart(s.quotaWeekStartDay, s.quotaTimezone)
 
     console.log(`[ADMIN-SHIFTS] Looking for shifts with userIds: ${possibleUserIds.join(", ")} in server ${serverId}`)
 
@@ -164,4 +163,38 @@ export async function DELETE(req: NextRequest) {
     await prisma.shift.delete({ where: { id: shiftId } })
 
     return NextResponse.json({ message: "Shift deleted", shiftId })
+}
+
+/**
+ * Calculate the start of the current quota week using configured day and timezone.
+ * Falls back to Monday UTC if the timezone is invalid.
+ */
+function getWeekStart(weekStartDay: number, timezone: string): Date {
+    const now = new Date()
+    try {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            weekday: 'short',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        })
+        const parts = formatter.formatToParts(now)
+        const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+        const weekdayStr = parts.find(p => p.type === 'weekday')?.value || 'Mon'
+        const currentDayOfWeek = weekdayMap[weekdayStr] ?? now.getDay()
+        const diff = (currentDayOfWeek - weekStartDay + 7) % 7
+        const startDate = new Date(now)
+        startDate.setDate(now.getDate() - diff)
+        startDate.setHours(0, 0, 0, 0)
+        return startDate
+    } catch {
+        // Fallback: Monday UTC
+        const day = now.getDay()
+        const diff = now.getDate() - day + (day === 0 ? -6 : 1)
+        const weekStart = new Date(now)
+        weekStart.setDate(diff)
+        weekStart.setHours(0, 0, 0, 0)
+        return weekStart
+    }
 }
