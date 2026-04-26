@@ -105,12 +105,13 @@ export async function POST(
 
             const memberData = await memberRes.json()
             const userDiscordRoles: string[] = memberData.roles || []
+            const userRolesSet = new Set(userDiscordRoles)
 
-            if (ignoredRoles.some(r => userDiscordRoles.includes(r))) {
+            if (ignoredRoles.some(r => userRolesSet.has(r))) {
                 return NextResponse.json({ error: "You do not have permission to submit this form" }, { status: 403 })
             }
 
-            if (requiredRoles.length > 0 && !requiredRoles.some(r => userDiscordRoles.includes(r))) {
+            if (requiredRoles.length > 0 && !requiredRoles.some(r => userRolesSet.has(r))) {
                 return NextResponse.json({ error: "You do not have the required role" }, { status: 403 })
             }
         }
