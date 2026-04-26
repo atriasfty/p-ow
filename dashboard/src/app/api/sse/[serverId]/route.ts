@@ -120,7 +120,7 @@ export async function GET(
                 enqueue("staff-on-duty-ids", staffIds)
 
                 // 6. SSD check (within configured display window)
-                const sevenDaysAgo = new Date(Date.now() - s.ssdDisplayDays * 24 * 60 * 60 * 1000)
+                const ssdWindowAgo = new Date(Date.now() - s.ssdDisplayDays * 24 * 60 * 60 * 1000)
                 const ssdConfig = await prisma.config.findUnique({
                     where: { key: `ssd_${serverId}` }
                 })
@@ -128,8 +128,24 @@ export async function GET(
                 if (ssdConfig) {
                     try {
                         const parsed = JSON.parse(ssdConfig.value)
-                        if (new Date(parsed.timestamp) > sevenDaysAgo) {
-                            ssdEventData = parsed
+                        if (new Date(parsed.timestamp) > ssdWindowAgo) {
+                            // Only show to users whose shifts were actually ended
+                            const wasAffected = Array.isArray(parsed.affectedUserIds) &&
+                                possibleUserIds.some(id => parsed.affectedUserIds.includes(id))
+
+                            if (wasAffected) {
+                                // Check if this user has already dismissed this specific event
+                                const dismissKey = `ssd_dismissed_${serverId}_${userId}`
+                                const dismissRecord = await prisma.config.findUnique({ where: { key: dismissKey } })
+                                let alreadyDismissed = false
+                                if (dismissRecord) {
+                                    try {
+                                        const d = JSON.parse(dismissRecord.value)
+                                        alreadyDismissed = d.eventTimestamp === parsed.timestamp
+                                    } catch { /* ignore */ }
+                                }
+                                if (!alreadyDismissed) ssdEventData = parsed
+                            }
                         }
                     } catch { /* ignore */ }
                 }
