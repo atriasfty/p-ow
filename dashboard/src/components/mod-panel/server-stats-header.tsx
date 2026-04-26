@@ -21,7 +21,7 @@ export function ServerStatsHeader({ serverId, initialPlayers, initialMaxPlayers,
     useEffect(() => {
         if (serverStats) {
             setPlayers(serverStats.players)
-            setMaxPlayers(serverStats.maxPlayers)
+            if (serverStats.maxPlayers > 0) setMaxPlayers(serverStats.maxPlayers)
             setOnline(serverStats.online)
         }
     }, [serverStats])

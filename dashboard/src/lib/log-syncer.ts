@@ -5,6 +5,7 @@ import { getRobloxUser } from "@/lib/roblox"
 import { RaidDetectorService, Detection } from "@/lib/raid-detector"
 import { findMemberByRobloxId } from "@/lib/clerk-lookup"
 import { eventBus } from "@/lib/event-bus"
+import { getServerSettings } from "@/lib/server-settings"
 // import { Prisma } from "@prisma/client"
 
 async function getAutomationEngine() {
@@ -57,18 +58,19 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
     const playerId = log.PlayerId
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
 
-    // Use robloxId as log.PlayerId represents the in-game Roblox profile, not Clerk user
-    const member = await prisma.member.findFirst({
-        where: { serverId, robloxId: String(playerId) },
-        include: { role: true, server: true }
-    })
+    const s = await getServerSettings(serverId)
+
+    if (!s.inGameShiftEnabled) return
+
+    const { member } = await findMemberByRobloxId(serverId, String(playerId))
 
     if (!member) {
-        await client.executeCommand(`:pm ${playerName} [POW] You are not registered as staff.`).catch(() => { })
+        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not registered as staff.`).catch(() => { })
         return
     }
 
-    const serverName = member.server.customName || member.server.name
+    const server = await prisma.server.findUnique({ where: { id: serverId }, select: { customName: true, name: true } })
+    const serverName = server?.customName || server?.name || serverId
 
     if (subcommand === "start") {
         const activeShift = await prisma.shift.findFirst({
@@ -79,19 +81,58 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             const duration = Math.floor((Date.now() - activeShift.startTime.getTime()) / 1000)
             const h = Math.floor(duration / 3600)
             const m = Math.floor((duration % 3600) / 60)
-            await client.executeCommand(`:pm ${playerName} [POW] You are already on shift! (${h}h ${m}m)`).catch(() => { })
+            await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are already on shift! (${h}h ${m}m)`).catch(() => { })
             return
         }
 
-        try {
-            const players = await client.getPlayers()
-            if (players.length === 0) {
-                await client.executeCommand(`:pm ${playerName} [POW] Cannot go on duty - server has no players`).catch(() => { })
+        // Cooldown check
+        if (s.shiftCooldownMinutes > 0) {
+            const lastShift = await prisma.shift.findFirst({
+                where: { userId: member.userId, serverId, endTime: { not: null } },
+                orderBy: { endTime: 'desc' }
+            })
+            if (lastShift?.endTime) {
+                const cooldownMs = s.shiftCooldownMinutes * 60 * 1000
+                const timeSinceEnd = Date.now() - lastShift.endTime.getTime()
+                if (timeSinceEnd < cooldownMs) {
+                    const remainingM = Math.ceil((cooldownMs - timeSinceEnd) / 60000)
+                    await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cooldown active — wait ${remainingM} more minute(s).`).catch(() => { })
+                    return
+                }
+            }
+        }
+
+        // Max on duty check
+        if (s.shiftMaxOnDuty > 0) {
+            const onDutyCount = await prisma.shift.count({ where: { serverId, endTime: null } })
+            if (onDutyCount >= s.shiftMaxOnDuty) {
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Max staff on duty (${s.shiftMaxOnDuty}) already reached.`).catch(() => { })
                 return
             }
-        } catch (apiError) {
-            await client.executeCommand(`:pm ${playerName} [POW] Cannot go on duty - server appears offline`).catch(() => { })
-            return
+        }
+
+        // LOA block check
+        if (s.shiftLoaBlocks) {
+            const activeLoa = await prisma.leaveOfAbsence.findFirst({
+                where: { serverId, userId: member.userId, status: 'approved', startDate: { lte: new Date() }, endDate: { gte: new Date() } }
+            })
+            if (activeLoa) {
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are on approved Leave of Absence — cannot start shift.`).catch(() => { })
+                return
+            }
+        }
+
+        if (s.shiftRequirePlayersInGame) {
+            try {
+                const players = await client.getPlayers()
+                if (players.length === 0) {
+                    await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cannot go on duty - server has no players`).catch(() => { })
+                    return
+                }
+            } catch (apiError) {
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cannot go on duty - server appears offline`).catch(() => { })
+                return
+            }
         }
 
         try {
@@ -106,9 +147,9 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
                 })
                 return shift.id
             })
-            
+
             const newShift = await prisma.shift.findUnique({ where: { id: shiftId } })
-            
+
             const engine = await getAutomationEngine()
             engine.trigger("SHIFT_START", {
                 serverId,
@@ -123,7 +164,7 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             const onDutyNow = await prisma.shift.findMany({ where: { serverId, endTime: null }, select: { userId: true } })
             eventBus.emit(serverId, 'staff-on-duty-ids', onDutyNow.map(s => s.userId))
 
-            await client.executeCommand(`:pm ${playerName} [POW] Shift started on ${serverName}.`).catch(() => { })
+            await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Shift started on ${serverName}.`).catch(() => { })
         } catch (e: any) {
             // If the transaction fails because a shift became active, we ignore it.
         }
@@ -134,12 +175,13 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         })
 
         if (!activeShift) {
-            await client.executeCommand(`:pm ${playerName} [POW] You are not currently on shift.`).catch(() => { })
+            await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not currently on shift.`).catch(() => { })
             return
         }
 
         const now = new Date()
         const duration = Math.floor((now.getTime() - activeShift.startTime.getTime()) / 1000)
+        console.log(`[SHIFT-END] In-game command by ${playerName} (robloxId: ${playerId}) ended shift ${activeShift.id} on server ${serverId}`)
 
         await prisma.shift.update({
             where: { id: activeShift.id },
@@ -162,19 +204,38 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
 
         const h = Math.floor(duration / 3600)
         const m = Math.floor((duration % 3600) / 60)
-        await client.executeCommand(`:pm ${playerName} [POW] Shift ended. Duration: ${h}h ${m}m`).catch(() => { })
+
+        let statusMsg: string
+        if (s.shiftPmStatusFormat === 'time') {
+            statusMsg = `Shift ended. Duration: ${h}h ${m}m`
+        } else if (s.shiftPmStatusFormat === 'remaining') {
+            const quotaMinutes = member.role?.quotaMinutes || 0
+            const quotaSeconds = quotaMinutes * 60
+            const remaining = Math.max(0, quotaSeconds - duration)
+            const rH = Math.floor(remaining / 3600)
+            const rM = Math.floor((remaining % 3600) / 60)
+            statusMsg = `Shift ended. Duration: ${h}h ${m}m | Remaining quota: ${rH}h ${rM}m`
+        } else {
+            // percent (default)
+            const quotaMinutes = member.role?.quotaMinutes || 0
+            const quotaSeconds = quotaMinutes * 60
+            const weeklyTotal = await prisma.shift.aggregate({
+                where: { serverId, userId: member.userId, endTime: { not: null }, startTime: { gte: getWeekStart(s.quotaWeekStartDay, s.quotaTimezone) } },
+                _sum: { duration: true }
+            })
+            const totalSec = (weeklyTotal._sum.duration || 0)
+            const pct = quotaSeconds > 0 ? Math.round((totalSec / quotaSeconds) * 100) : 100
+            statusMsg = `Shift ended. Duration: ${h}h ${m}m | Quota: ${pct}%`
+        }
+
+        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} ${statusMsg}`).catch(() => { })
 
     } else if (subcommand === "status") {
         const activeShift = await prisma.shift.findFirst({
             where: { userId: member.userId, serverId, endTime: null }
         })
 
-        const now = new Date()
-        const currentDay = now.getDay()
-        const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-        const weekStart = new Date(now)
-        weekStart.setDate(diff)
-        weekStart.setHours(0, 0, 0, 0)
+        const weekStart = getWeekStart(s.quotaWeekStartDay, s.quotaTimezone)
 
         const weeklyShifts = await prisma.shift.findMany({
             where: { serverId, userId: member.userId, startTime: { gte: weekStart } }
@@ -189,19 +250,68 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         const totalM = Math.floor((totalSeconds % 3600) / 60)
         const quotaMinutes = member.role?.quotaMinutes || 0
         const quotaSeconds = quotaMinutes * 60
-        const quotaPercent = quotaSeconds > 0 ? Math.round((totalSeconds / quotaSeconds) * 100) : 100
 
-        await client.executeCommand(`:pm ${playerName} [POW] ${activeShift ? 'ON DUTY' : 'OFF DUTY'} | Weekly: ${totalH}h ${totalM}m (${quotaPercent}% of quota)`).catch(() => { })
+        let quotaStr: string
+        if (s.shiftPmStatusFormat === 'remaining') {
+            const remaining = Math.max(0, quotaSeconds - totalSeconds)
+            const rH = Math.floor(remaining / 3600)
+            const rM = Math.floor((remaining % 3600) / 60)
+            quotaStr = `Remaining: ${rH}h ${rM}m`
+        } else if (s.shiftPmStatusFormat === 'time') {
+            const reqH = Math.floor(quotaSeconds / 3600)
+            const reqM = Math.floor((quotaSeconds % 3600) / 60)
+            quotaStr = `${totalH}h ${totalM}m / ${reqH}h ${reqM}m`
+        } else {
+            // percent
+            const quotaPercent = quotaSeconds > 0 ? Math.round((totalSeconds / quotaSeconds) * 100) : 100
+            quotaStr = `${quotaPercent}% of quota`
+        }
+
+        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} ${activeShift ? 'ON DUTY' : 'OFF DUTY'} | Weekly: ${totalH}h ${totalM}m (${quotaStr})`).catch(() => { })
+    }
+}
+
+/** Get the start of the current quota week based on configured week start day and timezone. */
+function getWeekStart(weekStartDay: number, timezone: string): Date {
+    try {
+        const now = new Date()
+        // Get the current day of week in the configured timezone
+        const formatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' })
+        const parts = formatter.formatToParts(now)
+        const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+        const weekdayStr = parts.find(p => p.type === 'weekday')?.value || 'Mon'
+        const currentDayOfWeek = weekdayMap[weekdayStr] ?? now.getDay()
+
+        const diff = (currentDayOfWeek - weekStartDay + 7) % 7
+        const startDate = new Date(now)
+        startDate.setDate(now.getDate() - diff)
+        startDate.setHours(0, 0, 0, 0)
+        return startDate
+    } catch {
+        // Fallback: use Monday UTC
+        const now = new Date()
+        const currentDay = now.getDay()
+        const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
+        const weekStart = new Date(now)
+        weekStart.setDate(diff)
+        weekStart.setHours(0, 0, 0, 0)
+        return weekStart
     }
 }
 
 async function handleShutdownCommand(log: any, serverId: string) {
+    const s = await getServerSettings(serverId)
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
+    const fullCommand = log.Command || ""
     const now = new Date()
+
+    if (!s.shiftEndOnShutdown) return
 
     const activeShifts = await prisma.shift.findMany({
         where: { serverId, endTime: null }
     })
+
+    console.log(`[SHIFT-END] Shutdown command "${fullCommand}" by ${playerName} on server ${serverId} — ending ${activeShifts.length} active shift(s): [${activeShifts.map((s: any) => s.userId).join(", ")}]`)
 
     // ⚡ Bolt: Using $transaction to batch all individual shift updates into a single database transaction,
     // drastically reducing overhead from N+1 concurrent transactions during server shutdowns.
@@ -226,7 +336,7 @@ async function handleShutdownCommand(log: any, serverId: string) {
                 player: { name: "System Shutdown", id: shift.userId },
                 details: { duration }
             }).catch(() => {})
-            
+
             processMilestones(shift.userId, serverId).catch(() => {})
         }
 
@@ -256,10 +366,14 @@ async function handleShutdownCommand(log: any, serverId: string) {
     })
 }
 
-async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
+async function handleLogCommand(log: any, serverId: string, client: PrcClient, s: Awaited<ReturnType<typeof getServerSettings>>) {
     const fullCommand = log.Command || ""
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
-    const logMatch = fullCommand.match(/^:log\s+(.*)$/i)
+    const playerId = log.PlayerId
+
+    const prefix = s.inGameCommandPrefix
+    const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const logMatch = fullCommand.match(new RegExp(`^${escapedPrefix}\\s+(.*)$`, 'i'))
     if (!logMatch) return
 
     const parts = logMatch[1].trim().split(/\s+/)
@@ -279,17 +393,35 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
     const punishmentType = typeMap[typeArg]
     if (!punishmentType) return
 
+    // Per-type enable checks
+    if (typeArg === "warn" && !s.inGameWarnEnabled) return
+    if (typeArg === "kick" && !s.inGameKickEnabled) return
+    if (typeArg === "ban" && !s.inGameBanEnabled) return
+    if (typeArg === "bolo" && !s.inGameBoloEnabled) return
+
+    // Auth check: verify the command issuer is a registered staff member
+    const { member: moderatorMember } = await findMemberByRobloxId(serverId, String(playerId))
+    if (!moderatorMember) {
+        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not registered as staff.`).catch(() => { })
+        return
+    }
+
     try {
-        const players = await client.getPlayers().catch(() => [] as any[])
+        const players = await client.getPlayers().catch(() => [] as PrcPlayer[])
         let matches = players.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
         let target: { name: string; id: string } | null = null
 
         if (matches.length === 1) {
             target = parsePrcPlayer(matches[0].Player)
-        } else if (matches.length === 0) {
-            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
+        } else if (matches.length > 1) {
+            await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Multiple players match "${parts[1]}" — be more specific.`).catch(() => { })
+            return
+        } else {
+            // No in-game match: check recent leave logs
+            const lookbackMs = s.inGameTargetLookbackMinutes * 60 * 1000
+            const lookbackCutoff = new Date(Date.now() - lookbackMs)
             const recentLeaveLogs = await prisma.log.findMany({
-                where: { serverId, type: "join", isJoin: false, createdAt: { gte: thirtyMinutesAgo }, playerName: { contains: targetQuery } },
+                where: { serverId, type: "join", isJoin: false, createdAt: { gte: lookbackCutoff }, playerName: { contains: targetQuery } },
                 orderBy: { createdAt: "desc" },
                 take: 1
             })
@@ -297,12 +429,15 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
         }
 
         if (!target) {
-            // Un-cached full lookup via Roblox API (useful for offline users or custom manual commands)
-            const rbxUser = await getRobloxUser(parts[1])
-            if (rbxUser) {
-                target = { name: rbxUser.name, id: String(rbxUser.id) }
-            } else {
-                await client.executeCommand(`:pm ${playerName} [POW] Player not found on Roblox or in-game.`).catch(() => { })
+            if (s.inGameRobloxFallbackEnabled) {
+                // Un-cached full lookup via Roblox API (useful for offline users or custom manual commands)
+                const rbxUser = await getRobloxUser(parts[1])
+                if (rbxUser) {
+                    target = { name: rbxUser.name, id: String(rbxUser.id) }
+                }
+            }
+            if (!target) {
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Player not found on Roblox or in-game.`).catch(() => { })
                 return
             }
         }
@@ -311,13 +446,13 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
             data: {
                 serverId,
                 userId: target.id,
-                moderatorId: String(log.PlayerId),
+                moderatorId: moderatorMember.userId, // Clerk user ID for proper name resolution in the dashboard
                 type: punishmentType,
                 reason: `[Game Command by ${playerName}] ${reason}`
             }
         })
 
-        await client.executeCommand(`:pm ${playerName} [POW] ${punishmentType} logged for ${target.name}`).catch(() => { })
+        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} ${punishmentType} logged for ${target.name}`).catch(() => { })
 
         const engine = await getAutomationEngine()
         engine.trigger("PUNISHMENT_ISSUED", {
@@ -333,6 +468,7 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient) {
 
 export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
     const client = new PrcClient(apiKey)
+    const s = await getServerSettings(serverId)
 
     try {
         const v2 = await client.getServerV2({
@@ -455,10 +591,11 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
 
         // 2. Mod Calls
         if (v2.ModCalls && v2.ModCalls.length > 0) {
-            // Find recent mod calls for this server (within last hour)
-            const hourAgo = new Date(Date.now() - 60 * 60 * 1000)
+            // Find recent mod calls for this server (within configured dedupe window)
+            const dedupeWindowMs = s.modCallDedupeWindowMinutes * 60 * 1000
+            const windowStart = new Date(Date.now() - dedupeWindowMs)
             const recentCalls = await prisma.modCall.findMany({
-                where: { serverId, createdAt: { gte: hourAgo } },
+                where: { serverId, createdAt: { gte: windowStart } },
                 orderBy: { createdAt: "desc" }
             })
 
@@ -568,7 +705,7 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
             try {
                 const [rawModCalls, latestEmerCalls] = await Promise.all([
                     prisma.modCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: 400 }),
-                    prisma.emergencyCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: 50 })
+                    prisma.emergencyCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: s.sseEmergencySnapshotLimit })
                 ])
 
                 // Deduplicate ModCalls based on timestamp and callerId (to handle past loop duplicates safely)
@@ -590,14 +727,14 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                         } catch { }
                     }
                 }
-                const latestModCalls = Array.from(uniqueCallsMap.values()).slice(0, 50)
+                const latestModCalls = Array.from(uniqueCallsMap.values()).slice(0, s.sseModCallSnapshotLimit)
 
                 eventBus.emit(serverId, 'calls', { modCalls: latestModCalls, emergencyCalls: latestEmerCalls })
             } catch { /* non-critical */ }
         }
 
         // 4. Vehicles
-        if (v2.Vehicles && v2.Vehicles.length > 0) {
+        if (s.vehicleTrackingEnabled && v2.Vehicles && v2.Vehicles.length > 0) {
             const vehicleData = v2.Vehicles.map(v => {
                 const details = parsePrcPlayer(v.Owner)
                 return {
@@ -613,7 +750,6 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                     timestamp: v.Timestamp
                 }
             })
-            // For vehicles, we just snapshot for now (or could deduplicate like calls)
             if (vehicleData.length > 0) {
                 await prisma.vehicleLog.createMany({ data: vehicleData })
             }
@@ -637,9 +773,13 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                     if (type === "join") {
                         AutomationEngine.trigger(log.Join !== false ? "PLAYER_JOIN" : "PLAYER_LEAVE", context).catch(() => { })
                     } else if (type === "command") {
-                        const cmd = log.Command?.toLowerCase()
-                        if (cmd?.startsWith(":log ")) await handleLogCommand(log, serverId, client)
-                        if (cmd === ":shutdown" || cmd?.startsWith(":shutdown ")) await handleShutdownCommand(log, serverId)
+                        const cmd = log.Command?.toLowerCase() || ""
+                        const prefix = s.inGameCommandPrefix.toLowerCase()
+                        // Check for :log (or custom prefix) command
+                        if (cmd.startsWith(prefix + " ")) await handleLogCommand(log, serverId, client, s)
+                        // Check for shutdown command patterns
+                        const isShutdown = s.shutdownCommandPatterns.some(p => cmd === p.toLowerCase() || cmd.startsWith(p.toLowerCase() + " "))
+                        if (isShutdown) await handleShutdownCommand(log, serverId)
 
                         newCommandLogsForDetection.push({ ...log, playerName: log.PlayerName, playerId: log.PlayerId, command: log.Command })
                         AutomationEngine.trigger("COMMAND_USED", { ...context, details: { command: log.Command } }).catch(() => { })
@@ -675,14 +815,19 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                         const filteredLogs = logsWithMemberInfo.filter((item: any) => !item.isAuthorized).map((item: any) => item.log)
 
                         if (filteredLogs.length > 0) {
-                            const detector = new RaidDetectorService()
+                            const detector = new RaidDetectorService({
+                                sensitiveCommands: s.raidSensitiveCommands,
+                                massActionPatterns: s.raidMassActionPatterns,
+                                highFreqThreshold: s.raidHighFreqThreshold,
+                                highFreqWindowSeconds: s.raidHighFreqWindowSeconds
+                            })
                             const detections = detector.scan(filteredLogs, [])
                             if (detections.length > 0) {
                                 const staffPing = server.staffRoleId ? `<@&${server.staffRoleId}>` : "@staff"
                                 const embed = {
-                                    title: "⚠️ RAID DETECTION ALERT",
+                                    title: s.raidAlertEmbedTitle,
                                     description: `Suspicious activity detected on **${server.name}**\n${staffPing} Please investigate immediately.`,
-                                    color: 0xFF0000,
+                                    color: s.raidAlertEmbedColor,
                                     fields: detections.map((d: any) => ({
                                         name: `${d.type}`,
                                         value: `**Roblox User:** ${d.userName} (ID: \`${d.userId}\`)\n**Details:** ${d.details}`,

@@ -61,9 +61,12 @@ model Server {
   featureStaffReq        Boolean   @default(true)
   featurePermLog         Boolean   @default(true)
   
+  // Per-Server Behavior Settings
+  settings              String?  // JSON blob for ServerSettings
+
   // Operational Status
   botMissingPermissions Boolean  @default(false)
-  deletionScheduledAt   DateTime? 
+  deletionScheduledAt   DateTime?
   
   logs            Log[]
   punishments     Punishment[]

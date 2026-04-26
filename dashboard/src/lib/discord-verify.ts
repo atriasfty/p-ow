@@ -67,20 +67,25 @@ export async function verifyMemberRoles(userId: string, serverId: string) {
             { headers: { Authorization: `Bot ${botToken}` } }
         )
 
-        let bestRoleId: string | null = null
-        if (guildRolesRes.ok) {
-            const guildRoles: { id: string; position: number }[] = await guildRolesRes.json()
-            const rolePositionMap = new Map(guildRoles.map(r => [r.id, r.position]))
+        if (!guildRolesRes.ok) {
+            // Can't determine the user's role without guild role data — return existing record unchanged
+            // rather than wiping their role on a transient Discord API failure.
+            console.warn(`[JIT-Verify] Failed to fetch guild roles for ${server.discordGuildId}: ${guildRolesRes.status}. Skipping update.`)
+            return member
+        }
 
-            let bestPosition = -1
-            for (const panelRole of panelRoles) {
-                if (!panelRole.discordRoleId) continue
-                if (userDiscordRoles.includes(panelRole.discordRoleId)) {
-                    const position = rolePositionMap.get(panelRole.discordRoleId) || 0
-                    if (position > bestPosition) {
-                        bestPosition = position
-                        bestRoleId = panelRole.id
-                    }
+        const guildRoles: { id: string; position: number }[] = await guildRolesRes.json()
+        const rolePositionMap = new Map(guildRoles.map(r => [r.id, r.position]))
+
+        let bestRoleId: string | null = null
+        let bestPosition = -1
+        for (const panelRole of panelRoles) {
+            if (!panelRole.discordRoleId) continue
+            if (userDiscordRoles.includes(panelRole.discordRoleId)) {
+                const position = rolePositionMap.get(panelRole.discordRoleId) || 0
+                if (position > bestPosition) {
+                    bestPosition = position
+                    bestRoleId = panelRole.id
                 }
             }
         }

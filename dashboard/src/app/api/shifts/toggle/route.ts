@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { AutomationEngine } from "@/lib/automation-engine"
 import { verifyCsrf } from "@/lib/auth-permissions"
+import { getServerSettings } from "@/lib/server-settings"
 import { NextResponse } from "next/server"
 import { eventBus } from "@/lib/event-bus"
 
@@ -19,6 +20,55 @@ export async function POST(req: Request) {
         const { verifyPermissionOrError } = await import("@/lib/auth-permissions")
         const permError = await verifyPermissionOrError(session.user, serverId, "canShift")
         if (permError) return permError
+
+        const s = await getServerSettings(serverId)
+
+        // LOA block check
+        if (s.shiftLoaBlocks) {
+            const now = new Date()
+            const activeLoa = await prisma.leaveOfAbsence.findFirst({
+                where: {
+                    serverId,
+                    userId: session.user.id,
+                    status: 'approved',
+                    startDate: { lte: now },
+                    endDate: { gte: now }
+                }
+            })
+            if (activeLoa) {
+                return NextResponse.json({
+                    error: "You are on an approved Leave of Absence and cannot start a shift"
+                }, { status: 403 })
+            }
+        }
+
+        // Max on duty check
+        if (s.shiftMaxOnDuty > 0) {
+            const onDutyCount = await prisma.shift.count({ where: { serverId, endTime: null } })
+            if (onDutyCount >= s.shiftMaxOnDuty) {
+                return NextResponse.json({
+                    error: `Maximum staff on duty (${s.shiftMaxOnDuty}) already reached`
+                }, { status: 409 })
+            }
+        }
+
+        // Cooldown check
+        if (s.shiftCooldownMinutes > 0) {
+            const lastShift = await prisma.shift.findFirst({
+                where: { userId: session.user.id, serverId, endTime: { not: null } },
+                orderBy: { endTime: 'desc' }
+            })
+            if (lastShift?.endTime) {
+                const cooldownMs = s.shiftCooldownMinutes * 60 * 1000
+                const timeSinceEnd = Date.now() - lastShift.endTime.getTime()
+                if (timeSinceEnd < cooldownMs) {
+                    const remainingM = Math.ceil((cooldownMs - timeSinceEnd) / 60000)
+                    return NextResponse.json({
+                        error: `Shift cooldown active — wait ${remainingM} more minute(s) before going on duty`
+                    }, { status: 429 })
+                }
+            }
+        }
 
         // Ensure user doesn't already have an active shift on this server
         const existing = await prisma.shift.findFirst({

@@ -105,9 +105,11 @@ async function getOrVerifyMember(user: SessionUser, serverId: string) {
 
     if (!member) return null
 
-    // JIT Verification: If more than 5 minutes since last check, re-sync with Discord
-    const FIVE_MINUTES = 5 * 60 * 1000
-    const needsVerify = !member.lastVerifiedAt || (Date.now() - member.lastVerifiedAt.getTime() > FIVE_MINUTES)
+    // JIT Verification: re-sync with Discord if past the configured interval
+    const { getServerSettings } = await import("./server-settings")
+    const s = await getServerSettings(serverId)
+    const jitIntervalMs = s.jitVerifyIntervalMinutes * 60 * 1000
+    const needsVerify = !member.lastVerifiedAt || (Date.now() - member.lastVerifiedAt.getTime() > jitIntervalMs)
 
     if (needsVerify && member.discordId) {
         const { verifyMemberRoles } = await import("./discord-verify")

@@ -8,9 +8,25 @@ export interface Detection {
     pattern?: string;
 }
 
+interface RaidDetectorOptions {
+    sensitiveCommands?: string[];
+    massActionPatterns?: string[];
+    highFreqThreshold?: number;
+    highFreqWindowSeconds?: number;
+}
+
 export class RaidDetectorService {
-    private sensitiveCommands = [":ban", ":kick", ":kill", ":unadmin", ":unmod", ":down", ":pban"];
-    private massActionPatterns = [/all\b/i, /others\b/i, /random\b/i];
+    private sensitiveCommands: string[];
+    private massActionPatterns: RegExp[];
+    private highFreqThreshold: number;
+    private highFreqWindowSeconds: number;
+
+    constructor(options: RaidDetectorOptions = {}) {
+        this.sensitiveCommands = options.sensitiveCommands ?? [":ban", ":kick", ":kill", ":unadmin", ":unmod", ":down", ":pban"];
+        this.massActionPatterns = (options.massActionPatterns ?? ["all", "others", "random"]).map(p => new RegExp(`\\b${p}\\b`, 'i'));
+        this.highFreqThreshold = options.highFreqThreshold ?? 5;
+        this.highFreqWindowSeconds = options.highFreqWindowSeconds ?? 10;
+    }
 
     /**
      * Scans a batch of logs for raid patterns.
@@ -20,10 +36,10 @@ export class RaidDetectorService {
      */
     public scan(logs: any[], authorizedMemberIds?: string[]): Detection[] {
         const detections: Detection[] = [];
-        
+
         // 1. Detect Mass Actions
         detections.push(...this.detectMassActions(logs));
-        
+
         // 2. Detect High Frequency
         detections.push(...this.detectHighFrequency(logs));
 
@@ -60,7 +76,7 @@ export class RaidDetectorService {
         const massDetections: Detection[] = [];
         for (const log of logs) {
             if (!log.command) continue;
-            
+
             const isSensitive = this.sensitiveCommands.some(cmd => log.command.toLowerCase().startsWith(cmd));
             if (!isSensitive) continue;
 
@@ -85,7 +101,7 @@ export class RaidDetectorService {
         // Group logs by user
         for (const log of logs) {
             if (!log.playerId || !log.command || !log.prcTimestamp) continue;
-            
+
             const isSensitive = this.sensitiveCommands.some(cmd => log.command.toLowerCase().startsWith(cmd));
             if (!isSensitive) continue;
 
@@ -98,24 +114,23 @@ export class RaidDetectorService {
         // Check frequency per user
         for (const userId in userCommands) {
             const commands = userCommands[userId].sort((a, b) => b.prcTimestamp - a.prcTimestamp);
-            
-            // Check for > 5 commands in 10 seconds
+
             for (let i = 0; i < commands.length; i++) {
                 const windowStart = commands[i].prcTimestamp;
-                const windowCommands = commands.filter(c => 
-                    c.prcTimestamp <= windowStart && 
-                    c.prcTimestamp > windowStart - 10
+                const windowCommands = commands.filter(c =>
+                    c.prcTimestamp <= windowStart &&
+                    c.prcTimestamp > windowStart - this.highFreqWindowSeconds
                 );
 
-                if (windowCommands.length > 5) {
+                if (windowCommands.length > this.highFreqThreshold) {
                     highFreqDetections.push({
                         type: "HIGH_FREQUENCY",
                         userId: userId,
                         userName: commands[i].playerName || "Unknown",
-                        details: `High frequency detected: ${windowCommands.length} commands in 10 seconds`,
+                        details: `High frequency detected: ${windowCommands.length} commands in ${this.highFreqWindowSeconds} seconds`,
                         pattern: windowCommands.map(c => c.command).join(", ")
                     });
-                    break; // Only one detection per user per batch for now
+                    break; // Only one detection per user per batch
                 }
             }
         }

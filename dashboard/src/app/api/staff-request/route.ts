@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
 import { getServerOverride } from "@/lib/config"
+import { getServerSettings } from "@/lib/server-settings"
 import { NextResponse } from "next/server"
 
 // Rate limit: using in-memory map
@@ -42,9 +43,10 @@ export async function POST(req: Request) {
         // Update rate limit
         rateLimitMap.set(userId, now)
 
-        const server = await prisma.server.findUnique({
-            where: { id: serverId }
-        })
+        const [server, s] = await Promise.all([
+            prisma.server.findUnique({ where: { id: serverId } }),
+            getServerSettings(serverId)
+        ])
         if (!server) {
             return NextResponse.json({ error: "Server not found" }, { status: 404 })
         }
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
             }).join(",")
 
             // PM all staff - NO reason in Roblox message (censorship)
-            const pmCommand = `:pm ${staffNames} Staff request from ${requesterName}! Please get on duty. - Project Overwatch`
+            const pmCommand = `:pm ${staffNames} Staff request from ${requesterName}! Please get on duty. - ${s.staffRequestPmBranding}`
             await client.executeCommand(pmCommand)
         }
 
@@ -110,7 +112,7 @@ export async function POST(req: Request) {
                                     inline: false
                                 }
                             ],
-                            color: 0xFFA500, // Orange
+                            color: s.staffRequestEmbedColor,
                             timestamp: new Date().toISOString()
                         }]
                     }),

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { isServerMember } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { eventBus, ServerEventType, ServerEventMap } from "@/lib/event-bus"
+import { getServerSettings } from "@/lib/server-settings"
 
 // Tell Next.js to always run this route dynamically (never statically render it)
 export const dynamic = "force-dynamic"
@@ -37,6 +38,9 @@ export async function GET(
         session.user.robloxId
     ].filter((id): id is string => !!id)
 
+    // Load settings for this server (needed for snapshot window sizes)
+    const s = await getServerSettings(serverId)
+
     const stream = new ReadableStream({
         async start(controller) {
             const enqueue = (event: string, data: unknown) => {
@@ -49,11 +53,11 @@ export async function GET(
 
             // ---- Send initial snapshot ----
             try {
-                // 1. Player list (from latest player locations in DB within last 2 minutes)
+                // 1. Player list (from latest player locations in DB within configured window)
                 const recentLocations = await prisma.playerLocation.findMany({
                     where: {
                         serverId,
-                        createdAt: { gte: new Date(Date.now() - 2 * 60 * 1000) }
+                        createdAt: { gte: new Date(Date.now() - s.ssePlayerWindowMinutes * 60 * 1000) }
                     },
                     orderBy: { createdAt: "desc" },
                     distinct: ["userId"]
@@ -73,15 +77,8 @@ export async function GET(
                     enqueue("players", players)
                 }
 
-                // 2. Server stats (from server record + recent player count)
-                const server = await prisma.server.findUnique({ where: { id: serverId } })
-                if (server) {
-                    enqueue("server-stats", {
-                        players: recentLocations.length,
-                        maxPlayers: 0, // Will be overwritten on next sync
-                        online: recentLocations.length > 0
-                    })
-                }
+                // Server stats are seeded from SSR props (initialPlayers/initialMaxPlayers).
+                // The live log-syncer event overwrites them within ~4 seconds, so no snapshot needed here.
 
                 // 3. Current shift status
                 const activeShift = await prisma.shift.findFirst({
@@ -103,12 +100,12 @@ export async function GET(
                     prisma.modCall.findMany({
                         where: { serverId },
                         orderBy: { timestamp: "desc" },
-                        take: 50
+                        take: s.sseModCallSnapshotLimit
                     }),
                     prisma.emergencyCall.findMany({
                         where: { serverId },
                         orderBy: { timestamp: "desc" },
-                        take: 50
+                        take: s.sseEmergencySnapshotLimit
                     })
                 ])
                 enqueue("calls", { modCalls, emergencyCalls })
@@ -122,10 +119,10 @@ export async function GET(
                 // Emit a basic on-duty event the component can hydrate
                 enqueue("staff-on-duty-ids", staffIds)
 
-                // 6. SSD check
-                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                // 6. SSD check (within configured display window)
+                const sevenDaysAgo = new Date(Date.now() - s.ssdDisplayDays * 24 * 60 * 60 * 1000)
                 const ssdConfig = await prisma.config.findUnique({
-                    where: { key: `ssd:${serverId}` }
+                    where: { key: `ssd_${serverId}` }
                 })
                 let ssdEventData = null
                 if (ssdConfig) {

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin, isServerMember } from "@/lib/admin"
 import { verifyCsrf } from "@/lib/auth-permissions"
+import { getServerSettings } from "@/lib/server-settings"
 
 // GET /api/forms?serverId=xxx - List forms for a server
 export async function GET(request: NextRequest) {
@@ -144,6 +145,9 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Apply per-server defaults
+        const formSettings = await getServerSettings(serverId)
+
         // Atomic create using Prisma transaction (implicit in .create with nested writes)
         const form = await prisma.form.create({
             data: {
@@ -152,7 +156,8 @@ export async function POST(request: NextRequest) {
                 description: description || null,
                 createdBy: session.user.id,
                 publicShareId: crypto.randomUUID(),
-                editorShareId: crypto.randomUUID(), // Better than CUID for security 
+                editorShareId: crypto.randomUUID(), // Better than CUID for security
+                allowMultiple: formSettings.formDefaultAllowMultiple,
                 // @ts-ignore - Prisma nested create types can be tricky
                 sections: sectionsCreate
             },

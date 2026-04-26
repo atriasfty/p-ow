@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { verifyCsrf } from "@/lib/auth-permissions"
+import { getServerSettings } from "@/lib/server-settings"
 
 // POST /api/forms/[formId]/submit - Submit form response
 export async function POST(
@@ -51,6 +52,23 @@ export async function POST(
         const session = await getSession()
         if (form.requiresAuth && !session) {
             return NextResponse.json({ error: "Authentication required" }, { status: 401 })
+        }
+
+        // Check Roblox account age if configured
+        const formSubmitSettings = await getServerSettings(form.serverId)
+        if (formSubmitSettings.formMinRobloxAccountAgeDays > 0 && session?.user.robloxId) {
+            try {
+                const { getRobloxUserById } = await import("@/lib/roblox")
+                const robloxUser = await getRobloxUserById(Number(session.user.robloxId))
+                if (robloxUser?.created) {
+                    const accountAgeDays = Math.floor((Date.now() - new Date(robloxUser.created).getTime()) / (24 * 60 * 60 * 1000))
+                    if (accountAgeDays < formSubmitSettings.formMinRobloxAccountAgeDays) {
+                        return NextResponse.json({
+                            error: `Your Roblox account must be at least ${formSubmitSettings.formMinRobloxAccountAgeDays} days old to submit this form (your account is ${accountAgeDays} days old)`
+                        }, { status: 403 })
+                    }
+                }
+            } catch { /* Non-critical: allow submission if Roblox lookup fails */ }
         }
 
         // Check multiple submissions (only for completed ones)

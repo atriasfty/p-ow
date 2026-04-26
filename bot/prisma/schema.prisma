@@ -23,6 +23,9 @@ model Server {
   milestoneChannelId String? // Discord Channel ID for Milestone Announcements
   createdAt   DateTime @default(now())
   
+  // Per-Server Behavior Settings
+  settings              String?  // JSON blob for ServerSettings
+
   // Custom Server Configuration Overrides
   maxUploadSize         Int?      // In bytes
   staffRequestRateLimit Int?      // In milliseconds
