@@ -19,9 +19,10 @@ export async function verifyMemberRoles(userId: string, serverId: string) {
 
         if (!botToken) return null
 
-        // 1. Get member record to find Discord ID
+        // 1. Get member record to find Discord ID (include role so both return paths have the same shape)
         const member = await prisma.member.findUnique({
-            where: { userId_serverId: { userId, serverId } }
+            where: { userId_serverId: { userId, serverId } },
+            include: { role: true }
         })
 
         const discordId = member?.discordId
