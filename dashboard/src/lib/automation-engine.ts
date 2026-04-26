@@ -78,12 +78,14 @@ export class AutomationEngine {
             for (const automation of timeAutomations) {
                 try {
                     const conditionsStr = automation.conditions || "{}"
-                    let intervalMinutes = 60
+                    const { getServerSettings } = await import("@/lib/server-settings")
+                    const tickSettings = await getServerSettings(serverId)
+                    let intervalMinutes = tickSettings.timeIntervalDefaultMinutes
 
                     try {
                         const parsed = JSON.parse(conditionsStr)
                         if (!Array.isArray(parsed) && parsed.intervalMinutes) {
-                            intervalMinutes = parseInt(parsed.intervalMinutes) || 60
+                            intervalMinutes = parseInt(parsed.intervalMinutes) || tickSettings.timeIntervalDefaultMinutes
                         }
                     } catch (e) {
                         // Silent fail
@@ -283,7 +285,11 @@ export class AutomationEngine {
 
                 if (action.type === "KICK_PLAYER") command = `:kick ${quotedPid} ${content}`
                 else if (action.type === "BAN_PLAYER") command = `:ban ${quotedPid} ${content}`
-                else if (action.type === "ANNOUNCEMENT") command = `:m ${content}`
+                else if (action.type === "ANNOUNCEMENT") {
+                    const { getServerSettings } = await import("@/lib/server-settings")
+                    const automationSettings = await getServerSettings(context.serverId)
+                    command = `${automationSettings.announcementCommandPrefix} ${content}`
+                }
                 else if (action.type === "TELEPORT_PLAYER") {
                     const safeTarget = this.sanitizeCommandArg(target)
                     const quotedTarget = safeTarget.includes(" ") ? `"${safeTarget}"` : safeTarget

@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db"
 import { fetchAndSaveLogs } from "@/lib/log-syncer"
 import { trackSyncCycle } from "@/lib/metrics"
+import { getServerSettings } from "@/lib/server-settings"
+import { maybeRunDataCleanup } from "@/lib/data-cleanup"
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 
@@ -43,6 +45,12 @@ export async function POST(req: Request) {
                 // Tick automations (time-based)
                 const { AutomationEngine } = await import("@/lib/automation-engine")
                 await AutomationEngine.tick(server.id)
+
+                // Run data retention cleanup (throttled to once per day per server)
+                const serverSettings = await getServerSettings(server.id)
+                maybeRunDataCleanup(server.id, serverSettings.dataRetentionDays).catch(e =>
+                    console.error(`[SYNC] Cleanup error for ${server.id}:`, e)
+                )
 
                 trackSyncCycle(server.id, Date.now() - syncStart, res.newLogsCount, "ok")
                 syncResults.push({ serverId: server.id, newLogs: res.newLogsCount })

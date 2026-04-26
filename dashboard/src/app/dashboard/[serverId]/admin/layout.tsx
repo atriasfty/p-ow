@@ -3,7 +3,7 @@ import { isServerAdmin, isSuperAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert, Trophy, Key, CreditCard, ActivitySquare } from "lucide-react"
+import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert, Trophy, Key, CreditCard, ActivitySquare, SlidersHorizontal } from "lucide-react"
 import { checkConnectionRequirements } from "@/lib/auth-server"
 import { ConnectionRequirementScreen } from "@/components/auth/connection-requirement-screen"
 
@@ -47,6 +47,7 @@ export default async function AdminLayout({
 
     const tabs = [
         { name: "General", href: `/dashboard/${serverId}/admin`, icon: Settings },
+        { name: "Behavior", href: `/dashboard/${serverId}/admin/behavior`, icon: SlidersHorizontal },
         { name: "Quota", href: `/dashboard/${serverId}/admin/quota`, icon: Clock },
         { name: "Audit Log", href: `/dashboard/${serverId}/admin/audit`, icon: ActivitySquare },
         { name: "Members", href: `/dashboard/${serverId}/admin/members`, icon: Users },

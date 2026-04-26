@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { AutomationEngine } from "@/lib/automation-engine"
 import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
+import { getServerSettings } from "@/lib/server-settings"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -22,12 +23,50 @@ export async function POST(req: Request) {
         const permError = await verifyPermissionOrError(session.user, serverId, "canRequestLoa")
         if (permError) return permError
 
-        const server = await prisma.server.findUnique({
-            where: { id: serverId }
-        })
+        const [server, s] = await Promise.all([
+            prisma.server.findUnique({ where: { id: serverId } }),
+            getServerSettings(serverId)
+        ])
 
         if (!server) {
             return NextResponse.json({ error: "Server not found" }, { status: 404 })
+        }
+
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        // Validate max duration
+        if (s.loaMaxDurationDays > 0) {
+            const durationDays = Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000))
+            if (durationDays > s.loaMaxDurationDays) {
+                return NextResponse.json({
+                    error: `LOA duration cannot exceed ${s.loaMaxDurationDays} days`
+                }, { status: 400 })
+            }
+        }
+
+        // Validate minimum notice
+        if (s.loaMinNoticeDays > 0) {
+            const noticeDays = Math.ceil((start.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+            if (noticeDays < s.loaMinNoticeDays) {
+                return NextResponse.json({
+                    error: `LOA must be submitted at least ${s.loaMinNoticeDays} day(s) in advance`
+                }, { status: 400 })
+            }
+        }
+
+        // Validate max pending per member
+        if (s.loaMaxPendingPerMember > 0) {
+            const pendingCount = await prisma.leaveOfAbsence.count({
+                where: { serverId, userId: session.user.id, status: "pending" }
+            })
+            if (pendingCount >= s.loaMaxPendingPerMember) {
+                return NextResponse.json({
+                    error: `You already have ${pendingCount} pending LOA request(s) (max ${s.loaMaxPendingPerMember})`
+                }, { status: 400 })
+            }
         }
 
         // Create the LOA record
@@ -36,8 +75,8 @@ export async function POST(req: Request) {
                 serverId,
                 userId: session.user.id,
                 robloxUsername: session.user.robloxUsername || session.user.username || "Unknown",
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
+                startDate: start,
+                endDate: end,
                 reason,
                 status: "pending"
             }
@@ -54,17 +93,17 @@ export async function POST(req: Request) {
         })
 
         // Notify via bot queue if configured
-        const notifyChannelId = server.loaChannelId || server.staffRequestChannelId
+        const notifyChannelId = server.loaChannelId || (s.loaFallbackToStaffChannel ? server.staffRequestChannelId : null)
         if (notifyChannelId) {
             const payload = {
                 embeds: [
                     {
                         title: "📅 New LOA Request",
-                        color: 0x6366f1, // Indigo
+                        color: s.loaEmbedColor,
                         fields: [
                             { name: "Staff Member", value: session.user.robloxUsername || session.user.username || session.user.id, inline: true },
-                            { name: "Start Date", value: new Date(startDate).toLocaleDateString(), inline: true },
-                            { name: "End Date", value: new Date(endDate).toLocaleDateString(), inline: true },
+                            { name: "Start Date", value: start.toLocaleDateString(), inline: true },
+                            { name: "End Date", value: end.toLocaleDateString(), inline: true },
                             { name: "Reason", value: reason, inline: false }
                         ],
                         footer: { text: `LOA ID: ${loa.id} • Clerk ID: ${session.user.id}` },

@@ -11,15 +11,15 @@ export async function runDataCleanup(serverId: string, retentionDays: number): P
 
     console.log(`[CLEANUP] Server ${serverId}: deleting records older than ${retentionDays} days (before ${cutoff.toISOString()})`)
 
-    // Run sequentially — SQLite has a single write lock and parallel deletes
-    // will queue up and hold it for long enough to time-out unrelated queries.
-    await prisma.log.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } })
-    await prisma.playerLocation.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } })
-    await prisma.vehicleLog.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } })
-    await prisma.shift.deleteMany({ where: { serverId, endTime: { lt: cutoff } } })
-    await prisma.punishment.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } })
-    await prisma.modCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } })
-    await prisma.emergencyCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } })
+    await Promise.all([
+        prisma.log.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+        prisma.playerLocation.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+        prisma.vehicleLog.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+        prisma.shift.deleteMany({ where: { serverId, endTime: { lt: cutoff } } }),
+        prisma.punishment.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+        prisma.modCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+        prisma.emergencyCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+    ])
 
     console.log(`[CLEANUP] Server ${serverId}: cleanup complete`)
 }

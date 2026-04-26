@@ -77,15 +77,15 @@ const QUESTION_TYPES = [
     { value: "file_upload", label: "File Upload", icon: "📎" },
 ]
 
-function FastLiveInput({ 
-    value, 
-    onChange, 
-    onBlur, 
-    className, 
-    placeholder, 
-    multiline = false 
-}: { 
-    value: string; 
+function FastLiveInput({
+    value,
+    onChange,
+    onBlur,
+    className,
+    placeholder,
+    multiline = false
+}: {
+    value: string;
     onChange: (val: string) => void;
     onBlur?: () => void;
     className?: string;
@@ -94,9 +94,14 @@ function FastLiveInput({
 }) {
     const [localValue, setLocalValue] = useState(value)
     const typingTimeout = useRef<NodeJS.Timeout | null>(null)
-    
+    // True while a debounced onChange is pending — blocks incoming prop updates
+    // from overwriting what the user is mid-typing.
+    const hasPendingRef = useRef(false)
+
     useEffect(() => {
-        setLocalValue(value)
+        if (!hasPendingRef.current) {
+            setLocalValue(value)
+        }
     }, [value])
 
     const Component = multiline ? "textarea" : "input"
@@ -107,14 +112,15 @@ function FastLiveInput({
             onChange={(e: any) => {
                 const val = e.target.value
                 setLocalValue(val)
+                hasPendingRef.current = true
                 if (typingTimeout.current) clearTimeout(typingTimeout.current)
-                
-                // Extremely short debounce (100ms) handles live-collab without blocking the thread
                 typingTimeout.current = setTimeout(() => {
+                    hasPendingRef.current = false
                     onChange(val)
                 }, 100)
             }}
             onBlur={() => {
+                hasPendingRef.current = false
                 if (typingTimeout.current) clearTimeout(typingTimeout.current)
                 onChange(localValue)
                 if (onBlur) onBlur()
