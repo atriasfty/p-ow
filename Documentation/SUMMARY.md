@@ -25,6 +25,7 @@
 
 ## Advanced Features
 
+* [Behavior Settings](behavior-settings.md)
 * [Advanced Automations & Webhooks](advanced-automations-and-webhooks.md)
 * [White Label Bot](white-label-bot.md)
 * [POW Vision](pow-vision.md)

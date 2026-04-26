@@ -30,6 +30,10 @@ To track their activity, staff must "clock in" using the Shift system.
 **Forgetting to End a Shift?** If a staff member leaves the Mod Panel open indefinitely, their shift will continue running. However, if a Server Admin uses the `:shutdown` command in-game, POW will automatically end all active shifts for everyone.
 {% endhint %}
 
+{% hint style="info" %}
+**Advanced shift rules:** Admins can configure a shift cooldown, a maximum number of concurrent staff on duty, and an auto-end duration in **Admin Panel** → **Behavior** → **Shift & Duty**.
+{% endhint %}
+
 ## 2. Quotas
 
 Admins can set minimum time requirements (Quotas) for different staff ranks. 
@@ -44,7 +48,7 @@ Admins can set minimum time requirements (Quotas) for different staff ranks.
 * **Admin view:** Go to the **Admin Panel** > **Quota**. Here you can see a breakdown of every staff member, how many hours they've completed, and whether they've met their requirement for the week.
 
 {% hint style="info" %}
-**Weekly Reset:** Quotas automatically reset at the start of every week (Sunday night / Monday morning depending on timezone).
+**Configuring the quota period:** By default quotas reset every Monday at midnight UTC. You can change the reset day, timezone, and switch to monthly quotas in **Admin Panel** → **Behavior** → **Quota**. You can also set a minimum shift duration that must be met for a shift to count toward quota.
 {% endhint %}
 
 ## 3. Leave of Absence (LOA)
@@ -65,3 +69,7 @@ When a staff member cannot meet their quota due to real-life obligations, they c
 **When an LOA is Approved:**
 * The staff member is exempted from quotas for the duration of the LOA.
 * If an **On-LOA Role ID** is configured in Server Settings, the bot will automatically assign this role to them in Discord for the duration of their absence, and remove it when the LOA expires.
+
+{% hint style="info" %}
+**Advanced LOA rules:** You can set a maximum LOA duration, a minimum notice period, and limit how many pending LOAs a member can have at once in **Admin Panel** → **Behavior** → **Leave of Absence**. You can also prevent staff on LOA from starting a shift via the **Shift & Duty** section.
+{% endhint %}

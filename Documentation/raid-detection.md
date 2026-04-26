@@ -17,6 +17,8 @@ It looks for suspicious patterns, such as:
 
 **Crucially**, POW cross-references these actions against your registered staff list. If a staff member uses these commands, it's considered normal. If a non-staff member uses them, it triggers the detector.
 
+By default, 5 sensitive commands within a 10-second window triggers an alert. You can adjust these thresholds, the list of sensitive commands, and the alert embed appearance in **Admin Panel** → **Behavior** → **Raid Detection**.
+
 ## Configuring the Alert Channel
 
 To use Raid Detection, you must set up an Alert Channel so POW can notify your team.
@@ -36,4 +38,8 @@ When an alert triggers, your staff should:
 
 {% hint style="warning" %}
 **False Positives:** The detector relies on identifying non-staff using commands. If a staff member is *not* registered on the POW dashboard (or hasn't linked their Discord/Roblox correctly), their actions may trigger a false raid alert. Ensure all staff are properly set up!
+{% endhint %}
+
+{% hint style="info" %}
+**Tuning detection sensitivity:** If you're getting false positives from legitimate mass moderations, raise the threshold or extend the window. If raids slip through, lower the threshold. Go to **Admin Panel** → **Behavior** → **Raid Detection** to adjust these values.
 {% endhint %}
