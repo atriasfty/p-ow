@@ -16,6 +16,9 @@ export interface BotServerSettings {
     milestoneEmbedTitle: string
     quotaWeekStartDay: number       // 0 = Sunday, 1 = Monday
     quotaTimezone: string
+    loaMaxDurationDays: number      // 0 = unlimited
+    loaMinNoticeDays: number        // 0 = no minimum notice
+    loaMaxPendingPerMember: number  // 0 = unlimited
 }
 
 const BOT_DEFAULTS: BotServerSettings = {
@@ -29,7 +32,10 @@ const BOT_DEFAULTS: BotServerSettings = {
     milestoneEmbedColor: 0x10b981,
     milestoneEmbedTitle: '🏆 Weekly Milestone Reached',
     quotaWeekStartDay: 1,
-    quotaTimezone: 'UTC'
+    quotaTimezone: 'UTC',
+    loaMaxDurationDays: 0,
+    loaMinNoticeDays: 0,
+    loaMaxPendingPerMember: 0
 }
 
 // 60-second in-memory cache

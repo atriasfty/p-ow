@@ -1,18 +1,76 @@
 import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
+import { getBotServerSettings } from "../lib/server-settings"
+
+/**
+ * Compute the start of the current period using server settings.
+ * Replicates the logic from milestones.ts so the quota command respects the
+ * same week-start-day / timezone / period-type configuration.
+ */
+function getPeriodStart(weekStartDay: number, timezone: string): Date {
+    const now = new Date()
+
+    try {
+        const fmt = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            weekday: 'short',
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric'
+        })
+        const parts = fmt.formatToParts(now)
+        const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+        const weekdayStr = parts.find(p => p.type === 'weekday')?.value ?? 'Mon'
+        const currentDayOfWeek = weekdayMap[weekdayStr] ?? now.getDay()
+        const diff = (currentDayOfWeek - weekStartDay + 7) % 7
+
+        const year = parseInt(parts.find(p => p.type === 'year')?.value ?? '2000')
+        const month = parseInt(parts.find(p => p.type === 'month')?.value ?? '1')
+        const day = parseInt(parts.find(p => p.type === 'day')?.value ?? '1')
+
+        const startUtc = new Date(Date.UTC(year, month - 1, day - diff))
+        return getMidnightUTC(startUtc.getUTCFullYear(), startUtc.getUTCMonth() + 1, startUtc.getUTCDate(), timezone)
+    } catch {
+        // Fallback: Monday UTC midnight
+        const day = now.getUTCDay()
+        const diff = (day === 0 ? -6 : 1) - day
+        return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff))
+    }
+}
+
+function getMidnightUTC(year: number, month: number, day: number, timezone: string): Date {
+    const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
+
+    const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: false
+    })
+    const parts = fmt.formatToParts(noonUTC)
+
+    let h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '12')
+    const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0')
+    const s = parseInt(parts.find(p => p.type === 'second')?.value ?? '0')
+    if (h === 24) h = 0
+
+    const localDay = parseInt(parts.find(p => p.type === 'day')?.value ?? String(day))
+    const localMonth = parseInt(parts.find(p => p.type === 'month')?.value ?? String(month))
+    const localYear = parseInt(parts.find(p => p.type === 'year')?.value ?? String(year))
+
+    const localDateMs = Date.UTC(localYear, localMonth - 1, localDay)
+    const targetDateMs = Date.UTC(year, month - 1, day)
+    const dayDiffMs = localDateMs - targetDateMs
+
+    return new Date(noonUTC.getTime() - (h * 3600 + m * 60 + s) * 1000 - dayDiffMs)
+}
 
 export async function handleQuotaCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand()
-
-    // Get week start (Monday) in a timezone-independent way (UTC)
-    const now = new Date()
-    const day = now.getUTCDay()
-    // Calculate days to subtract to get to last Monday
-    // getUTCDay: 0=Sun, 1=Mon, ..., 6=Sat
-    // If today is Monday(1), diff is 0. If Sunday(0), diff is -6.
-    const diff = now.getUTCDate() - day + (day === 0 ? -6 : 1)
-
-    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), diff, 0, 0, 0, 0))
 
     if (subcommand === "status") {
         const discordId = interaction.user.id
@@ -30,6 +88,12 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
 
         const clerkUserIds = Array.from(new Set(members.map((m: any) => m.userId)))
 
+        // Load settings for the first server (used for week boundary — covers the common case
+        // where all a user's servers share the same quota settings)
+        const firstServerId = members[0].server.id
+        const s = await getBotServerSettings(firstServerId)
+        const weekStart = getPeriodStart(s.quotaWeekStartDay, s.quotaTimezone)
+
         // Get Global Time across all possible user IDs
         const shifts = await prisma.shift.findMany({
             where: {
@@ -39,21 +103,23 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             }
         })
 
+        // Active shifts: include ALL active shifts (regardless of start time) so long
+        // shifts that crossed the week boundary are still counted from weekStart onwards
         const activeShifts = await prisma.shift.findMany({
             where: {
                 userId: { in: clerkUserIds },
-                endTime: null,
-                startTime: { gte: weekStart }
+                endTime: null
             }
         })
 
         // Calc total seconds from completed shifts
         let totalSeconds = shifts.reduce((acc: number, s: any) => acc + (s.duration || 0), 0)
 
-        // Add active shifts current duration
+        // Add active shifts current duration, counting only time within the current period
         const currentTimestamp = Date.now()
         activeShifts.forEach((s: any) => {
-            totalSeconds += Math.floor((currentTimestamp - s.startTime.getTime()) / 1000)
+            const effectiveStart = Math.max(weekStart.getTime(), s.startTime.getTime())
+            totalSeconds += Math.floor((currentTimestamp - effectiveStart) / 1000)
         })
 
         const totalMinutes = Math.floor(totalSeconds / 60)
@@ -101,6 +167,19 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             return interaction.editReply({ content: "You do not have permission to view the global quota leaderboard." })
         }
 
+        // Load settings from the invoker's first server for period boundaries
+        const settingsServerId = authMembers[0]?.serverId
+        const s = settingsServerId ? await getBotServerSettings(settingsServerId) : null
+        const weekStart = s
+            ? getPeriodStart(s.quotaWeekStartDay, s.quotaTimezone)
+            : (() => {
+                // Fallback: Monday UTC midnight
+                const now = new Date()
+                const day = now.getUTCDay()
+                const diff = (day === 0 ? -6 : 1) - day
+                return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff))
+            })()
+
         // 1. Get all members across ALL servers (include discordId for mentions)
         const members = await prisma.member.findMany({
             include: { role: true, server: true }
@@ -138,6 +217,18 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
         const userTimeMap = new Map<string, number>()
         aggregations.forEach((a: any) => {
             userTimeMap.set(a.userId, Math.floor((a._sum.duration || 0) / 60))
+        })
+
+        // Add currently active shift time (only the portion within the current period)
+        const activeShifts = await prisma.shift.findMany({
+            where: { userId: { in: memberIds }, endTime: null },
+            select: { userId: true, startTime: true }
+        })
+        const currentTimestamp = Date.now()
+        activeShifts.forEach((a: any) => {
+            const effectiveStart = Math.max(weekStart.getTime(), a.startTime.getTime())
+            const activeMinutes = Math.floor((currentTimestamp - effectiveStart) / 1000 / 60)
+            userTimeMap.set(a.userId, (userTimeMap.get(a.userId) || 0) + activeMinutes)
         })
 
         // 3. Build leaderboard with all members

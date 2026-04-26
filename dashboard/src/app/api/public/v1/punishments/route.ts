@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db"
 import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
+import { getServerSettings } from "@/lib/server-settings"
 import { NextResponse } from "next/server"
 
 export async function GET(req: Request) {
@@ -43,6 +44,14 @@ export async function POST(req: Request) {
 
     const server = await resolveServer(auth.apiKey)
     if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
+
+    // Validate type against server-configured punishment types
+    const s = await getServerSettings(server.id)
+    if (!s.punishmentTypes.includes(type)) {
+        return withRateLimit(NextResponse.json({
+            error: `Invalid punishment type '${type}'. Allowed: ${s.punishmentTypes.join(", ")}`
+        }, { status: 400 }), auth)
+    }
 
     try {
         const punishment = await prisma.punishment.create({

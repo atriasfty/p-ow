@@ -2,6 +2,7 @@ import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord
 import { prisma } from "../client"
 import { resolveServer } from "../lib/server-resolve"
 import { findMemberByDiscordId } from "../lib/clerk"
+import { getBotServerSettings } from "../lib/server-settings"
 
 export async function handleLoaCommand(interaction: ChatInputCommandInteraction) {
     if (interaction.options.getSubcommand() === "request") {
@@ -38,6 +39,37 @@ export async function handleLoaCommand(interaction: ChatInputCommandInteraction)
 
         if (!member.role || !member.role.canRequestLoa) {
             return interaction.editReply("You do not have permission to request an LOA on this server.")
+        }
+
+        // Load server settings to enforce per-server rules
+        const s = await getBotServerSettings(serverId)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+
+        // Validate max duration
+        if (s.loaMaxDurationDays > 0) {
+            const durationDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
+            if (durationDays > s.loaMaxDurationDays) {
+                return interaction.editReply(`❌ LOA duration cannot exceed ${s.loaMaxDurationDays} days.`)
+            }
+        }
+
+        // Validate minimum notice
+        if (s.loaMinNoticeDays > 0) {
+            const noticeDays = Math.ceil((startDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+            if (noticeDays < s.loaMinNoticeDays) {
+                return interaction.editReply(`❌ LOA must be submitted at least ${s.loaMinNoticeDays} day(s) in advance.`)
+            }
+        }
+
+        // Validate max pending per member
+        if (s.loaMaxPendingPerMember > 0) {
+            const pendingCount = await prisma.leaveOfAbsence.count({
+                where: { serverId, userId: member.userId, status: "pending" }
+            })
+            if (pendingCount >= s.loaMaxPendingPerMember) {
+                return interaction.editReply(`❌ You already have ${pendingCount} pending LOA request(s) (max ${s.loaMaxPendingPerMember}).`)
+            }
         }
 
         // Create LOA
