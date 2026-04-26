@@ -86,6 +86,13 @@ export async function PUT(
 
         // Batch reorder: { sections: [{ id, order }] }
         if (body.sections && Array.isArray(body.sections)) {
+            const ids: string[] = body.sections.map((s: { id: string }) => s.id)
+            const validCount = await prisma.formSection.count({
+                where: { id: { in: ids }, formId }
+            })
+            if (validCount !== ids.length) {
+                return NextResponse.json({ error: "One or more sections do not belong to this form" }, { status: 403 })
+            }
             await prisma.$transaction(
                 body.sections.map((s: { id: string; order: number }) =>
                     prisma.formSection.update({
@@ -99,6 +106,12 @@ export async function PUT(
 
         // Update single section: { sectionId, title, description }
         if (body.sectionId) {
+            const belongs = await prisma.formSection.findFirst({
+                where: { id: body.sectionId, formId }
+            })
+            if (!belongs) {
+                return NextResponse.json({ error: "Section not found" }, { status: 404 })
+            }
             const section = await prisma.formSection.update({
                 where: { id: body.sectionId },
                 data: {
@@ -138,6 +151,11 @@ export async function DELETE(
         const canEdit = await canEditForm(session.user.id, formId)
         if (!canEdit) {
             return NextResponse.json({ error: "Access denied" }, { status: 403 })
+        }
+
+        const belongs = await prisma.formSection.findFirst({ where: { id: sectionId, formId } })
+        if (!belongs) {
+            return NextResponse.json({ error: "Section not found" }, { status: 404 })
         }
 
         await prisma.formSection.delete({ where: { id: sectionId } })

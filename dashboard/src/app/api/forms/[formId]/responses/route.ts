@@ -64,7 +64,7 @@ export async function GET(
         }
 
         const responses = await prisma.formResponse.findMany({
-            where: { formId, status: "completed" }, // Only show completed submissions, not drafts
+            where: { formId, status: { not: "draft" } }, // Show all reviewed + pending, exclude drafts
             include: {
                 answers: {
                     include: { question: true }
@@ -75,7 +75,7 @@ export async function GET(
             take: limit
         })
 
-        const total = await prisma.formResponse.count({ where: { formId, status: "completed" } })
+        const total = await prisma.formResponse.count({ where: { formId, status: { not: "draft" } } })
 
         // Collect respondent IDs
         const respondentIds = responses
@@ -105,6 +105,7 @@ export async function GET(
 
             return {
                 id: r.id,
+                status: r.status,
                 submittedAt: r.submittedAt,
                 respondent: form.isAnonymous ? { name: "Anonymous" } : (user ? {
                     id: r.respondentId,
@@ -164,9 +165,14 @@ export async function GET(
                 return row
             })
 
+            // Prefix formula-trigger characters to prevent CSV injection when opened in spreadsheets.
+            const csvCell = (v: any) => {
+                const s = String(v ?? "").replace(/"/g, '""')
+                return /^[=+\-@\t\r]/.test(s) ? `"'${s}"` : `"${s}"`
+            }
             const csv = [
                 headers.join(","),
-                ...rows.map((r: any[]) => r.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+                ...rows.map((r: any[]) => r.map(csvCell).join(","))
             ].join("\n")
 
             return new NextResponse(csv, {
@@ -188,7 +194,8 @@ export async function GET(
             form: {
                 id: form.id,
                 title: form.title,
-                isAnonymous: form.isAnonymous
+                isAnonymous: form.isAnonymous,
+                isApplication: form.isApplication
             }
         })
     } catch (error) {

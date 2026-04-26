@@ -12,13 +12,17 @@ export async function POST(req: Request) {
     if (!id) return withRateLimit(NextResponse.json({ error: "Missing punishment ID" }, { status: 400 }), auth)
 
     try {
-        const punishment = await prisma.punishment.update({
-            where: { id },
+        const punishment = await prisma.punishment.updateMany({
+            where: { id, serverId: auth.apiKey.serverId },
             data: { resolved: true }
         })
 
+        if (punishment.count === 0) {
+            return withRateLimit(NextResponse.json({ error: "Punishment not found or access denied" }, { status: 404 }), auth)
+        }
+
         await logApiAccess(auth.apiKey, "PUBLIC_PUNISHMENT_RESOLVED", `ID: ${id}`)
-        return withRateLimit(NextResponse.json({ success: true, id: punishment.id }), auth)
+        return withRateLimit(NextResponse.json({ success: true, id }), auth)
     } catch (e) {
         console.error("Public Punishment Resolve API Error:", e)
         return withRateLimit(NextResponse.json({ error: "Internal Error or Invalid ID" }, { status: 500 }), auth)

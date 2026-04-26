@@ -118,6 +118,13 @@ export async function PUT(
 
         // Batch reorder: { questions: [{ id, order, sectionId? }] }
         if (body.questions && Array.isArray(body.questions)) {
+            const ids: string[] = body.questions.map((q: { id: string }) => q.id)
+            const validCount = await prisma.formQuestion.count({
+                where: { id: { in: ids }, section: { formId } }
+            })
+            if (validCount !== ids.length) {
+                return NextResponse.json({ error: "One or more questions do not belong to this form" }, { status: 403 })
+            }
             await prisma.$transaction(
                 body.questions.map((q: { id: string; order: number; sectionId?: string }) =>
                     prisma.formQuestion.update({
@@ -138,6 +145,13 @@ export async function PUT(
 
             if (type && !QUESTION_TYPES.includes(type)) {
                 return NextResponse.json({ error: `Invalid type. Must be one of: ${QUESTION_TYPES.join(", ")}` }, { status: 400 })
+            }
+
+            const belongs = await prisma.formQuestion.findFirst({
+                where: { id: questionId, section: { formId } }
+            })
+            if (!belongs) {
+                return NextResponse.json({ error: "Question not found" }, { status: 404 })
             }
 
             const question = await prisma.formQuestion.update({
@@ -188,6 +202,13 @@ export async function DELETE(
         const canEdit = await canEditForm(session.user.id, formId)
         if (!canEdit) {
             return NextResponse.json({ error: "Access denied" }, { status: 403 })
+        }
+
+        const belongs = await prisma.formQuestion.findFirst({
+            where: { id: questionId, section: { formId } }
+        })
+        if (!belongs) {
+            return NextResponse.json({ error: "Question not found" }, { status: 404 })
         }
 
         await prisma.formQuestion.delete({ where: { id: questionId } })

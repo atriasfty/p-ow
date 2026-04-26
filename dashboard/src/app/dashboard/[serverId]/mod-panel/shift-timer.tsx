@@ -35,7 +35,7 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
         }
 
         const tick = () => {
-            const diff = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000)
+            const diff = Math.max(0, Math.floor((Date.now() - new Date(startTime).getTime()) / 1000))
             setElapsed(diff)
         }
 

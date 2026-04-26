@@ -51,8 +51,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Server not found" }, { status: 404 })
         }
 
-        // Get requester name
-        const requesterName = session.user.robloxUsername || session.user.name || session.user.username || "A staff member"
+        // Sanitize requester name — Clerk profile fields are attacker-controlled.
+        // Strip chars that enable PRC command injection or Discord markdown injection.
+        const sanitizePrc = (s: string) => s.replace(/[\r\n`'"\\;|&@*_~]/g, "").slice(0, 50)
+        const requesterName = sanitizePrc(session.user.robloxUsername || session.user.name || session.user.username || "A staff member")
 
         // 1. Get all online players with mod/admin perms and PM them
         const client = new PrcClient(server.apiUrl)
