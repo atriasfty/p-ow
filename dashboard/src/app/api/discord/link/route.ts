@@ -1,9 +1,12 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Ensure user's Discord ID is saved to their Member records
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden: CSRF check failed", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
