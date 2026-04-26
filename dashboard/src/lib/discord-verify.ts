@@ -47,9 +47,10 @@ export async function verifyMemberRoles(userId: string, serverId: string) {
 
         const guildMemberData = await guildMemberRes.json()
         const userDiscordRoles: string[] = guildMemberData.roles || []
+        const userRolesSet = new Set(userDiscordRoles)
 
         // 4. Handle terminated/suspended
-        if (server.terminatedRoleId && userDiscordRoles.includes(server.terminatedRoleId)) {
+        if (server.terminatedRoleId && userRolesSet.has(server.terminatedRoleId)) {
             console.log(`[JIT-Verify] User ${userId} is terminated, removing member record.`)
             await prisma.member.delete({
                 where: { userId_serverId: { userId, serverId } }
@@ -75,7 +76,7 @@ export async function verifyMemberRoles(userId: string, serverId: string) {
             let bestPosition = -1
             for (const panelRole of panelRoles) {
                 if (!panelRole.discordRoleId) continue
-                if (userDiscordRoles.includes(panelRole.discordRoleId)) {
+                if (userRolesSet.has(panelRole.discordRoleId)) {
                     const position = rolePositionMap.get(panelRole.discordRoleId) || 0
                     if (position > bestPosition) {
                         bestPosition = position

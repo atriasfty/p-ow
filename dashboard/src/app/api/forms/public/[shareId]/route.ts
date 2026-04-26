@@ -119,9 +119,10 @@ export async function GET(
 
             const memberData = await memberRes.json()
             const userDiscordRoles: string[] = memberData.roles || []
+            const userRolesSet = new Set(userDiscordRoles)
 
             // Check ignored roles (block if user has ANY of them)
-            const hasIgnoredRole = ignoredRoles.some(roleId => userDiscordRoles.includes(roleId))
+            const hasIgnoredRole = ignoredRoles.some(roleId => userRolesSet.has(roleId))
             if (hasIgnoredRole) {
                 return NextResponse.json({
                     error: "You do not have permission to access this form"
@@ -130,7 +131,7 @@ export async function GET(
 
             // Check required roles (must have at least ONE)
             if (requiredRoles.length > 0) {
-                const hasRequiredRole = requiredRoles.some(roleId => userDiscordRoles.includes(roleId))
+                const hasRequiredRole = requiredRoles.some(roleId => userRolesSet.has(roleId))
                 if (!hasRequiredRole) {
                     return NextResponse.json({
                         error: "You do not have the required role to access this form"
