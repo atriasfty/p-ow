@@ -6,13 +6,17 @@ const syncPort = process.env.SYNC_PORT || 41730;
 const dirName = require('path').basename(process.cwd());
 const envPrefix = process.env.APP_ENV || (dirName.includes('staging') ? 'staging' : (dirName.includes('prod') ? 'prod' : dirName));
 
+// Each environment gets its own symlink so prod and staging never share a cwd.
+// deploy.sh creates current-prod or current-staging — not a shared "current".
+const currentLink = `./current-${envPrefix}`;
+
 module.exports = {
   apps: [
     {
       name: `pow-dashboard-${envPrefix}`,
       script: 'npm',
       args: `run start -- -p ${port}`,
-      cwd: './current/dashboard',
+      cwd: `${currentLink}/dashboard`,
       watch: false,
       autorestart: true,
     },
@@ -20,7 +24,7 @@ module.exports = {
       name: `pow-bot-${envPrefix}`,
       script: 'npm',
       args: 'run start',
-      cwd: './current/bot',
+      cwd: `${currentLink}/bot`,
       watch: false,
       autorestart: true,
     },
@@ -28,7 +32,7 @@ module.exports = {
       name: `pow-sync-${envPrefix}`,
       script: 'node',
       args: 'src/sync-server.js',
-      cwd: './current/dashboard',
+      cwd: `${currentLink}/dashboard`,
       watch: false,
       autorestart: true,
       env: {
