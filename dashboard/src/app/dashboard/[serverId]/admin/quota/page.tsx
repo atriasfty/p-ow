@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { redirect } from "next/navigation"
 import { clerkClient } from "@clerk/nextjs/server"
+import { getServerSettings } from "@/lib/server-settings"
 import { Clock, Trophy, User, CheckCircle, XCircle, Calendar, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 
@@ -85,23 +86,48 @@ export default async function AdminQuotaPage({
         return user?.image || null
     }
 
+    // Get server settings for quota configuration
+    const settings = await getServerSettings(serverId)
+
     // Get all members with their roles
     const members = await prisma.member.findMany({
         where: { serverId },
         include: { role: true }
     })
 
-    // Calculate week start based on offset (Monday)
-    const now = new Date()
-    const currentDay = now.getDay()
-    const currentDiff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-    const weekStart = new Date(now)
-    weekStart.setDate(currentDiff + (weekOffset * 7))
-    weekStart.setHours(0, 0, 0, 0)
+    // Calculate period start using server-configured week start day and timezone
+    // Uses the same algorithm as milestones.ts to stay consistent
+    const getMidnightUTC = (tz: string, targetDate?: Date): Date => {
+        const ref = targetDate ?? new Date()
+        // Anchor at noon UTC to avoid DST ambiguity
+        const noon = new Date(Date.UTC(ref.getUTCFullYear(), ref.getUTCMonth(), ref.getUTCDate(), 12, 0, 0))
+        const parts = new Intl.DateTimeFormat("en-US", {
+            timeZone: tz,
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+        }).formatToParts(noon)
+        const get = (type: string) => parseInt(parts.find(p => p.type === type)?.value ?? "0")
+        const localHour = get("hour") === 24 ? 0 : get("hour")
+        const offsetMs = 12 * 3600_000 - (localHour * 3600_000 + get("minute") * 60_000 + get("second") * 1_000)
+        return new Date(noon.getTime() + offsetMs)
+    }
 
-    // Calculate week end
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekEnd.getDate() + 7)
+    const getPeriodStart = (weekStartDay: number, tz: string): Date => {
+        const today = getMidnightUTC(tz)
+        const todayDow = new Date(today.getTime() + 12 * 3600_000)
+            .toLocaleDateString("en-US", { weekday: "short", timeZone: tz })
+        const dowMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+        const todayDowNum = dowMap[todayDow] ?? 0
+        let diff = todayDowNum - weekStartDay
+        if (diff < 0) diff += 7
+        const start = new Date(today.getTime() - diff * 86_400_000)
+        return start
+    }
+
+    const periodStart = getPeriodStart(settings.quotaWeekStartDay, settings.quotaTimezone)
+    // Apply week offset (each offset step moves back by 7 days)
+    const weekStart = new Date(periodStart.getTime() + weekOffset * 7 * 86_400_000)
+    const weekEnd = new Date(weekStart.getTime() + (settings.quotaPeriodType === "monthly" ? 28 : 7) * 86_400_000)
 
     // Get shifts for this week - across ALL servers for global quota
     const shifts = await prisma.shift.findMany({

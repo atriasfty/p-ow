@@ -41,13 +41,6 @@ export function ShiftButton({ isActive, serverId, disabled }: ShiftButtonProps) 
         }
     }
 
-    // Since I don't see a /api/shifts/toggle route in the file list, 
-    // I should check if there's a more appropriate one or if I need to create it.
-    // Looking at the file list again, I see /api/admin/shifts/route.ts handles POST to end shifts.
-    // I will assume for a moment the original button used a specific route.
-    // WAIT - I just realized I can check the PRISM schema to see how shifts are structured.
-    // Actually, I'll just create a robust button that uses /api/shifts/toggle and then I'll CREATE that API route.
-
     return (
         <button
             onClick={toggleShift}

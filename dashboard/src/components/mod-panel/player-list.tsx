@@ -158,7 +158,7 @@ export function PlayerList({ serverId, players: externalPlayers }: { serverId: s
                     onClick={() => setShowAll(true)}
                     className="w-full py-2 text-[10px] text-zinc-500 hover:text-white transition-colors border border-dashed border-zinc-800 rounded-lg mt-2 font-mono uppercase tracking-widest"
                 >
-                    + {players.length - DISPLAY_LIMIT} more players offline/hidden
+                    + {players.length - DISPLAY_LIMIT} more players
                 </button>
             )}
         </div>
