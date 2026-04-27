@@ -1,0 +1,3 @@
+## 2024-05-18 - Resolve N+1 location fetches for Call Logs
+**Learning:** Sequential `.findFirst()` queries inside loops (such as mapping calls to fallback locations in `/api/calls/route.ts`) will cause N+1 query bottlenecks and significantly throttle endpoint response times, especially when processing numerous historical records. Wait times compound and can degrade UX.
+**Action:** Extract all entities needing supplementary data (e.g., coordinates) into an array, compute minimal date bounds using `max` and `min` timestamps, execute a single `findMany` query constrained by those date limits, and structure the result in an O(1) map grouped by user IDs to apply synchronously to all entities.
