@@ -207,7 +207,10 @@ You can set a **shorter** retention period than your plan default (for privacy),
 The following data is purged when records exceed the retention window:
 - Game logs (joins, kills, commands)
 - Shift records (completed shifts only — active shifts are never deleted)
-- Punishments
 - Mod calls and emergency calls
 - Player location snapshots
 - Vehicle logs
+
+{% hint style="info" %}
+**Punishments are exempt from the retention window.** Punishment records are always kept for a minimum of **2 years (730 days)** on all plans, including Free. This ensures moderation audit trails are preserved regardless of your subscription tier.
+{% endhint %}

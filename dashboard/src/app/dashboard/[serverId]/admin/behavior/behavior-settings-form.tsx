@@ -697,7 +697,7 @@ export function BehaviorSettingsForm({ serverId, initialSettings, plan, planRete
                         Your plan (<strong className="text-amber-200">{plan.toUpperCase()}</strong>) allows a maximum of <strong className="text-amber-200">{planRetentionCeiling} days</strong>.
                     </div>
                 </div>
-                <Field label="Retention Period (days)" hint={`Logs, shifts, punishments, and calls older than this are deleted. Max for your plan: ${planRetentionCeiling} days.`}>
+                <Field label="Retention Period (days)" hint={`Logs, shifts, and calls older than this are deleted. Punishments are always kept for a minimum of 2 years regardless of plan. Max for your plan: ${planRetentionCeiling} days.`}>
                     <div className="space-y-2">
                         <input
                             type="range"

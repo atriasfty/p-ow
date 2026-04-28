@@ -1,22 +1,27 @@
 import { prisma } from "./db"
 
+const PUNISHMENT_MIN_RETENTION_DAYS = 730 // 2 years, all plans
+
 /**
  * Delete records older than `retentionDays` for a specific server.
  * Only deletes completed shifts (endTime not null) to preserve active sessions.
+ * Punishments use a minimum of PUNISHMENT_MIN_RETENTION_DAYS regardless of plan.
  */
 export async function runDataCleanup(serverId: string, retentionDays: number): Promise<void> {
     if (retentionDays <= 0) return // 0 = no retention limit (never purge)
 
     const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
+    const punishmentRetentionDays = Math.max(retentionDays, PUNISHMENT_MIN_RETENTION_DAYS)
+    const punishmentCutoff = new Date(Date.now() - punishmentRetentionDays * 24 * 60 * 60 * 1000)
 
-    console.log(`[CLEANUP] Server ${serverId}: deleting records older than ${retentionDays} days (before ${cutoff.toISOString()})`)
+    console.log(`[CLEANUP] Server ${serverId}: deleting records older than ${retentionDays} days (before ${cutoff.toISOString()}), punishments older than ${punishmentRetentionDays} days`)
 
     await Promise.all([
         prisma.log.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.playerLocation.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.vehicleLog.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.shift.deleteMany({ where: { serverId, endTime: { lt: cutoff } } }),
-        prisma.punishment.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
+        prisma.punishment.deleteMany({ where: { serverId, createdAt: { lt: punishmentCutoff } } }),
         prisma.modCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.emergencyCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
     ])
