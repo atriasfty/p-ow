@@ -211,7 +211,12 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         } else if (s.shiftPmStatusFormat === 'remaining') {
             const quotaMinutes = member.role?.quotaMinutes || 0
             const quotaSeconds = quotaMinutes * 60
-            const remaining = Math.max(0, quotaSeconds - duration)
+            const weeklyTotal = await prisma.shift.aggregate({
+                where: { serverId, userId: member.userId, endTime: { not: null }, startTime: { gte: getWeekStart(s.quotaWeekStartDay, s.quotaTimezone) } },
+                _sum: { duration: true }
+            })
+            const totalSec = weeklyTotal._sum.duration || 0
+            const remaining = Math.max(0, quotaSeconds - totalSec)
             const rH = Math.floor(remaining / 3600)
             const rM = Math.floor((remaining % 3600) / 60)
             statusMsg = `Shift ended. Duration: ${h}h ${m}m | Remaining quota: ${rH}h ${rM}m`
@@ -238,13 +243,15 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         const weekStart = getWeekStart(s.quotaWeekStartDay, s.quotaTimezone)
 
         const weeklyShifts = await prisma.shift.findMany({
-            where: { serverId, userId: member.userId, startTime: { gte: weekStart } }
+            where: { serverId, userId: member.userId, endTime: { not: null }, startTime: { gte: weekStart } }
         })
 
-        let totalSeconds = 0
-        for (const shift of weeklyShifts) {
-            // Use nullish coalescing (not ||) so that a valid duration of 0 isn't treated as falsy
-            totalSeconds += shift.duration ?? (shift.endTime ? 0 : Math.floor((Date.now() - shift.startTime.getTime()) / 1000))
+        let totalSeconds = weeklyShifts.reduce((acc: number, shift: any) => acc + (shift.duration || 0), 0)
+
+        // Active shift may have started before weekStart — count only time within the current period
+        if (activeShift) {
+            const effectiveStart = Math.max(weekStart.getTime(), activeShift.startTime.getTime())
+            totalSeconds += Math.floor((Date.now() - effectiveStart) / 1000)
         }
 
         const totalH = Math.floor(totalSeconds / 3600)

@@ -34,7 +34,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
     const { punishmentEvents } = useServerEventsContext()
 
     // Pagination state
-    const [hasMore, setHasMore] = useState(true)
+    const [hasMore, setHasMore] = useState(initialPunishments.length >= 30)
     const [loadingMore, setLoadingMore] = useState(false)
     const [cursor, setCursor] = useState<string | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement>(null)

@@ -72,17 +72,54 @@ export async function handleLoaCommand(interaction: ChatInputCommandInteraction)
             }
         }
 
+        const robloxUsername = (member as any)._robloxUsername || interaction.user.username
+
         // Create LOA
-        await prisma.leaveOfAbsence.create({
+        const loa = await prisma.leaveOfAbsence.create({
             data: {
                 userId: member.userId,
                 serverId: member.server.id,
+                robloxUsername,
                 startDate,
                 endDate,
                 reason,
                 status: "pending"
             }
         })
+
+        // Notify admin channel if configured
+        const notifyChannelId = (member.server as any).loaChannelId
+        if (notifyChannelId) {
+            const payload = {
+                embeds: [{
+                    title: "📅 New LOA Request",
+                    color: 0x10b981,
+                    fields: [
+                        { name: "Staff Member", value: robloxUsername, inline: true },
+                        { name: "Start Date", value: startDate.toLocaleDateString(), inline: true },
+                        { name: "End Date", value: endDate.toLocaleDateString(), inline: true },
+                        { name: "Reason", value: reason, inline: false }
+                    ],
+                    footer: { text: `LOA ID: ${loa.id}` },
+                    timestamp: new Date().toISOString()
+                }],
+                components: [{
+                    type: 1,
+                    components: [
+                        { type: 2, style: 3, label: "Accept", custom_id: `loa_accept:${loa.id}` },
+                        { type: 2, style: 4, label: "Deny", custom_id: `loa_deny:${loa.id}` }
+                    ]
+                }]
+            }
+            await prisma.botQueue.create({
+                data: {
+                    serverId: member.server.id,
+                    type: "MESSAGE",
+                    targetId: notifyChannelId,
+                    content: JSON.stringify(payload)
+                }
+            })
+        }
 
         const embed = new EmbedBuilder()
             .setTitle("LOA Request Submitted")

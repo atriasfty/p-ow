@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
+import { getServerSettings } from "@/lib/server-settings"
 import { NextResponse } from "next/server"
 
 export async function GET(
@@ -22,6 +23,9 @@ export async function GET(
     }
 
     try {
+        const s = await getServerSettings(serverId)
+        const timezone = s.quotaTimezone || 'UTC'
+
         // Get shifts for the last 365 days
         const oneYearAgo = new Date()
         oneYearAgo.setDate(oneYearAgo.getDate() - 365)
@@ -40,11 +44,12 @@ export async function GET(
             }
         })
 
-        // Bucket by day (YYYY-MM-DD)
+        // Bucket by day in the server's configured timezone (en-CA gives YYYY-MM-DD)
+        const dateFmt = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
         const heatmap: Record<string, number> = {}
 
         shifts.forEach(shift => {
-            const date = shift.startTime.toISOString().split("T")[0]
+            const date = dateFmt.format(shift.startTime)
             heatmap[date] = (heatmap[date] || 0) + (shift.duration || 0)
         })
 

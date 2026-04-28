@@ -57,7 +57,7 @@ async function syncLogs() {
         // Suppress connection refused errors during dev if dashboard is down
         if (e.cause?.code === "ECONNREFUSED") return
         if (e.name === "AbortError") {
-            console.error("Failed to sync logs: sync cycle timed out (30s)")
+            console.error("Failed to sync logs: sync cycle timed out (120s)")
             return
         }
         console.error("Failed to sync logs:", e.message)

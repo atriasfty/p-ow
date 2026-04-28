@@ -129,10 +129,7 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             .setDescription(`**Total Time This Week:** ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`)
             .setColor(0x3b82f6)
 
-        if (members.length === 0) {
-            embed.addFields({ name: "Info", value: "You are not a member of any servers." })
-        } else {
-            members.forEach((m: any) => {
+        members.forEach((m: any) => {
                 const req = m.role?.quotaMinutes || 0
                 if (req === 0) return // Skip if no quota
 
@@ -148,7 +145,6 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
                     inline: true
                 })
             })
-        }
 
         await interaction.editReply({ embeds: [embed] })
 
@@ -180,8 +176,12 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
                 return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff))
             })()
 
-        // 1. Get all members across ALL servers (include discordId for mentions)
+        // Scope leaderboard to servers the invoking user belongs to
+        const authServerIds = authMembers.map((m: any) => m.serverId)
+
+        // 1. Get all members across the invoker's servers (include discordId for mentions)
         const members = await prisma.member.findMany({
+            where: { serverId: { in: authServerIds } },
             include: { role: true, server: true }
         })
 
