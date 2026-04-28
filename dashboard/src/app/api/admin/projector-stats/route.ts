@@ -56,9 +56,9 @@ export async function GET() {
         prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: false, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "kill", createdAt: { gte: startOfToday } } }),
-        prisma.shift.count({ where: { createdAt: { gte: startOfToday } } }),
+        prisma.shift.count({ where: { startTime: { gte: startOfToday } } }),
         prisma.shift.aggregate({
-            where: { createdAt: { gte: startOfToday }, endTime: { not: null } },
+            where: { startTime: { gte: startOfToday }, endTime: { not: null } },
             _sum: { duration: true },
         }),
         prisma.punishment.count({ where: { createdAt: { gte: startOfToday } } }),
