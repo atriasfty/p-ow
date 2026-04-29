@@ -5,6 +5,75 @@ import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 
+const POSTHOG_HOST = "https://a.atriasafety.org"
+
+interface PhLatency { avgMs: number; errorRate: number; totalCalls: number }
+
+async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLatency | null> {
+    const key = process.env.POSTHOG_PERSONAL_API_KEY
+    const proj = process.env.POSTHOG_PROJECT_ID
+    if (!key || !proj) return null
+
+    const after = new Date(Date.now() - minutes * 60 * 1000).toISOString()
+    try {
+        const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                query: {
+                    kind: "HogQLQuery",
+                    query: `SELECT avg(toFloat64OrZero(toString(properties.duration_ms))), countIf(properties.status != 'ok'), count() FROM events WHERE event = 'metric_api_call' AND properties.service = '${service}' AND timestamp > toDateTime('${after}') LIMIT 1`
+                }
+            }),
+            signal: AbortSignal.timeout(2500),
+            cache: "no-store",
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        const row = data.results?.[0]
+        if (!row || row[2] === 0) return null
+        return {
+            avgMs: Math.round(row[0] ?? 0),
+            errorRate: Math.round((row[1] / row[2]) * 100),
+            totalCalls: row[2],
+        }
+    } catch {
+        return null
+    }
+}
+
+async function querySyncHealth(minutes = 5): Promise<{ successRate: number; totalCycles: number } | null> {
+    const key = process.env.POSTHOG_PERSONAL_API_KEY
+    const proj = process.env.POSTHOG_PROJECT_ID
+    if (!key || !proj) return null
+
+    const after = new Date(Date.now() - minutes * 60 * 1000).toISOString()
+    try {
+        const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+                query: {
+                    kind: "HogQLQuery",
+                    query: `SELECT countIf(properties.status = 'ok'), count() FROM events WHERE event = 'metric_sync_cycle' AND timestamp > toDateTime('${after}') LIMIT 1`
+                }
+            }),
+            signal: AbortSignal.timeout(2500),
+            cache: "no-store",
+        })
+        if (!res.ok) return null
+        const data = await res.json()
+        const row = data.results?.[0]
+        if (!row || row[1] === 0) return null
+        return {
+            successRate: Math.round((row[0] / row[1]) * 100),
+            totalCycles: row[1],
+        }
+    } catch {
+        return null
+    }
+}
+
 export async function GET() {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
@@ -13,9 +82,13 @@ export async function GET() {
     const now = new Date()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    // 30s window captures ~7 sync cycles (syncer runs every ~4s)
     const recentWindow = new Date(now.getTime() - 30 * 1000)
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+
+    // Measure DB round-trip latency live
+    const dbPingStart = Date.now()
+    await prisma.$queryRaw`SELECT 1`
+    const dbLatencyMs = Date.now() - dbPingStart
 
     const [
         totalServers,
@@ -27,6 +100,7 @@ export async function GET() {
         emergencyCallsHour,
         activePlayers,
         activeServers,
+        lastSyncRecord,
         logsToday,
         joinsToday,
         leavesToday,
@@ -40,6 +114,9 @@ export async function GET() {
         totalLogsAll,
         totalPunishmentsAll,
         totalShiftsAll,
+        prcLatency,
+        powApiLatency,
+        syncHealth,
     ] = await Promise.all([
         prisma.server.count(),
         prisma.member.count(),
@@ -52,6 +129,7 @@ export async function GET() {
         prisma.emergencyCall.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.playerLocation.groupBy({ by: ["userId"], where: { createdAt: { gte: recentWindow } } }),
         prisma.playerLocation.groupBy({ by: ["serverId"], where: { createdAt: { gte: recentWindow } } }),
+        prisma.playerLocation.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
         prisma.log.count({ where: { createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: false, createdAt: { gte: startOfToday } } }),
@@ -76,15 +154,36 @@ export async function GET() {
         prisma.log.count(),
         prisma.punishment.count(),
         prisma.shift.count(),
+        queryPostHogLatency("prc"),
+        queryPostHogLatency("pow-api"),
+        querySyncHealth(),
     ])
 
     const byType = (groups: { type: string; _count: { id: number } }[], type: string) =>
         groups.find((g) => g.type === type)?._count.id ?? 0
 
+    const lastSyncAgeSeconds = lastSyncRecord
+        ? Math.round((now.getTime() - lastSyncRecord.createdAt.getTime()) / 1000)
+        : null
+
+    const staleServers = totalServers - activeServers.length
+
+    const alerts = {
+        emergencyActive: emergencyCallsHour > 0,
+        highModCalls: modCallsHour > 3,
+        syncStale: lastSyncAgeSeconds !== null && lastSyncAgeSeconds > 60,
+        dbSlow: dbLatencyMs > 300,
+        prcSlow: prcLatency !== null && prcLatency.avgMs > 2000,
+        prcErrors: prcLatency !== null && prcLatency.errorRate > 15,
+        syncUnhealthy: syncHealth !== null && syncHealth.successRate < 90,
+        manyServersDown: totalServers > 0 && staleServers > totalServers * 0.5,
+    }
+
     return NextResponse.json({
         platform: {
             totalServers,
             activeServers: activeServers.length,
+            staleServers,
             totalMembers,
             newMembersWeek,
         },
@@ -120,6 +219,16 @@ export async function GET() {
             totalPunishments: totalPunishmentsAll,
             totalShifts: totalShiftsAll,
         },
+        health: {
+            dbLatencyMs,
+            lastSyncAgeSeconds,
+            prcLatency,
+            powApiLatency,
+            syncHealth,
+            staleServers,
+        },
+        alerts,
+        anyAlert: Object.values(alerts).some(Boolean),
         updatedAt: now.toISOString(),
     })
 }
