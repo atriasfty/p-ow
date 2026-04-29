@@ -72,7 +72,7 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
         try {
             const res = await fetch("/api/admin/automations", {
                 method: "DELETE",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", "x-csrf-check": "1" },
                 body: JSON.stringify({ serverId: params.serverId, id })
             })
 
