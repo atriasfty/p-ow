@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 
 interface PhLatency { avgMs: number; errorRate: number; totalCalls: number }
 
@@ -78,6 +78,8 @@ export function ProjectorDisplay() {
     const [ready, setReady] = useState(false)
     const [error, setError] = useState(false)
     const [flashing, setFlashing] = useState(false)
+    const [alertPanel, setAlertPanel] = useState<{ lines: string[]; expiresAt: number } | null>(null)
+    const [alertCountdown, setAlertCountdown] = useState(0)
     const prevAlertRef = useRef(false)
     const time = useTime()
     const secs = useTicker(stats?.updatedAt ?? null)
@@ -101,15 +103,41 @@ export function ProjectorDisplay() {
         return () => clearInterval(id)
     }, [fetchStats])
 
-    // Trigger violent flash when alert state newly becomes true
+    const ALERT_LABELS: Record<string, string> = useMemo(() => ({
+        emergencyActive: "Emergency calls active in the last hour",
+        syncStale: "Sync pipeline stale — no PlayerLocation updates in >60s",
+        dbSlow: "Database latency critical — queries exceeding 300ms",
+        prcSlow: "PRC API critically slow — avg response >2000ms",
+        prcErrors: "PRC API error rate above 15% (403s excluded)",
+        syncUnhealthy: "Sync cycle success rate below 90%",
+        manyServersDown: "Mass outage — >50% of registered servers stale",
+    }), [])
+
+    // Trigger violent flash + error panel when alert state newly becomes true
     useEffect(() => {
         const isAlert = stats?.anyAlert ?? false
         if (isAlert && !prevAlertRef.current) {
             setFlashing(true)
             setTimeout(() => setFlashing(false), 5000)
+            const activeLines = Object.entries(stats?.alerts ?? {})
+                .filter(([, v]) => v)
+                .map(([k]) => ALERT_LABELS[k] ?? k)
+            setAlertPanel({ lines: activeLines, expiresAt: Date.now() + 60_000 })
         }
         prevAlertRef.current = isAlert
-    }, [stats?.anyAlert])
+    }, [stats?.anyAlert, stats?.alerts, ALERT_LABELS])
+
+    // Countdown ticker for the alert panel
+    useEffect(() => {
+        if (!alertPanel) return
+        const id = setInterval(() => {
+            const remaining = Math.max(0, Math.ceil((alertPanel.expiresAt - Date.now()) / 1000))
+            setAlertCountdown(remaining)
+            if (remaining === 0) setAlertPanel(null)
+        }, 1000)
+        setAlertCountdown(Math.max(0, Math.ceil((alertPanel.expiresAt - Date.now()) / 1000)))
+        return () => clearInterval(id)
+    }, [alertPanel])
 
     const s = stats
     const h = s?.health
@@ -197,7 +225,7 @@ export function ProjectorDisplay() {
                             <Big value={fmt(s.live.activePlayers)} label="Players In-Game" />
                             <Big value={fmt(s.live.staffOnDuty)} label="Staff On Duty" color={s.live.staffOnDuty === 0 && s.platform.activeServers > 0 ? "text-yellow-400" : "text-white"} />
                             <Row label="Active LOAs" value={fmt(s.live.activeLoas)} />
-                            <Row label="Mod Calls (1h)" value={fmt(s.live.modCallsHour)} color={s.alerts.highModCalls ? "text-red-400" : "text-white"} />
+                            <Row label="Mod Calls (1h)" value={fmt(s.live.modCallsHour)} />
                             <Row label="Emergency Calls (1h)" value={fmt(s.live.emergencyCallsHour)} color={s.alerts.emergencyActive ? "text-red-400" : "text-white"} />
 
                             <SectionLabel>Shifts · Today</SectionLabel>
@@ -276,6 +304,23 @@ export function ProjectorDisplay() {
                     </>
                 )}
             </main>
+
+            {/* ── Alert detail panel — visible for 60s after trigger ── */}
+            {alertPanel && (
+                <div className="flex-none border-t border-red-500/40 px-6 py-2 flex items-start gap-4">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-red-400 flex-none mt-0.5 animate-pulse">
+                        ● Issues
+                    </span>
+                    <div className="flex-1 flex flex-wrap gap-x-8 gap-y-0.5">
+                        {alertPanel.lines.map((line, i) => (
+                            <span key={i} className="text-[10px] text-red-300">{line}</span>
+                        ))}
+                    </div>
+                    <span className="text-[9px] text-red-400/40 tabular-nums flex-none">
+                        clears in {alertCountdown}s
+                    </span>
+                </div>
+            )}
 
             {/* ── Footer ── */}
             <footer className="flex-none flex items-center justify-between px-6 py-1.5 border-t border-white/8">

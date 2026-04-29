@@ -15,6 +15,8 @@ async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLate
     if (!key || !proj) return null
 
     const after = new Date(Date.now() - minutes * 60 * 1000).toISOString()
+    // 403s are expected auth rejections, not service failures — exclude from error rate
+    const errorCondition = `properties.status != 'ok' AND toInt64OrZero(toString(properties.http_status)) != 403`
     try {
         const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
             method: "POST",
@@ -22,7 +24,7 @@ async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLate
             body: JSON.stringify({
                 query: {
                     kind: "HogQLQuery",
-                    query: `SELECT avg(toFloat64OrZero(toString(properties.duration_ms))), countIf(properties.status != 'ok'), count() FROM events WHERE event = 'metric_api_call' AND properties.service = '${service}' AND timestamp > toDateTime('${after}') LIMIT 1`
+                    query: `SELECT avg(toFloat64OrZero(toString(properties.duration_ms))), countIf(${errorCondition}), count() FROM events WHERE event = 'metric_api_call' AND properties.service = '${service}' AND timestamp > toDateTime('${after}') LIMIT 1`
                 }
             }),
             signal: AbortSignal.timeout(2500),
@@ -170,7 +172,6 @@ export async function GET() {
 
     const alerts = {
         emergencyActive: emergencyCallsHour > 0,
-        highModCalls: modCallsHour > 3,
         syncStale: lastSyncAgeSeconds !== null && lastSyncAgeSeconds > 60,
         dbSlow: dbLatencyMs > 300,
         prcSlow: prcLatency !== null && prcLatency.avgMs > 2000,
