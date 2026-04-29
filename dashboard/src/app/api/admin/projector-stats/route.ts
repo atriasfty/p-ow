@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { isSuperAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import os from "os"
 
 export const dynamic = "force-dynamic"
 
@@ -75,7 +76,17 @@ export async function GET() {
     const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const recentWindow = new Date(now.getTime() - 30 * 1000)
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
-    const twoHoursAgo = new Date(now.getTime() - 120 * 60 * 1000)
+
+    // VPS system stats (synchronous — no I/O)
+    const cpuCount = os.cpus().length
+    const loadAvg = os.loadavg() // [1m, 5m, 15m]
+    const cpuLoadPct = Math.min(100, Math.round((loadAvg[0] / cpuCount) * 100))
+    const totalMemBytes = os.totalmem()
+    const freeMemBytes = os.freemem()
+    const usedMemBytes = totalMemBytes - freeMemBytes
+    const memUsedPct = Math.round((usedMemBytes / totalMemBytes) * 100)
+    const processRssBytes = process.memoryUsage().rss
+    const processUptimeSeconds = Math.round(process.uptime())
 
     // Live DB round-trip latency
     const dbPingStart = Date.now()
@@ -91,26 +102,18 @@ export async function GET() {
         modCallsHour,
         emergencyCallsHour,
         activePlayers,
-        activeServersRaw,
-        staffedActiveServers,
+        activeServers,
         lastSyncRecord,
         logsToday,
         joinsToday,
         leavesToday,
         killsToday,
-        joinsLastHour,
-        joinsPrevHour,
         shiftsStartedToday,
         shiftDurationToday,
         punishmentsToday,
-        punishmentsThisHour,
         punishmentsByTypeToday,
         punishmentsWeek,
         punishmentsByTypeWeek,
-        botQueuePending,
-        botQueueFailed,
-        formSubmissionsToday,
-        securityEventsToday,
         totalLogsAll,
         totalPunishmentsAll,
         totalShiftsAll,
@@ -129,23 +132,17 @@ export async function GET() {
         prisma.emergencyCall.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.playerLocation.groupBy({ by: ["userId"], where: { createdAt: { gte: recentWindow } } }),
         prisma.playerLocation.groupBy({ by: ["serverId"], where: { createdAt: { gte: recentWindow } } }),
-        // Which of those active servers has at least one active shift
-        prisma.shift.groupBy({ by: ["serverId"], where: { endTime: null } }),
         prisma.playerLocation.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
         prisma.log.count({ where: { createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: false, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "kill", createdAt: { gte: startOfToday } } }),
-        // Join rate trend: last hour vs the hour before
-        prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: oneHourAgo } } }),
-        prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: twoHoursAgo, lt: oneHourAgo } } }),
         prisma.shift.count({ where: { startTime: { gte: startOfToday } } }),
         prisma.shift.aggregate({
             where: { startTime: { gte: startOfToday }, endTime: { not: null } },
             _sum: { duration: true },
         }),
         prisma.punishment.count({ where: { createdAt: { gte: startOfToday } } }),
-        prisma.punishment.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.punishment.groupBy({
             by: ["type"],
             where: { createdAt: { gte: startOfToday } },
@@ -157,10 +154,6 @@ export async function GET() {
             where: { createdAt: { gte: startOfWeek } },
             _count: { id: true },
         }),
-        prisma.botQueue.count({ where: { status: "PENDING" } }),
-        prisma.botQueue.count({ where: { status: "FAILED", createdAt: { gte: oneHourAgo } } }),
-        prisma.formResponse.count({ where: { submittedAt: { gte: startOfToday } } }),
-        prisma.securityLog.count({ where: { createdAt: { gte: startOfToday } } }),
         prisma.log.count(),
         prisma.punishment.count(),
         prisma.shift.count(),
@@ -172,40 +165,28 @@ export async function GET() {
     const byType = (groups: { type: string; _count: { id: number } }[], type: string) =>
         groups.find((g) => g.type === type)?._count.id ?? 0
 
-    const activeServerIds = new Set(activeServersRaw.map((s) => s.serverId))
-    const staffedServerIds = new Set(staffedActiveServers.map((s) => s.serverId))
-    const unmannedServers = [...activeServerIds].filter((id) => !staffedServerIds.has(id)).length
-
     const lastSyncAgeSeconds = lastSyncRecord
         ? Math.round((now.getTime() - lastSyncRecord.createdAt.getTime()) / 1000)
         : null
-    const staleServers = totalServers - activeServerIds.size
-
-    // Join rate trend: positive = more joins this hour than last hour
-    const joinTrendPct = joinsPrevHour > 0
-        ? Math.round(((joinsLastHour - joinsPrevHour) / joinsPrevHour) * 100)
-        : null
-
-    const processUptimeSeconds = Math.round(process.uptime())
+    const staleServers = totalServers - activeServers.length
 
     const alerts = {
         emergencyActive: emergencyCallsHour > 0,
-        unmannedServers: unmannedServers > 0,
         syncStale: lastSyncAgeSeconds !== null && lastSyncAgeSeconds > 60,
         dbSlow: dbLatencyMs > 300,
         prcSlow: prcLatency !== null && prcLatency.avgMs > 2000,
         prcErrors: prcLatency !== null && prcLatency.errorRate > 15,
         syncUnhealthy: syncHealth !== null && syncHealth.successRate < 90,
         manyServersDown: totalServers > 0 && staleServers > totalServers * 0.5,
-        botQueueStuck: botQueuePending > 10 || botQueueFailed > 5,
+        cpuHigh: cpuLoadPct > 85,
+        memHigh: memUsedPct > 90,
     }
 
     return NextResponse.json({
         platform: {
             totalServers,
-            activeServers: activeServerIds.size,
+            activeServers: activeServers.length,
             staleServers,
-            unmannedServers,
             totalMembers,
             newMembersWeek,
         },
@@ -215,8 +196,6 @@ export async function GET() {
             activeLoas,
             modCallsHour,
             emergencyCallsHour,
-            punishmentsThisHour,
-            joinTrendPct,
         },
         today: {
             logs: logsToday,
@@ -230,8 +209,6 @@ export async function GET() {
             kicks: byType(punishmentsByTypeToday, "Kick"),
             bans: byType(punishmentsByTypeToday, "Ban"),
             banBolos: byType(punishmentsByTypeToday, "Ban Bolo"),
-            formSubmissions: formSubmissionsToday,
-            securityEvents: securityEventsToday,
         },
         week: {
             punishments: punishmentsWeek,
@@ -239,10 +216,6 @@ export async function GET() {
             kicks: byType(punishmentsByTypeWeek, "Kick"),
             bans: byType(punishmentsByTypeWeek, "Ban"),
             banBolos: byType(punishmentsByTypeWeek, "Ban Bolo"),
-        },
-        ops: {
-            botQueuePending,
-            botQueueFailed,
         },
         db: {
             totalLogs: totalLogsAll,
@@ -252,11 +225,23 @@ export async function GET() {
         health: {
             dbLatencyMs,
             lastSyncAgeSeconds,
+            staleServers,
             prcLatency,
             powApiLatency,
             syncHealth,
-            staleServers,
             processUptimeSeconds,
+            vps: {
+                cpuCount,
+                cpuLoadPct,
+                loadAvg1m: Math.round(loadAvg[0] * 100) / 100,
+                loadAvg5m: Math.round(loadAvg[1] * 100) / 100,
+                loadAvg15m: Math.round(loadAvg[2] * 100) / 100,
+                totalMemMb: Math.round(totalMemBytes / 1024 / 1024),
+                usedMemMb: Math.round(usedMemBytes / 1024 / 1024),
+                freeMemMb: Math.round(freeMemBytes / 1024 / 1024),
+                memUsedPct,
+                processRssMb: Math.round(processRssBytes / 1024 / 1024),
+            },
         },
         alerts,
         anyAlert: Object.values(alerts).some(Boolean),
