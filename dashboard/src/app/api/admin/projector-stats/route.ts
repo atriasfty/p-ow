@@ -15,7 +15,7 @@ async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLate
     if (!key || !proj) return null
 
     const after = new Date(Date.now() - minutes * 60 * 1000).toISOString()
-    // 403s are expected auth rejections, not service failures — exclude from error rate
+    // 403s are expected auth rejections — excluded from error rate
     const errorCondition = `properties.status != 'ok' AND toInt64OrZero(toString(properties.http_status)) != 403`
     try {
         const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
@@ -34,14 +34,8 @@ async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLate
         const data = await res.json()
         const row = data.results?.[0]
         if (!row || row[2] === 0) return null
-        return {
-            avgMs: Math.round(row[0] ?? 0),
-            errorRate: Math.round((row[1] / row[2]) * 100),
-            totalCalls: row[2],
-        }
-    } catch {
-        return null
-    }
+        return { avgMs: Math.round(row[0] ?? 0), errorRate: Math.round((row[1] / row[2]) * 100), totalCalls: row[2] }
+    } catch { return null }
 }
 
 async function querySyncHealth(minutes = 5): Promise<{ successRate: number; totalCycles: number } | null> {
@@ -67,13 +61,8 @@ async function querySyncHealth(minutes = 5): Promise<{ successRate: number; tota
         const data = await res.json()
         const row = data.results?.[0]
         if (!row || row[1] === 0) return null
-        return {
-            successRate: Math.round((row[0] / row[1]) * 100),
-            totalCycles: row[1],
-        }
-    } catch {
-        return null
-    }
+        return { successRate: Math.round((row[0] / row[1]) * 100), totalCycles: row[1] }
+    } catch { return null }
 }
 
 export async function GET() {
@@ -86,8 +75,9 @@ export async function GET() {
     const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const recentWindow = new Date(now.getTime() - 30 * 1000)
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+    const twoHoursAgo = new Date(now.getTime() - 120 * 60 * 1000)
 
-    // Measure DB round-trip latency live
+    // Live DB round-trip latency
     const dbPingStart = Date.now()
     await prisma.$queryRaw`SELECT 1`
     const dbLatencyMs = Date.now() - dbPingStart
@@ -101,18 +91,26 @@ export async function GET() {
         modCallsHour,
         emergencyCallsHour,
         activePlayers,
-        activeServers,
+        activeServersRaw,
+        staffedActiveServers,
         lastSyncRecord,
         logsToday,
         joinsToday,
         leavesToday,
         killsToday,
+        joinsLastHour,
+        joinsPrevHour,
         shiftsStartedToday,
         shiftDurationToday,
         punishmentsToday,
+        punishmentsThisHour,
         punishmentsByTypeToday,
         punishmentsWeek,
         punishmentsByTypeWeek,
+        botQueuePending,
+        botQueueFailed,
+        formSubmissionsToday,
+        securityEventsToday,
         totalLogsAll,
         totalPunishmentsAll,
         totalShiftsAll,
@@ -131,17 +129,23 @@ export async function GET() {
         prisma.emergencyCall.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.playerLocation.groupBy({ by: ["userId"], where: { createdAt: { gte: recentWindow } } }),
         prisma.playerLocation.groupBy({ by: ["serverId"], where: { createdAt: { gte: recentWindow } } }),
+        // Which of those active servers has at least one active shift
+        prisma.shift.groupBy({ by: ["serverId"], where: { endTime: null } }),
         prisma.playerLocation.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
         prisma.log.count({ where: { createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: false, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "kill", createdAt: { gte: startOfToday } } }),
+        // Join rate trend: last hour vs the hour before
+        prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: oneHourAgo } } }),
+        prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: twoHoursAgo, lt: oneHourAgo } } }),
         prisma.shift.count({ where: { startTime: { gte: startOfToday } } }),
         prisma.shift.aggregate({
             where: { startTime: { gte: startOfToday }, endTime: { not: null } },
             _sum: { duration: true },
         }),
         prisma.punishment.count({ where: { createdAt: { gte: startOfToday } } }),
+        prisma.punishment.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.punishment.groupBy({
             by: ["type"],
             where: { createdAt: { gte: startOfToday } },
@@ -153,6 +157,10 @@ export async function GET() {
             where: { createdAt: { gte: startOfWeek } },
             _count: { id: true },
         }),
+        prisma.botQueue.count({ where: { status: "PENDING" } }),
+        prisma.botQueue.count({ where: { status: "FAILED", createdAt: { gte: oneHourAgo } } }),
+        prisma.formResponse.count({ where: { submittedAt: { gte: startOfToday } } }),
+        prisma.securityLog.count({ where: { createdAt: { gte: startOfToday } } }),
         prisma.log.count(),
         prisma.punishment.count(),
         prisma.shift.count(),
@@ -164,27 +172,40 @@ export async function GET() {
     const byType = (groups: { type: string; _count: { id: number } }[], type: string) =>
         groups.find((g) => g.type === type)?._count.id ?? 0
 
+    const activeServerIds = new Set(activeServersRaw.map((s) => s.serverId))
+    const staffedServerIds = new Set(staffedActiveServers.map((s) => s.serverId))
+    const unmannedServers = [...activeServerIds].filter((id) => !staffedServerIds.has(id)).length
+
     const lastSyncAgeSeconds = lastSyncRecord
         ? Math.round((now.getTime() - lastSyncRecord.createdAt.getTime()) / 1000)
         : null
+    const staleServers = totalServers - activeServerIds.size
 
-    const staleServers = totalServers - activeServers.length
+    // Join rate trend: positive = more joins this hour than last hour
+    const joinTrendPct = joinsPrevHour > 0
+        ? Math.round(((joinsLastHour - joinsPrevHour) / joinsPrevHour) * 100)
+        : null
+
+    const processUptimeSeconds = Math.round(process.uptime())
 
     const alerts = {
         emergencyActive: emergencyCallsHour > 0,
+        unmannedServers: unmannedServers > 0,
         syncStale: lastSyncAgeSeconds !== null && lastSyncAgeSeconds > 60,
         dbSlow: dbLatencyMs > 300,
         prcSlow: prcLatency !== null && prcLatency.avgMs > 2000,
         prcErrors: prcLatency !== null && prcLatency.errorRate > 15,
         syncUnhealthy: syncHealth !== null && syncHealth.successRate < 90,
         manyServersDown: totalServers > 0 && staleServers > totalServers * 0.5,
+        botQueueStuck: botQueuePending > 10 || botQueueFailed > 5,
     }
 
     return NextResponse.json({
         platform: {
             totalServers,
-            activeServers: activeServers.length,
+            activeServers: activeServerIds.size,
             staleServers,
+            unmannedServers,
             totalMembers,
             newMembersWeek,
         },
@@ -194,6 +215,8 @@ export async function GET() {
             activeLoas,
             modCallsHour,
             emergencyCallsHour,
+            punishmentsThisHour,
+            joinTrendPct,
         },
         today: {
             logs: logsToday,
@@ -207,6 +230,8 @@ export async function GET() {
             kicks: byType(punishmentsByTypeToday, "Kick"),
             bans: byType(punishmentsByTypeToday, "Ban"),
             banBolos: byType(punishmentsByTypeToday, "Ban Bolo"),
+            formSubmissions: formSubmissionsToday,
+            securityEvents: securityEventsToday,
         },
         week: {
             punishments: punishmentsWeek,
@@ -214,6 +239,10 @@ export async function GET() {
             kicks: byType(punishmentsByTypeWeek, "Kick"),
             bans: byType(punishmentsByTypeWeek, "Ban"),
             banBolos: byType(punishmentsByTypeWeek, "Ban Bolo"),
+        },
+        ops: {
+            botQueuePending,
+            botQueueFailed,
         },
         db: {
             totalLogs: totalLogsAll,
@@ -227,6 +256,7 @@ export async function GET() {
             powApiLatency,
             syncHealth,
             staleServers,
+            processUptimeSeconds,
         },
         alerts,
         anyAlert: Object.values(alerts).some(Boolean),

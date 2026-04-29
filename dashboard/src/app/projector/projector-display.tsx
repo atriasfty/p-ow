@@ -5,12 +5,13 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 interface PhLatency { avgMs: number; errorRate: number; totalCalls: number }
 
 interface ProjectorStats {
-    platform: { totalServers: number; activeServers: number; staleServers: number; totalMembers: number; newMembersWeek: number }
-    live: { activePlayers: number; staffOnDuty: number; activeLoas: number; modCallsHour: number; emergencyCallsHour: number }
-    today: { logs: number; joins: number; leaves: number; kills: number; punishments: number; shiftsStarted: number; shiftDurationSeconds: number; warns: number; kicks: number; bans: number; banBolos: number }
+    platform: { totalServers: number; activeServers: number; staleServers: number; unmannedServers: number; totalMembers: number; newMembersWeek: number }
+    live: { activePlayers: number; staffOnDuty: number; activeLoas: number; modCallsHour: number; emergencyCallsHour: number; punishmentsThisHour: number; joinTrendPct: number | null }
+    today: { logs: number; joins: number; leaves: number; kills: number; punishments: number; shiftsStarted: number; shiftDurationSeconds: number; warns: number; kicks: number; bans: number; banBolos: number; formSubmissions: number; securityEvents: number }
     week: { punishments: number; warns: number; kicks: number; bans: number; banBolos: number }
+    ops: { botQueuePending: number; botQueueFailed: number }
     db: { totalLogs: number; totalPunishments: number; totalShifts: number }
-    health: { dbLatencyMs: number; lastSyncAgeSeconds: number | null; prcLatency: PhLatency | null; powApiLatency: PhLatency | null; syncHealth: { successRate: number; totalCycles: number } | null; staleServers: number }
+    health: { dbLatencyMs: number; lastSyncAgeSeconds: number | null; prcLatency: PhLatency | null; powApiLatency: PhLatency | null; syncHealth: { successRate: number; totalCycles: number } | null; staleServers: number; processUptimeSeconds: number }
     alerts: Record<string, boolean>
     anyAlert: boolean
     updatedAt: string
@@ -39,13 +40,15 @@ function useTicker(dep: string | null) {
 const fmt = (n: number) => n.toLocaleString("en-US")
 const fmtBig = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n)
 const fmtDuration = (s: number) => { if (!s) return "—"; const h = Math.floor(s / 3600); const m = Math.floor((s % 3600) / 60); return h > 0 ? `${h}h ${m}m` : `${m}m` }
+const fmtUptime = (s: number) => { const d = Math.floor(s / 86400); const h = Math.floor((s % 86400) / 3600); const m = Math.floor((s % 3600) / 60); return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m` }
 
-// Thresholds: value, [good limit, warn limit] — above warn = red
 const latColor = (ms: number) => ms < 500 ? "text-emerald-400" : ms < 2000 ? "text-yellow-400" : "text-red-400"
 const errColor = (pct: number) => pct === 0 ? "text-emerald-400" : pct < 10 ? "text-yellow-400" : "text-red-400"
 const syncAgeColor = (s: number) => s < 15 ? "text-emerald-400" : s < 45 ? "text-yellow-400" : "text-red-400"
 const dbColor = (ms: number) => ms < 50 ? "text-emerald-400" : ms < 200 ? "text-yellow-400" : "text-red-400"
 const rateColor = (pct: number) => pct >= 99 ? "text-emerald-400" : pct >= 90 ? "text-yellow-400" : "text-red-400"
+const trendColor = (pct: number | null) => pct === null ? "text-white/30" : pct > 10 ? "text-emerald-400" : pct < -10 ? "text-red-400" : "text-white"
+const trendLabel = (pct: number | null) => pct === null ? "—" : pct > 0 ? `↑ ${pct}%` : pct < 0 ? `↓ ${Math.abs(pct)}%` : "→ stable"
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return <p className="text-[10px] uppercase tracking-[0.22em] text-white/35 mb-1.5 mt-0.5">{children}</p>
@@ -105,12 +108,14 @@ export function ProjectorDisplay() {
 
     const ALERT_LABELS: Record<string, string> = useMemo(() => ({
         emergencyActive: "Emergency calls active in the last hour",
+        unmannedServers: "Active game servers have no staff on shift",
         syncStale: "Sync pipeline stale — no PlayerLocation updates in >60s",
         dbSlow: "Database latency critical — queries exceeding 300ms",
         prcSlow: "PRC API critically slow — avg response >2000ms",
         prcErrors: "PRC API error rate above 15% (403s excluded)",
         syncUnhealthy: "Sync cycle success rate below 90%",
         manyServersDown: "Mass outage — >50% of registered servers stale",
+        botQueueStuck: "Bot queue stuck — >10 pending or >5 failed messages",
     }), [])
 
     // Trigger violent flash + error panel when alert state newly becomes true
@@ -163,9 +168,7 @@ export function ProjectorDisplay() {
                     <span className="text-sm font-bold tracking-tight">Project Overwatch</span>
                     <span className="text-[8px] border border-white/15 text-white/25 px-1.5 py-0.5 rounded uppercase tracking-widest">Superadmin</span>
                     {s?.anyAlert && (
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-red-400 animate-pulse ml-2">
-                            ● Alert
-                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-red-400 animate-pulse ml-2">● Alert</span>
                     )}
                 </div>
                 <div className="flex items-center gap-5">
@@ -199,8 +202,13 @@ export function ProjectorDisplay() {
                         {/* ── Col 1: Platform + Punishments ── */}
                         <Col>
                             <SectionLabel>Platform</SectionLabel>
-                            <Big value={`${s.platform.activeServers} / ${s.platform.totalServers}`} label="Servers Online" color={s.platform.staleServers > s.platform.totalServers * 0.5 ? "text-red-400" : "text-white"} />
-                            <Row label="Stale / Offline" value={s.platform.staleServers} color={s.platform.staleServers > 0 ? "text-yellow-400" : "text-white"} />
+                            <Big
+                                value={`${s.platform.activeServers} / ${s.platform.totalServers}`}
+                                label="Servers Online"
+                                color={s.platform.staleServers > s.platform.totalServers * 0.5 ? "text-red-400" : "text-white"}
+                            />
+                            <Row label="Stale / Offline" value={s.platform.staleServers} color={s.platform.staleServers > 0 ? "text-yellow-400" : "text-emerald-400"} />
+                            <Row label="Unmanned (no staff)" value={s.platform.unmannedServers} color={s.platform.unmannedServers > 0 ? "text-red-400" : "text-emerald-400"} />
                             <Row label="Total Members" value={fmt(s.platform.totalMembers)} />
                             <Row label="New Members (7d)" value={fmt(s.platform.newMembersWeek)} />
 
@@ -219,24 +227,39 @@ export function ProjectorDisplay() {
                             <Row label="Total" value={fmt(s.week.punishments)} />
                         </Col>
 
-                        {/* ── Col 2: Live + Shifts + Members ── */}
+                        {/* ── Col 2: Live + Shifts + Operations ── */}
                         <Col>
                             <SectionLabel>Live Now</SectionLabel>
                             <Big value={fmt(s.live.activePlayers)} label="Players In-Game" />
-                            <Big value={fmt(s.live.staffOnDuty)} label="Staff On Duty" color={s.live.staffOnDuty === 0 && s.platform.activeServers > 0 ? "text-yellow-400" : "text-white"} />
-                            <Row label="Active LOAs" value={fmt(s.live.activeLoas)} />
+                            <Big
+                                value={fmt(s.live.staffOnDuty)}
+                                label="Staff On Duty"
+                                color={s.live.staffOnDuty === 0 && s.platform.activeServers > 0 ? "text-yellow-400" : "text-white"}
+                            />
+                            <Row label="Join Rate Trend (1h)" value={trendLabel(s.live.joinTrendPct)} color={trendColor(s.live.joinTrendPct)} />
+                            <Row label="Punishments This Hour" value={fmt(s.live.punishmentsThisHour)} />
                             <Row label="Mod Calls (1h)" value={fmt(s.live.modCallsHour)} />
                             <Row label="Emergency Calls (1h)" value={fmt(s.live.emergencyCallsHour)} color={s.alerts.emergencyActive ? "text-red-400" : "text-white"} />
+                            <Row label="Active LOAs" value={fmt(s.live.activeLoas)} />
 
                             <SectionLabel>Shifts · Today</SectionLabel>
                             <Row label="Shifts Started" value={fmt(s.today.shiftsStarted)} />
                             <Row label="Currently Active" value={fmt(s.live.staffOnDuty)} />
                             <Row label="Total Duty Time" value={fmtDuration(s.today.shiftDurationSeconds)} />
 
-                            <SectionLabel>All-Time</SectionLabel>
-                            <Row label="Total Logs in DB" value={fmtBig(s.db.totalLogs)} />
-                            <Row label="Total Punishments" value={fmtBig(s.db.totalPunishments)} />
-                            <Row label="Total Shifts" value={fmtBig(s.db.totalShifts)} />
+                            <SectionLabel>Operations</SectionLabel>
+                            <Row
+                                label="Bot Queue Pending"
+                                value={fmt(s.ops.botQueuePending)}
+                                color={s.ops.botQueuePending > 10 ? "text-red-400" : s.ops.botQueuePending > 0 ? "text-yellow-400" : "text-emerald-400"}
+                            />
+                            <Row
+                                label="Bot Queue Failed (1h)"
+                                value={fmt(s.ops.botQueueFailed)}
+                                color={s.ops.botQueueFailed > 5 ? "text-red-400" : s.ops.botQueueFailed > 0 ? "text-yellow-400" : "text-emerald-400"}
+                            />
+                            <Row label="Form Submissions Today" value={fmt(s.today.formSubmissions)} />
+                            <Row label="Security Events Today" value={fmt(s.today.securityEvents)} color={s.today.securityEvents > 20 ? "text-yellow-400" : "text-white"} />
                         </Col>
 
                         {/* ── Col 3: Activity + System Health ── */}
@@ -249,57 +272,23 @@ export function ProjectorDisplay() {
                             <Row label="Punishments" value={fmt(s.today.punishments)} />
                             <Row label="Shifts Started" value={fmt(s.today.shiftsStarted)} />
 
+                            <SectionLabel>All-Time</SectionLabel>
+                            <Row label="Logs in DB" value={fmtBig(s.db.totalLogs)} />
+                            <Row label="Punishments in DB" value={fmtBig(s.db.totalPunishments)} />
+                            <Row label="Shifts in DB" value={fmtBig(s.db.totalShifts)} />
+
                             <SectionLabel>System Health</SectionLabel>
-                            <Row
-                                label="DB Latency"
-                                value={`${h?.dbLatencyMs ?? "—"}ms`}
-                                color={h?.dbLatencyMs !== undefined ? dbColor(h.dbLatencyMs) : "text-white/40"}
-                            />
-                            <Row
-                                label="Last Sync"
-                                value={h?.lastSyncAgeSeconds !== null && h?.lastSyncAgeSeconds !== undefined ? `${h.lastSyncAgeSeconds}s ago` : "unknown"}
-                                color={h?.lastSyncAgeSeconds !== null && h?.lastSyncAgeSeconds !== undefined ? syncAgeColor(h.lastSyncAgeSeconds) : "text-white/40"}
-                            />
-                            <Row
-                                label="Stale Servers"
-                                value={h?.staleServers ?? "—"}
-                                color={h?.staleServers === 0 ? "text-emerald-400" : h?.staleServers !== undefined && h.staleServers < s.platform.totalServers * 0.5 ? "text-yellow-400" : "text-red-400"}
-                            />
-                            <Row
-                                label="PRC Avg (5m)"
-                                value={h?.prcLatency ? `${h.prcLatency.avgMs}ms` : "—"}
-                                color={h?.prcLatency ? latColor(h.prcLatency.avgMs) : "text-white/30"}
-                            />
-                            <Row
-                                label="PRC Error Rate (5m)"
-                                value={h?.prcLatency ? `${h.prcLatency.errorRate}%` : "—"}
-                                color={h?.prcLatency ? errColor(h.prcLatency.errorRate) : "text-white/30"}
-                            />
-                            <Row
-                                label="PRC Calls (5m)"
-                                value={h?.prcLatency ? fmt(h.prcLatency.totalCalls) : "—"}
-                                color="text-white/70"
-                            />
-                            <Row
-                                label="POW API Avg (5m)"
-                                value={h?.powApiLatency ? `${h.powApiLatency.avgMs}ms` : "—"}
-                                color={h?.powApiLatency ? latColor(h.powApiLatency.avgMs) : "text-white/30"}
-                            />
-                            <Row
-                                label="POW API Errors (5m)"
-                                value={h?.powApiLatency ? `${h.powApiLatency.errorRate}%` : "—"}
-                                color={h?.powApiLatency ? errColor(h.powApiLatency.errorRate) : "text-white/30"}
-                            />
-                            <Row
-                                label="Sync Success (5m)"
-                                value={h?.syncHealth ? `${h.syncHealth.successRate}%` : "—"}
-                                color={h?.syncHealth ? rateColor(h.syncHealth.successRate) : "text-white/30"}
-                            />
-                            <Row
-                                label="Sync Cycles (5m)"
-                                value={h?.syncHealth ? fmt(h.syncHealth.totalCycles) : "—"}
-                                color="text-white/70"
-                            />
+                            <Row label="DB Latency" value={`${h?.dbLatencyMs ?? "—"}ms`} color={h?.dbLatencyMs !== undefined ? dbColor(h.dbLatencyMs) : "text-white/40"} />
+                            <Row label="Last Sync" value={h?.lastSyncAgeSeconds != null ? `${h.lastSyncAgeSeconds}s ago` : "unknown"} color={h?.lastSyncAgeSeconds != null ? syncAgeColor(h.lastSyncAgeSeconds) : "text-white/40"} />
+                            <Row label="Stale Servers" value={h?.staleServers ?? "—"} color={h?.staleServers === 0 ? "text-emerald-400" : h != null && h.staleServers < s.platform.totalServers * 0.5 ? "text-yellow-400" : "text-red-400"} />
+                            <Row label="PRC Avg (5m)" value={h?.prcLatency ? `${h.prcLatency.avgMs}ms` : "—"} color={h?.prcLatency ? latColor(h.prcLatency.avgMs) : "text-white/30"} />
+                            <Row label="PRC Error Rate (5m)" value={h?.prcLatency ? `${h.prcLatency.errorRate}%` : "—"} color={h?.prcLatency ? errColor(h.prcLatency.errorRate) : "text-white/30"} />
+                            <Row label="PRC Calls (5m)" value={h?.prcLatency ? fmt(h.prcLatency.totalCalls) : "—"} color="text-white/70" />
+                            <Row label="POW API Avg (5m)" value={h?.powApiLatency ? `${h.powApiLatency.avgMs}ms` : "—"} color={h?.powApiLatency ? latColor(h.powApiLatency.avgMs) : "text-white/30"} />
+                            <Row label="POW API Errors (5m)" value={h?.powApiLatency ? `${h.powApiLatency.errorRate}%` : "—"} color={h?.powApiLatency ? errColor(h.powApiLatency.errorRate) : "text-white/30"} />
+                            <Row label="Sync Success (5m)" value={h?.syncHealth ? `${h.syncHealth.successRate}%` : "—"} color={h?.syncHealth ? rateColor(h.syncHealth.successRate) : "text-white/30"} />
+                            <Row label="Sync Cycles (5m)" value={h?.syncHealth ? fmt(h.syncHealth.totalCycles) : "—"} color="text-white/70" />
+                            <Row label="Process Uptime" value={h?.processUptimeSeconds != null ? fmtUptime(h.processUptimeSeconds) : "—"} color="text-white/70" />
                         </Col>
                     </>
                 )}
@@ -308,17 +297,13 @@ export function ProjectorDisplay() {
             {/* ── Alert detail panel — visible for 60s after trigger ── */}
             {alertPanel && (
                 <div className="flex-none border-t border-red-500/40 px-6 py-2 flex items-start gap-4">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-red-400 flex-none mt-0.5 animate-pulse">
-                        ● Issues
-                    </span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-red-400 flex-none mt-0.5 animate-pulse">● Issues</span>
                     <div className="flex-1 flex flex-wrap gap-x-8 gap-y-0.5">
                         {alertPanel.lines.map((line, i) => (
                             <span key={i} className="text-[10px] text-red-300">{line}</span>
                         ))}
                     </div>
-                    <span className="text-[9px] text-red-400/40 tabular-nums flex-none">
-                        clears in {alertCountdown}s
-                    </span>
+                    <span className="text-[9px] text-red-400/40 tabular-nums flex-none">clears in {alertCountdown}s</span>
                 </div>
             )}
 
@@ -327,9 +312,7 @@ export function ProjectorDisplay() {
                 <span className="text-[8px] font-semibold uppercase tracking-[0.3em] text-white/12">
                     Project Overwatch · Atria Safety · /projector
                 </span>
-                <span className="text-[8px] uppercase tracking-[0.3em] text-white/12">
-                    10s auto-refresh
-                </span>
+                <span className="text-[8px] uppercase tracking-[0.3em] text-white/12">10s auto-refresh</span>
             </footer>
         </div>
     )
