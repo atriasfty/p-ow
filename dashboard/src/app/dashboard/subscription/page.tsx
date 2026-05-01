@@ -52,7 +52,10 @@ export default function SubscriptionPage() {
         try {
             const res = await fetch("/api/subscription/link", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-csrf-check": "1"
+                },
                 body: JSON.stringify({ serverId, plan: data?.userPlan })
             })
 
@@ -73,7 +76,10 @@ export default function SubscriptionPage() {
         setLinking(true)
 
         try {
-            const res = await fetch(`/api/subscription/link?serverId=${serverIdToUnlink}`, { method: "DELETE" })
+            const res = await fetch(`/api/subscription/link?serverId=${serverIdToUnlink}`, {
+                method: "DELETE",
+                headers: { "x-csrf-check": "1" }
+            })
             if (res.ok) {
                 const updated = await fetch("/api/subscription/link").then(r => r.json())
                 setData(updated)
