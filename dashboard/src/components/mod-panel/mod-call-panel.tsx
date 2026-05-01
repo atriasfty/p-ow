@@ -120,9 +120,10 @@ export function ModCallPanel({
     }) ?? []
 
     const formatTime = (ts?: number | null, isoStr?: string) => {
-        if (ts) return new Date(ts * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        if (isoStr) return new Date(isoStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        return "–"
+        const d = ts ? new Date(ts * 1000) : isoStr ? new Date(isoStr) : null
+        if (!d) return "–"
+        const date = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+        return `${date} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
     }
 
     // All players to show on the mini-map: nearby + caller + responding mods  

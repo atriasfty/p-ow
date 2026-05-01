@@ -331,7 +331,7 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
                                     )}
                                 </div>
                                 <span className="ml-auto text-xs text-zinc-600 flex-shrink-0 whitespace-nowrap">
-                                    {new Date((log.timestamp || log.Timestamp || 0) * 1000).toLocaleTimeString()}
+                                    {(() => { const d = new Date((log.timestamp || log.Timestamp || 0) * 1000); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${d.toLocaleTimeString()}` })()}
                                 </span>
                             </div>
                         ))}

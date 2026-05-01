@@ -154,14 +154,16 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
                 setQuotaMinutes(data.quotaMinutes || 0)
                 setStatus("ok")
 
-                // Cache the result
-                permissionCache.set(serverId, {
-                    status: "ok",
-                    permissions: finalPermissions,
-                    viewerOnly: data.viewerOnly || false,
-                    quotaMinutes: data.quotaMinutes || 0,
-                    timestamp: Date.now()
-                })
+                // Cache the result — skip caching viewer-only so promoted users aren't stuck
+                if (!data.viewerOnly) {
+                    permissionCache.set(serverId, {
+                        status: "ok",
+                        permissions: finalPermissions,
+                        viewerOnly: false,
+                        quotaMinutes: data.quotaMinutes || 0,
+                        timestamp: Date.now()
+                    })
+                }
 
             } catch (e) {
                 // On error, block access (fail closed for security)
