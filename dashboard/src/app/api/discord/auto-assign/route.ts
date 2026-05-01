@@ -155,10 +155,11 @@ export async function POST(req: Request) {
         if (bestMatch) {
             // User has a panel role - assign and return permissions
             const userId = session.user.id
+            const robloxId = session.user.robloxId || null
             await prisma.member.upsert({
                 where: { userId_serverId: { userId, serverId } },
-                update: { roleId: bestMatch.id, discordId },
-                create: { userId, serverId, discordId, roleId: bestMatch.id, isAdmin: false }
+                update: { roleId: bestMatch.id, discordId, ...(robloxId ? { robloxId } : {}) },
+                create: { userId, serverId, discordId, roleId: bestMatch.id, isAdmin: false, ...(robloxId ? { robloxId } : {}) }
             })
 
             return NextResponse.json({

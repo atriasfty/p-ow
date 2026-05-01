@@ -39,11 +39,15 @@ export async function POST(req: Request) {
         })
 
         if (existingMember) {
-            // Update Discord ID
-            if (existingMember.discordId !== discordId) {
+            // Backfill discordId and robloxId if missing
+            const needsUpdate = existingMember.discordId !== discordId || (!existingMember.robloxId && robloxId)
+            if (needsUpdate) {
                 await prisma.member.update({
                     where: { id: existingMember.id },
-                    data: { discordId }
+                    data: {
+                        discordId,
+                        ...(robloxId && !existingMember.robloxId ? { robloxId } : {})
+                    }
                 })
             }
             return NextResponse.json({ success: true, discordId, updated: true })
@@ -55,6 +59,7 @@ export async function POST(req: Request) {
                 userId: clerkId,
                 serverId,
                 discordId,
+                robloxId: robloxId || null,
                 isAdmin: false
             }
         })

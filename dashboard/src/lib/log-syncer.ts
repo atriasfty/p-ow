@@ -53,7 +53,7 @@ function logToDbFormat(log: any, serverId: string): any {
 /**
  * Handle :log shift start|end|status commands
  */
-async function handleShiftCommand(log: any, serverId: string, client: PrcClient, args: string[]) {
+async function handleShiftCommand(log: any, serverId: string, client: PrcClient, args: string[], cachedPlayers: PrcPlayer[]) {
     const subcommand = args[0]?.toLowerCase()
     const playerId = log.PlayerId
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
@@ -123,14 +123,8 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         }
 
         if (s.shiftRequirePlayersInGame) {
-            try {
-                const players = await client.getPlayers()
-                if (players.length === 0) {
-                    await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cannot go on duty - server has no players`).catch(() => { })
-                    return
-                }
-            } catch (apiError) {
-                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cannot go on duty - server appears offline`).catch(() => { })
+            if (cachedPlayers.length === 0) {
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cannot go on duty - server has no players`).catch(() => { })
                 return
             }
         }
@@ -374,7 +368,7 @@ async function handleShutdownCommand(log: any, serverId: string) {
     })
 }
 
-async function handleLogCommand(log: any, serverId: string, client: PrcClient, s: Awaited<ReturnType<typeof getServerSettings>>) {
+async function handleLogCommand(log: any, serverId: string, client: PrcClient, s: Awaited<ReturnType<typeof getServerSettings>>, cachedPlayers: PrcPlayer[]) {
     const fullCommand = log.Command || ""
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
     const playerId = log.PlayerId
@@ -389,7 +383,7 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient, s
 
     const typeArg = parts[0].toLowerCase()
     if (typeArg === "shift") {
-        await handleShiftCommand(log, serverId, client, parts.slice(1))
+        await handleShiftCommand(log, serverId, client, parts.slice(1), cachedPlayers)
         return
     }
 
@@ -415,8 +409,7 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient, s
     }
 
     try {
-        const players = await client.getPlayers().catch(() => [] as PrcPlayer[])
-        let matches = players.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
+        let matches = cachedPlayers.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
         let target: { name: string; id: string } | null = null
 
         if (matches.length === 1) {
@@ -789,7 +782,7 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                         const cmd = log.Command?.toLowerCase() || ""
                         const prefix = s.inGameCommandPrefix.toLowerCase()
                         // Check for :log (or custom prefix) command
-                        if (cmd.startsWith(prefix + " ")) await handleLogCommand(log, serverId, client, s)
+                        if (cmd.startsWith(prefix + " ")) await handleLogCommand(log, serverId, client, s, v2.Players || [])
                         // Check for shutdown command patterns
                         const isShutdown = s.shutdownCommandPatterns.some(p => cmd === p.toLowerCase() || cmd.startsWith(p.toLowerCase() + " "))
                         if (isShutdown) await handleShutdownCommand(log, serverId)

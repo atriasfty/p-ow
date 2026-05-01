@@ -89,17 +89,27 @@ export async function findMemberByRobloxId(serverId: string, robloxId: string) {
 
     console.log(`[MEMBER-LOOKUP] Roblox ${robloxId} -> Search userIds: ${possibleUserIds.join(", ")}`)
 
-    // Find member by any of these IDs
+    // Find member by any of these IDs, including direct robloxId match as fallback
     const member = await prisma.member.findFirst({
         where: {
             serverId,
             OR: [
                 { userId: { in: possibleUserIds } },
-                { discordId: { in: possibleUserIds } }
+                { discordId: { in: possibleUserIds } },
+                { robloxId: robloxId }
             ]
         },
         include: { role: true }
     })
+
+    // Backfill robloxId on the member record if missing — fixes existing members
+    // who were created before robloxId was saved in the creation flows.
+    if (member && !member.robloxId) {
+        prisma.member.update({
+            where: { id: member.id },
+            data: { robloxId }
+        }).catch(() => {})
+    }
 
     return {
         member,
