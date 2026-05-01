@@ -241,8 +241,9 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             const completionPct = hasQuota ? (mins / quotaMins) : (mins > 0 ? 999 : 0) // 999 = no quota but has time
 
             return {
-                discordId: m.discordId, // Discord ID for mentions
-                userId: m.userId, // Fallback if no Discord ID
+                discordId: m.discordId as string | null,
+                robloxUsername: m.robloxUsername as string | null,
+                userId: m.userId as string,
                 mins,
                 quotaMins,
                 hasQuota,
@@ -251,6 +252,21 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
                 completionPct
             }
         })
+
+        // Bulk-fetch guild members so we can use display names for users who may have left
+        const guild = interaction.guild
+        const discordIdsToFetch = leaderboard
+            .map(e => e.discordId)
+            .filter((id): id is string => !!id)
+        const guildMemberNames = new Map<string, string>()
+        if (guild && discordIdsToFetch.length > 0) {
+            try {
+                const fetched = await guild.members.fetch({ user: discordIdsToFetch })
+                fetched.forEach((gm: any) => guildMemberNames.set(gm.id, gm.displayName))
+            } catch {
+                // Non-fatal — fall through to mention/roblox fallbacks
+            }
+        }
 
         // Sort: quota completion % (desc), then by time worked (desc)
         leaderboard.sort((a: any, b: any) => {
@@ -267,8 +283,18 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             const m = entry.mins % 60
             const timeWorked = `${h}h ${m}m`
 
-            // Mention: prefer Discord ID, fallback to showing userId
-            const mention = entry.discordId ? `<@${entry.discordId}>` : `\`${entry.userId}\``
+            // Prefer guild display name to avoid unresolvable raw mention IDs.
+            // Fall back to Roblox username, then a Discord mention, then userId.
+            let mention: string
+            if (entry.discordId && guildMemberNames.has(entry.discordId)) {
+                mention = `**${guildMemberNames.get(entry.discordId)}**`
+            } else if (entry.robloxUsername) {
+                mention = `**${entry.robloxUsername}**`
+            } else if (entry.discordId) {
+                mention = `<@${entry.discordId}>`
+            } else {
+                mention = `\`${entry.userId}\``
+            }
 
             if (!entry.hasQuota) {
                 // No quota assigned

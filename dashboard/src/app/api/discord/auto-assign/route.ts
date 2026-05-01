@@ -119,10 +119,11 @@ export async function POST(req: Request) {
             where: {
                 serverId,
                 discordRoleId: { not: null }
-            }
+            },
+            orderBy: { quotaMinutes: "asc" }
         })
 
-        // Fetch guild roles for hierarchy
+        // Fetch guild roles so we can rank by Discord hierarchy position.
         const guildRolesRes = await fetch(
             `https://discord.com/api/v10/guilds/${discordGuildId}/roles`,
             { headers: { Authorization: `Bot ${botToken}` } }
@@ -134,16 +135,20 @@ export async function POST(req: Request) {
             rolePositionMap = new Map(guildRoles.map(r => [r.id, r.position]))
         }
 
-        // Find best matching panel role
-        let bestMatch: { role: typeof panelRoles[0]; position: number } | null = null
+        // Pick the highest-ranked panel role the user holds.
+        // Primary: highest Discord hierarchy position (higher number = higher in server).
+        // Tiebreaker: lowest quotaMinutes = most senior POW role (panelRoles is asc-sorted,
+        // so when two roles share the same position the loop naturally keeps the first/lowest-quota one).
+        let bestMatch: typeof panelRoles[0] | null = null
+        let bestPosition = -Infinity
 
         for (const panelRole of panelRoles) {
             if (!panelRole.discordRoleId) continue
-            if (userDiscordRoles.includes(panelRole.discordRoleId)) {
-                const position = rolePositionMap.get(panelRole.discordRoleId) || 0
-                if (!bestMatch || position > bestMatch.position) {
-                    bestMatch = { role: panelRole, position }
-                }
+            if (!userDiscordRoles.includes(panelRole.discordRoleId)) continue
+            const position = rolePositionMap.get(panelRole.discordRoleId) ?? -1
+            if (position > bestPosition) {
+                bestPosition = position
+                bestMatch = panelRole
             }
         }
 
@@ -152,30 +157,30 @@ export async function POST(req: Request) {
             const userId = session.user.id
             await prisma.member.upsert({
                 where: { userId_serverId: { userId, serverId } },
-                update: { roleId: bestMatch.role.id, discordId },
-                create: { userId, serverId, discordId, roleId: bestMatch.role.id, isAdmin: false }
+                update: { roleId: bestMatch.id, discordId },
+                create: { userId, serverId, discordId, roleId: bestMatch.id, isAdmin: false }
             })
 
             return NextResponse.json({
                 success: true,
                 assigned: true,
-                roleName: bestMatch.role.name,
-                quotaMinutes: bestMatch.role.quotaMinutes || 0,
+                roleName: bestMatch.name,
+                quotaMinutes: bestMatch.quotaMinutes || 0,
                 permissions: {
-                    canShift: bestMatch.role.canShift,
-                    canViewOtherShifts: bestMatch.role.canViewOtherShifts,
-                    canViewLogs: bestMatch.role.canViewLogs,
-                    canViewPunishments: bestMatch.role.canViewPunishments,
-                    canIssueWarnings: bestMatch.role.canIssueWarnings,
-                    canKick: bestMatch.role.canKick,
-                    canBan: bestMatch.role.canBan,
-                    canBanBolo: bestMatch.role.canBanBolo,
-                    canUseToolbox: bestMatch.role.canUseToolbox,
-                    canManageBolos: bestMatch.role.canManageBolos,
-                    canRequestLoa: bestMatch.role.canRequestLoa,
-                    canViewQuota: bestMatch.role.canViewQuota,
-                    canUseAdminCommands: bestMatch.role.canUseAdminCommands,
-                    canAccessAdmin: bestMatch.role.canAccessAdmin
+                    canShift: bestMatch.canShift,
+                    canViewOtherShifts: bestMatch.canViewOtherShifts,
+                    canViewLogs: bestMatch.canViewLogs,
+                    canViewPunishments: bestMatch.canViewPunishments,
+                    canIssueWarnings: bestMatch.canIssueWarnings,
+                    canKick: bestMatch.canKick,
+                    canBan: bestMatch.canBan,
+                    canBanBolo: bestMatch.canBanBolo,
+                    canUseToolbox: bestMatch.canUseToolbox,
+                    canManageBolos: bestMatch.canManageBolos,
+                    canRequestLoa: bestMatch.canRequestLoa,
+                    canViewQuota: bestMatch.canViewQuota,
+                    canUseAdminCommands: bestMatch.canUseAdminCommands,
+                    canAccessAdmin: bestMatch.canAccessAdmin
                 }
             })
         }

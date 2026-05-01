@@ -185,7 +185,7 @@ export default async function AdminQuotaPage({
         uniqueUserStats.set(canonicalId, {
             memberId: shouldUpdateInfo ? member.id : existing!.memberId,
             userId: canonicalId,
-            displayName: shouldUpdateInfo ? getRobloxUsername(member.userId) : existing!.displayName,
+            displayName: shouldUpdateInfo ? (member.robloxUsername || getRobloxUsername(member.userId)) : existing!.displayName,
             avatar: shouldUpdateInfo ? getUserAvatar(member.userId) : existing!.avatar,
             role: shouldUpdateInfo ? currentRole : (existing!.role || currentRole),
             totalMinutes: (existing?.totalMinutes || 0) + totalMinutes,

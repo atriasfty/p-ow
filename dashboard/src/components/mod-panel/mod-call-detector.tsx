@@ -100,6 +100,7 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
 
     return (
         <ModCallPanel
+            key={activePanelCallId}
             serverId={serverId}
             callId={activePanelCallId}
             onClose={() => setActivePanelCallId(null)}

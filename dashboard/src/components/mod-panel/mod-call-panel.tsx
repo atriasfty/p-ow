@@ -73,6 +73,11 @@ export function ModCallPanel({
     const [filter, setFilter] = useState<"all" | "kill" | "command" | "join">("all")
     const [searchQuery, setSearchQuery] = useState("")
     const [isClosing, setIsClosing] = useState(false)
+    const unmountedRef = useRef(false)
+
+    useEffect(() => {
+        return () => { unmountedRef.current = true }
+    }, [])
 
     const fetchContext = useCallback(async () => {
         try {
@@ -94,7 +99,9 @@ export function ModCallPanel({
 
     const handleClose = () => {
         setIsClosing(true)
-        setTimeout(onClose, 400) // match animation duration
+        setTimeout(() => {
+            if (!unmountedRef.current) onClose()
+        }, 400) // match animation duration
     }
 
     // Filter logs
