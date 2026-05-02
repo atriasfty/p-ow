@@ -71,9 +71,17 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
         if (isPwaRef.current) return  // suppress on installed PWA / mobile app
 
         const myId = String(userRobloxId)
+        const ONE_HOUR_MS = 60 * 60 * 1000
 
         for (const call of calls.modCalls) {
             if (seenRef.current[call.id]) continue
+
+            // Ignore old calls — only auto-open for calls within the last hour.
+            // This prevents historical snapshot entries from triggering stacked panels.
+            const callTime = call.createdAt ? new Date(call.createdAt).getTime()
+                : call.timestamp ? call.timestamp * 1000
+                : 0
+            if (Date.now() - callTime > ONE_HOUR_MS) continue
 
             let responders: string[] = []
             if (typeof call.respondingPlayers === "string") {

@@ -635,8 +635,18 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                             where: { id: existingCall.id },
                             data: { respondingPlayers: newRespondersStr }
                         })
-                        // update local cache so we don't spam updates
                         existingCall.respondingPlayers = newRespondersStr
+
+                        // Push an immediate SSE update so the detector opens the
+                        // panel as soon as respondingPlayers changes, regardless of
+                        // whether the call is still active in PRC on the next poll.
+                        try {
+                            const [snapModCalls, snapEmerCalls] = await Promise.all([
+                                prisma.modCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: s.sseModCallSnapshotLimit }),
+                                prisma.emergencyCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: s.sseEmergencySnapshotLimit })
+                            ])
+                            eventBus.emit(serverId, 'calls', { modCalls: snapModCalls, emergencyCalls: snapEmerCalls })
+                        } catch { /* non-critical */ }
                     }
                 } else {
                     // Call doesn't exist at all (webhook must have missed it). Create a fallback record.
