@@ -127,9 +127,12 @@ export async function GET(request: NextRequest) {
                 select: { userId: true, robloxUsername: true }
             })
 
+            const clerkUserMap = new Map(clerkUsers.map(u => [u.id, u]))
+            const memberMap = new Map(members.map(m => [m.userId, m]))
+
             const enrichedEditors = editors.map((editor: any) => {
-                const clerkUser = clerkUsers.find(u => u.id === editor.userId)
-                const member = members.find((m: any) => m.userId === editor.userId)
+                const clerkUser = clerkUserMap.get(editor.userId)
+                const member = memberMap.get(editor.userId)
 
                 return {
                     ...editor,
