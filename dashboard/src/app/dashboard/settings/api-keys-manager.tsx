@@ -50,7 +50,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
         try {
             const res = await fetch("/api/admin/api-keys", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ name: newName })
             })
             if (res.ok) {
@@ -73,7 +73,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
         const id = confirmId
         setIsDeleting(true)
         try {
-            await fetch(`/api/admin/api-keys?id=${id}`, { method: "DELETE" })
+            await fetch(`/api/admin/api-keys?id=${id}`, { method: "DELETE", headers: { "x-csrf-check": "1" } })
             fetchKeys()
             setConfirmId(null)
         } catch (e) {
@@ -87,7 +87,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
         try {
             await fetch("/api/admin/api-keys", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ id, ...updates })
             })
             fetchKeys()

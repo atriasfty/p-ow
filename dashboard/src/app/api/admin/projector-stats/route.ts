@@ -21,7 +21,7 @@ async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLate
     try {
         const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            headers: { "x-csrf-check": "1", Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
                 query: {
                     kind: "HogQLQuery",
@@ -48,7 +48,7 @@ async function querySyncHealth(minutes = 5): Promise<{ successRate: number; tota
     try {
         const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+            headers: { "x-csrf-check": "1", Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
                 query: {
                     kind: "HogQLQuery",

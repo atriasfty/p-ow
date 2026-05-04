@@ -101,7 +101,7 @@ export async function GET(req: Request) {
             `https://users.roblox.com/v1/usernames/users`,
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     usernames: [username],
                     excludeBannedUsers: false

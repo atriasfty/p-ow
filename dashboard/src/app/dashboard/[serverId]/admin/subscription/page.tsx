@@ -50,7 +50,7 @@ export default function AdminSubscriptionPage({ params: paramsPromise }: { param
         try {
             const res = await fetch("/api/subscription/link", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId: params.serverId, plan: data?.userPlan })
             })
 
@@ -73,7 +73,7 @@ export default function AdminSubscriptionPage({ params: paramsPromise }: { param
         setMessage(null)
 
         try {
-            const res = await fetch(`/api/subscription/link?serverId=${params.serverId}`, { method: "DELETE" })
+            const res = await fetch(`/api/subscription/link?serverId=${params.serverId}`, { method: "DELETE", headers: { "x-csrf-check": "1" } })
             if (res.ok) {
                 setMessage({ type: 'success', text: "Subscription unlinked." })
                 fetchData()

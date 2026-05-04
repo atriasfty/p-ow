@@ -93,7 +93,7 @@ export function ServerCreationWizard() {
         try {
             const res = await fetch("/api/admin/server/verify-creation", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ prcApiKey, discordGuildId })
             })
 
@@ -133,7 +133,7 @@ export function ServerCreationWizard() {
         try {
             const res = await fetch("/api/admin/server/create", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     prcApiKey,
                     discordGuildId,

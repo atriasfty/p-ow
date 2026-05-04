@@ -171,7 +171,7 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
         try {
             const res = await fetch("/api/admin/roles", {
                 method: "DELETE",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ roleId })
             })
 
@@ -191,7 +191,7 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
         try {
             await fetch("/api/admin/roles/sync", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })
             })
         } catch (e) {

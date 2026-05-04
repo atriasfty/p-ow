@@ -42,7 +42,7 @@ export function MembersList({ serverId, members: initialMembers, roles, servers 
         try {
             const res = await fetch("/api/admin/members/role", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ memberId, roleId })
             })
 
@@ -66,7 +66,7 @@ export function MembersList({ serverId, members: initialMembers, roles, servers 
         try {
             const res = await fetch("/api/admin/members/sync", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })
             })
 

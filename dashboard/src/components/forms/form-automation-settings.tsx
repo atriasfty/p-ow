@@ -28,7 +28,7 @@ export function FormAutomationSettings({ serverId, initialData }: FormAutomation
         try {
             const res = await fetch("/api/admin/server", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     serverId,
                     loaChannelId: loaChannelId || null,

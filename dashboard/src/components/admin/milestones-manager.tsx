@@ -34,7 +34,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
         try {
             const res = await fetch("/api/admin/milestones", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     serverId,
                     name: newName,
@@ -63,7 +63,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
 
         try {
             const res = await fetch(`/api/admin/milestones?serverId=${serverId}&id=${id}`, {
-                method: "DELETE"
+                method: "DELETE", headers: { "x-csrf-check": "1" }
             })
 
             if (res.ok) {
