@@ -2,9 +2,12 @@
 import { NextResponse } from "next/server"
 import { getFromCache, setToCache } from "@/lib/roblox-cache"
 import { checkSecurity } from "@/lib/security"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Batch fetch user data from Roblox
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const body = await req.json()
     const userIds: string[] = body.userIds || []
 
@@ -34,7 +37,7 @@ export async function POST(req: Request) {
     try {
         const usersRes = await fetch("https://users.roblox.com/v1/users", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
             body: JSON.stringify({ userIds: uncachedIds.map(id => parseInt(id)).filter(id => !isNaN(id)) })
         })
 

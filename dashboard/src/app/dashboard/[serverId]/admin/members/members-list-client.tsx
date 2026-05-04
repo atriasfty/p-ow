@@ -126,13 +126,13 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
             if (member) {
                 await fetch("/api/admin/members/role", {
                     method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                     body: JSON.stringify({ memberId: member.id, roleId, isAdmin })
                 })
             } else {
                 await fetch("/api/admin/members", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                     body: JSON.stringify({ serverId, userId, roleId })
                 })
             }
@@ -158,7 +158,7 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
         try {
             await fetch("/api/admin/members/sync", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })
             })
             window.location.reload()

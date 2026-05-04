@@ -139,7 +139,7 @@ export function ServerSettingsForm({
         setIsSyncing(true)
         try {
             const res = await fetch(`/api/admin/server/${serverId}/sync-commands`, {
-                method: "POST"
+                method: "POST", headers: { "x-csrf-check": "1" }
             })
             const data = await res.json()
             if (data.success) {
@@ -222,7 +222,7 @@ export function ServerSettingsForm({
         try {
             const res = await fetch("/api/admin/server", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     serverId,
                     customName: name,
@@ -278,7 +278,7 @@ export function ServerSettingsForm({
         try {
             const res = await fetch("/api/admin/server/danger", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, action, value })
             })
 

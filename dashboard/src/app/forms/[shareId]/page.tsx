@@ -75,7 +75,7 @@ export default function PublicFormPage({
             try {
                 const res = await fetch(`/api/forms/${form.id}/submit`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                     body: JSON.stringify({ answers, saveAsDraft: true, responseId })
                 })
                 if (res.ok) {
@@ -176,7 +176,7 @@ export default function PublicFormPage({
         try {
             const res = await fetch(`/api/forms/${form.id}/submit`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ answers, responseId })
             })
 
@@ -410,7 +410,7 @@ function QuestionInput({
                 formData.append("formId", formId)
 
                 const res = await fetch("/api/forms/upload", {
-                    method: "POST",
+                    method: "POST", headers: { "x-csrf-check": "1" },
                     body: formData
                 })
 

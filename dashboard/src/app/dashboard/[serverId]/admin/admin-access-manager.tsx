@@ -128,7 +128,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
         try {
             const res = await fetch("/api/admin/grant", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, userId })
             })
 
@@ -151,7 +151,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
         try {
             const res = await fetch("/api/admin/revoke", {
                 method: "DELETE",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, memberId })
             })
 
@@ -169,7 +169,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
         try {
             const res = await fetch("/api/admin/roles", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ roleId, canAccessAdmin: !currentStatus })
             })
 

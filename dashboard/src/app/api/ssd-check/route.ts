@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/auth-clerk'
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 export const dynamic = 'force-dynamic'
 
@@ -90,6 +91,8 @@ export async function GET(req: Request) {
 
 // POST to acknowledge/dismiss the SSD notification (per-user)
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

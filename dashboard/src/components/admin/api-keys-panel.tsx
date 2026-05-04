@@ -46,7 +46,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
 
         const res = await fetch("/api/admin/api-keys", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
             body: JSON.stringify({ name: newName, serverId, allowedIps: newAllowedIps })
         })
 
@@ -65,7 +65,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
         if (!confirmed) return
 
         const res = await fetch(`/api/admin/api-keys?id=${id}&serverId=${serverId}`, {
-            method: "DELETE"
+            method: "DELETE", headers: { "x-csrf-check": "1" }
         })
 
         if (res.ok) {
@@ -76,7 +76,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
     const handleUpdate = async (id: string, updates: any) => {
         const res = await fetch("/api/admin/api-keys", {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
             body: JSON.stringify({ id, serverId, ...updates })
         })
         if (res.ok) {

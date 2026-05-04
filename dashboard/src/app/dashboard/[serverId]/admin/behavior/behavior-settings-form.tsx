@@ -225,7 +225,7 @@ export function BehaviorSettingsForm({ serverId, initialSettings, plan, planRete
         try {
             const res = await fetch("/api/admin/server/settings", {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json", "x-csrf-token": "1" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json", "x-csrf-token": "1" },
                 body: JSON.stringify({ serverId, settings: fields })
             })
             if (!res.ok) {

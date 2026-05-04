@@ -31,7 +31,7 @@ export function SuperSettingsPanel({ initialConfigs }: SuperSettingsPanelProps) 
         try {
             const res = await fetch("/api/admin/super/config", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ key, value })
             })
 

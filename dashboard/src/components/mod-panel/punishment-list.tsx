@@ -113,7 +113,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
             try {
                 const res = await fetch("/api/roblox/users", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                     body: JSON.stringify({ userIds: uncachedIds })
                 })
 
@@ -170,7 +170,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         setLoading(id)
         setConfirmModal(null)
         try {
-            const res = await fetch(`/api/punishments/${id}`, { method: "DELETE" })
+            const res = await fetch(`/api/punishments/${id}`, { method: "DELETE", headers: { "x-csrf-check": "1" } })
             if (res.ok) {
                 setPunishments(prev => prev.filter(p => p.id !== id))
             }
@@ -188,7 +188,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         try {
             const res = await fetch(`/api/punishments/${id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ resolved: true })
             })
             if (res.ok) {
@@ -207,7 +207,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         try {
             const res = await fetch(`/api/punishments/${id}`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ reason: editReason })
             })
             if (res.ok) {

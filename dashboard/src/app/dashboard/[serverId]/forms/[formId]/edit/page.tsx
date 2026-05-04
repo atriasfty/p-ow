@@ -259,7 +259,7 @@ function EditFormInner({
 
         try {
             const res = await fetch(`/api/forms/editor-access?formId=${form.id}&userId=${userId}`, {
-                method: "DELETE"
+                method: "DELETE", headers: { "x-csrf-check": "1" }
             })
             if (res.ok) {
                 setEditors(prev => prev.filter(e => e.userId !== userId))
@@ -336,7 +336,7 @@ function EditFormInner({
         try {
             const res = await fetch(`/api/forms/${form.id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
             })
             if (!res.ok) throw new Error("Failed to save")
@@ -371,7 +371,7 @@ function EditFormInner({
         try {
             const res = await fetch(`/api/forms/${form.id}/sections`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ title: `Section ${form.sections.length + 1}` })
             })
             if (res.ok) await loadForm(form.id)
@@ -383,7 +383,7 @@ function EditFormInner({
         try {
             await fetch(`/api/forms/${form.id}/sections`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ sectionId, ...updates })
             })
             const newForm = {
@@ -400,7 +400,7 @@ function EditFormInner({
     const deleteSection = async (sectionId: string) => {
         if (!form || form.sections.length <= 1) return
         try {
-            await fetch(`/api/forms/${form.id}/sections?sectionId=${sectionId}`, { method: "DELETE" })
+            await fetch(`/api/forms/${form.id}/sections?sectionId=${sectionId}`, { method: "DELETE", headers: { "x-csrf-check": "1" } })
             await loadForm(form.id)
         } catch { }
     }
@@ -419,7 +419,7 @@ function EditFormInner({
         try {
             await fetch(`/api/forms/${form.id}/questions`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     sectionId,
                     type,
@@ -459,7 +459,7 @@ function EditFormInner({
             try {
                 const res = await fetch(`/api/forms/${form.id}/questions`, {
                     method: "PUT",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                     body: JSON.stringify({ questionId, ...updates })
                 })
 
@@ -478,7 +478,7 @@ function EditFormInner({
     const deleteQuestion = async (questionId: string) => {
         if (!form) return
         try {
-            await fetch(`/api/forms/${form.id}/questions?questionId=${questionId}`, { method: "DELETE" })
+            await fetch(`/api/forms/${form.id}/questions?questionId=${questionId}`, { method: "DELETE", headers: { "x-csrf-check": "1" } })
             await loadForm(form.id)
         } catch { }
     }
@@ -529,7 +529,7 @@ function EditFormInner({
         try {
             await fetch(`/api/forms/${form.id}/questions`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     questions: updatedQuestions.map(q => ({ id: q.id, order: q.order }))
                 })
@@ -565,7 +565,7 @@ function EditFormInner({
         try {
             await fetch(`/api/forms/${form.id}/sections`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     sections: updatedSections.map(s => ({ id: s.id, order: s.order }))
                 })
@@ -581,7 +581,7 @@ function EditFormInner({
         const confirmed = await showConfirm("Delete Form", "Are you sure you want to delete this form? All responses will be lost.", "Delete", "destructive")
         if (!confirmed) return
         try {
-            await fetch(`/api/forms/${form.id}`, { method: "DELETE" })
+            await fetch(`/api/forms/${form.id}`, { method: "DELETE", headers: { "x-csrf-check": "1" } })
             router.push(`/dashboard/${resolvedParams.serverId}/forms`)
         } catch { }
     }

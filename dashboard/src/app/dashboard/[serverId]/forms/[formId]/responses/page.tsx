@@ -164,7 +164,7 @@ export default function ResponsesPage({
         setDeleting(responseId)
         try {
             const res = await fetch(`/api/forms/${resolvedParams.formId}/responses?responseId=${responseId}`, {
-                method: "DELETE"
+                method: "DELETE", headers: { "x-csrf-check": "1" }
             })
             if (res.ok) {
                 setResponses(prev => prev.filter(r => r.id !== responseId))
@@ -185,7 +185,7 @@ export default function ResponsesPage({
         setDeleting("all")
         try {
             const res = await fetch(`/api/forms/${resolvedParams.formId}/responses?deleteAll=true`, {
-                method: "DELETE"
+                method: "DELETE", headers: { "x-csrf-check": "1" }
             })
             if (res.ok) {
                 setResponses([])
@@ -205,7 +205,7 @@ export default function ResponsesPage({
         try {
             const res = await fetch(`/api/forms/${resolvedParams.formId}/responses/${responseId}/status`, {
                 method: "PATCH",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ status: decision, reason: reviewReason })
             })
             if (res.ok) {

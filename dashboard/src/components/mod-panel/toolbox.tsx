@@ -100,7 +100,7 @@ export function Toolbox({
         try {
             const res = await fetch("/api/loa", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, startDate, endDate, reason: reason.trim() })
             })
 
@@ -132,7 +132,7 @@ export function Toolbox({
         try {
             const res = await fetch("/api/command", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, command: commandInput.trim() })
             })
 
@@ -163,7 +163,7 @@ export function Toolbox({
         try {
             const res = await fetch("/api/staff-request", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, reason: staffRequestReason.trim() })
             })
 

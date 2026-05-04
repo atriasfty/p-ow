@@ -23,7 +23,7 @@ export default function EditorAccessPage({
         try {
             const res = await fetch("/api/forms/editor-access", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({ editorShareId })
             })
 

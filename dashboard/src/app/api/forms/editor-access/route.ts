@@ -3,9 +3,12 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin, isServerMember } from "@/lib/admin"
 import { clerkClient } from "@clerk/nextjs/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // POST /api/forms/editor-access - Claim editor access via share link
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return new NextResponse("Forbidden", { status: 403 })
+
     try {
         const session = await getSession()
         if (!session) {
@@ -155,6 +158,8 @@ export async function GET(request: NextRequest) {
 
 // DELETE /api/forms/editor-access - Remove editor access
 export async function DELETE(request: NextRequest) {
+    if (!verifyCsrf(request)) return new NextResponse("Forbidden", { status: 403 })
+
     try {
         const session = await getSession()
         if (!session) {

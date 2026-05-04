@@ -3,11 +3,14 @@ import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { NextResponse } from "next/server"
 import { clerkClient } from "@clerk/nextjs/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 export async function PATCH(
     req: Request,
     { params }: { params: Promise<{ formId: string, responseId: string }> }
 ) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

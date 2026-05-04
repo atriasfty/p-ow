@@ -7,6 +7,7 @@ import {
     getUserPlan
 } from "@/lib/subscription"
 import { isSuperAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Get servers available for linking
 export async function GET() {
@@ -34,6 +35,8 @@ export async function GET() {
 
 // Link subscription to a server
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     try {
         const { userId } = await auth()
         if (!userId) {
@@ -77,6 +80,8 @@ export async function POST(req: Request) {
 
 // Unlink subscription from server
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     try {
         const { userId } = await auth()
         if (!userId) {

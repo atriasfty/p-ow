@@ -27,7 +27,7 @@ async function queryPostHogEvents(eventName: string, hours: number = 24): Promis
             `${POSTHOG_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/`,
             {
                 method: "POST",
-                headers: {
+                headers: { "x-csrf-check": "1",
                     Authorization: `Bearer ${POSTHOG_PERSONAL_KEY}`,
                     "Content-Type": "application/json",
                 },

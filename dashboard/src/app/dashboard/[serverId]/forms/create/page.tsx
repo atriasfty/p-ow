@@ -150,7 +150,7 @@ export default function CreateFormPage({
             // Create everything in one go (Atomic)
             const res = await fetch("/api/forms", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "x-csrf-check": "1", "Content-Type": "application/json" },
                 body: JSON.stringify({
                     serverId,
                     title,

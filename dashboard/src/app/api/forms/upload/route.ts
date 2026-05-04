@@ -5,9 +5,12 @@ import { getServerOverride } from "@/lib/config"
 import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { randomBytes } from "crypto"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // POST /api/forms/upload - Handle file uploads
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return new NextResponse("Forbidden", { status: 403 })
+
     try {
         const session = await getSession()
         

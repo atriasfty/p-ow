@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         // 4. Call Pixtral AI
         const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
             method: "POST",
-            headers: {
+            headers: { "x-csrf-check": "1",
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${MISTRAL_API_KEY}`
             },
