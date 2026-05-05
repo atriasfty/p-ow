@@ -259,7 +259,8 @@ function EditFormInner({
 
         try {
             const res = await fetch(`/api/forms/editor-access?formId=${form.id}&userId=${userId}`, {
-                method: "DELETE"
+                method: "DELETE",
+                headers: { "x-csrf-check": "1" }
             })
             if (res.ok) {
                 setEditors(prev => prev.filter(e => e.userId !== userId))
