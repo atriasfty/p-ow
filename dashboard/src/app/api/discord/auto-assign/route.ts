@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { clerkClient } from "@clerk/nextjs/server"
@@ -24,6 +25,8 @@ const VIEWER_PERMISSIONS = {
 // Auto-assign panel role based on Discord roles
 // Returns permissions for the user based on their role
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
