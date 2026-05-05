@@ -21,6 +21,7 @@
 ## Staff Management
 
 * [Staff Management](staff-management.md)
+* [Managing Members](managing-members.md)
 * [Forms and Applications](forms-and-applications.md)
 * [Automations and Roles](automations-and-roles.md)
 
@@ -28,6 +29,8 @@
 
 * [Behavior Settings](behavior-settings.md)
 * [Advanced Automations & Webhooks](advanced-automations-and-webhooks.md)
+* [Audit Log](audit-log.md)
+* [Raid Mitigation](raid-mitigation.md)
 * [White Label Bot](white-label-bot.md)
 * [POW Vision](pow-vision.md)
 * [Data Exports](data-exports.md)
@@ -42,3 +45,7 @@
 
 * [Terms of Service](legal-terms-of-service.md)
 * [Privacy Policy](legal-privacy-policy.md)
+
+## Support
+
+* [Troubleshooting & FAQ](troubleshooting-and-faq.md)
