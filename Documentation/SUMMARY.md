@@ -10,6 +10,7 @@
 
 * [How to Make Roles](how-to-make-roles.md)
 * [How to Buy and Link Subscriptions](how-to-buy-and-link-subscriptions.md)
+* [How to Add Custom Toolbox Buttons](how-to-add-custom-toolbox-buttons.md)
 
 ## Moderation
 

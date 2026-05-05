@@ -37,6 +37,20 @@ If you are running into issues with Project Overwatch, this guide will help you 
 **Q: Why aren't punishments working from the Toolbox?**
 * **A:** Ensure the user you are targeting is currently in the game. Some commands (like Kick) require the player to be online. If it's a Ban, ensure you spell their Roblox username exactly correctly.
 
+**Q: I created a Toolbox Button automation but it isn't showing up.**
+* **A:** Check these in order:
+  1. Ensure the automation is **Enabled** (the toggle in Admin Panel → Automations).
+  2. Ensure your Panel Role has the `canUseToolbox` permission.
+  3. If the button has **Role Restrictions** set, ensure your Panel Role is in the allowed list.
+  4. Try refreshing the Mod Panel — custom buttons are fetched on load.
+
+**Q: My custom Toolbox Button shows a spinner but nothing happens.**
+* **A:** A failed action stops execution silently. The most common causes are:
+  * The target Discord channel was deleted or the bot lost permission to post in it.
+  * An invalid PRC command string (check for typos or unsupported commands).
+  * The PRC API key is expired or the game server is offline.
+  Review the automation's action configuration and ensure the game server is active.
+
 ## Billing & Subscriptions
 
 **Q: I upgraded to POW Pro/Max, but my server still says "Free Plan".**

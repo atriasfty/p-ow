@@ -29,6 +29,7 @@ Automations allow you to trigger actions in your Discord server based on events 
    * **Events:** Player Join, Player Leave, Player Kill, Player Death, Command Used, BOLO Created, BOLO Cleared, Server Startup, Discord Message Received.
    * **Staff Actions:** Shift Start, Shift End, Any Punishment Issued, Warn Issued, Kick Issued, Ban Issued, Member Role Updated.
    * **Time-based:** Every X Minutes (Time Interval).
+   * **Manual:** Toolbox Button — adds a clickable button to the Mod Panel Toolbox. See [How to Add Custom Toolbox Buttons](how-to-add-custom-toolbox-buttons.md) for a full guide.
 4. **Add Conditions (IF this is true):**
    * Example: `player.name` `EQUALS` `BadGuy123`
    * Example: `server.playerCount` `GREATER_THAN` `10`
@@ -43,6 +44,7 @@ Automations allow you to trigger actions in your Discord server based on events 
 * **High-Value Target Alert:** Trigger on `Player Join`, condition `player.name` EQUALS `Target123`, Action: `Discord Message` to ping staff.
 * **Abuse Prevention:** Trigger on `Command Used`, condition `command` CONTAINS `:shutdown`, Action: `Discord Message` to alert the owner.
 * **Timed Announcements:** Trigger on `Every X Minutes`, Action: `Server Announcement` to remind players of server rules.
+* **One-Click Server Lock:** Trigger on `Toolbox Button`, Action: `Custom Command` running `:lock` — staff can lock the server with one click from the Mod Panel.
 
 ## 3. Staff Milestones
 

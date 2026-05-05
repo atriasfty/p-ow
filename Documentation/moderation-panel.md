@@ -48,6 +48,16 @@ The **Toolbox** is a utility bar found in the Mod Panel that allows staff to qui
 *   **Request LOA / On LOA:** Opens a modal to request a Leave of Absence directly from the panel. If you are already on an approved LOA, it displays an "On LOA" status instead.
 *   **Run Command:** Opens a terminal window where you can type raw PRC commands (e.g., `:m Hello Server` or `:kick username reason`) and execute them immediately.
 *   **Staff Request:** Sends an urgent alert. Online staff will be PM'd in-game, and a full alert with your reason will be sent to the Discord Staff Request channel.
+*   **Calls:** Opens the active mod calls panel. This displays any in-progress mod calls from players in the current game session, along with nearby players, the caller's last known location, and relevant logs — so you can respond quickly without leaving the dashboard.
+*   **Map:** Opens a live overhead map of your PRC server, showing player positions in real time. Staff members are distinguished from civilians. You can click on any marker to open that player's panel.
+
+### Custom Actions (Automation Buttons)
+
+Admins can add custom buttons to the Toolbox using the **Automations** system. These buttons can trigger any automation action — sending Discord messages, running PRC commands, posting to webhooks, and more.
+
+Custom buttons appear in a dedicated **Custom Actions** row below the built-in tools. Each button can have a custom colour and can be restricted to specific staff roles so only the right people see it.
+
+For a full setup guide, see [How to Add Custom Toolbox Buttons](how-to-add-custom-toolbox-buttons.md).
 
 {% hint style="warning" %}
 **Toolbox Restrictions:** The Toolbox requires the `canUseToolbox` permission. Additionally, any raw commands executed via "Run Command" are logged in the **Command Log Channel** in your Discord for accountability.
