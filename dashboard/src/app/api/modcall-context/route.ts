@@ -104,6 +104,14 @@ export async function GET(req: Request) {
         distinct: ["userId"]
     })
 
+    // 6. Fetch the caller's last known location with no time restriction —
+    //    ensures location shows even if the call is old or caller left recently.
+    const callerLastLocation = await prisma.playerLocation.findFirst({
+        where: { serverId, userId: modCall.callerId },
+        orderBy: { createdAt: "desc" },
+        select: { postalCode: true, streetName: true, locationX: true, locationZ: true }
+    })
+
     return NextResponse.json({
         call: {
             id: modCall.id,
@@ -114,6 +122,8 @@ export async function GET(req: Request) {
             positionX: modCall.positionX,
             positionZ: modCall.positionZ,
             positionDescriptor: modCall.positionDescriptor,
+            callerPostalCode: callerLastLocation?.postalCode ?? null,
+            callerStreetName: callerLastLocation?.streetName ?? null,
             respondingPlayers: respondingMods,
             timestamp: modCall.timestamp,
             createdAt: modCall.createdAt

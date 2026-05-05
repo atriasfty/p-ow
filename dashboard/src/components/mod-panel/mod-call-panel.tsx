@@ -16,6 +16,8 @@ interface ModCallContext {
         positionX: number | null
         positionZ: number | null
         positionDescriptor: string | null
+        callerPostalCode: string | null
+        callerStreetName: string | null
         respondingPlayers: string[]
         timestamp: number | null
         createdAt: string
@@ -176,17 +178,18 @@ export function ModCallPanel({
                                 <div>
                                     <div className="flex items-center gap-3">
                                         <h2 className="text-xl font-black text-white tracking-tight">
-                                            MOD CALL #{data.call.callNumber}
+                                            MOD CALL {data.call.callNumber}
                                         </h2>
-                                        <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-black uppercase tracking-widest">
-                                            Active
-                                        </span>
                                     </div>
                                     <p className="text-xs text-zinc-500 mt-0.5 flex items-center gap-2">
                                         <span>Caller: <span className="text-white font-medium">{data.call.callerName || data.call.callerId}</span></span>
                                         <span className="text-zinc-700">•</span>
                                         <MapPin className="h-3 w-3 inline" />
-                                        <span>{data.call.positionDescriptor || "Unknown Location"}</span>
+                                        <span>{
+                                            data.call.callerPostalCode || data.call.callerStreetName
+                                                ? [data.call.callerPostalCode && `[${data.call.callerPostalCode}]`, data.call.callerStreetName].filter(Boolean).join(" ")
+                                                : data.call.positionDescriptor || "Unknown Location"
+                                        }</span>
                                     </p>
                                 </div>
                             </div>
