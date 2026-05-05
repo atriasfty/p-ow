@@ -1,92 +1,183 @@
 # Privacy Policy
 
-**Last Updated: March 29, 2026**
+**Last Updated: May 6, 2026**
 
-### 1. Introduction
+---
 
-This Privacy Policy explains how Project Overwatch ("POW", "we", "us", or "our") collects, uses, and protects your personal information across our web platform, Discord bot, and Vision desktop application.
+### 1. The Short Version
 
-### 2. Information We Collect
+We built Project Overwatch to help Roblox communities run better moderation — not to harvest data. We collect what we need to make the platform work, we keep it on our own servers, we don't sell it to anyone, and we don't share it with advertisers. Full stop.
 
-#### 2.1 Information You Provide
+The sections below explain exactly what we collect and why, in plain English.
 
-| Data Type           | Source           | Purpose                                                             |
-| ------------------- | ---------------- | ------------------------------------------------------------------- |
-| **Roblox Account**  | OAuth via Clerk  | Identification, in-game moderation linking, and profile management. |
-| **Discord Account** | OAuth via Clerk  | Server membership verification and bot notifications.               |
-| **Form Responses**  | User Submissions | Recruitment, applications, and surveys for specific communities.    |
-| **File Uploads**    | Form Submissions | Evidence or supporting documents for recruitment or reports.        |
-| **Configuration**   | Server Settings  | Webhooks, roles, and automated milestone settings.                  |
+---
 
-#### 2.2 Information Collected Automatically
+### 2. Who This Covers
 
-| Data Type         | Source                | Purpose                                                                            |
-| ----------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| **Game Logs**     | PRC API               | Join/Leave events, kill logs, and command usage for moderation audit trails.       |
-| **Analytics**     | PostHog               | Feature usage, pageviews, session recordings, and UI interaction tracking.         |
-| **Screen Data**   | POW Vision            | Temporary OCR processing of in-game text (processed locally or via transient API). |
-| **Security Logs** | Server Infrastructure | IP addresses, login patterns, and rate-limiting data for platform security.        |
-| **AI Usage**      | Mistral Integration   | Tracking of AI requests for usage limits and abuse prevention.                     |
+This policy applies to:
 
-### 3. Third-Party Services
+- **POW account holders** — server owners, admins, and staff members who log into the dashboard.
+- **In-game Roblox players** — players present in a PRC game server connected to POW. They don't have a POW account, but their in-game activity (logs, location, vehicle data) is processed through the platform on behalf of the server operator.
 
-We partner with the following services to provide the Project Overwatch ecosystem:
+---
 
-* **Clerk:** Authentication and session management (Roblox/Discord OAuth).
-* **PostHog:** Product analytics and session recording (Data hosted in the EU).
-* **Mistral:** AI-assisted tools and moderation assistance.
-* **PRC API:** Integration with Emergency Response: Liberty County game servers.
-* **Discord:** Real-time notifications and community management.
-* **Backblaze B2:** Secure storage for form-related file uploads.
+### 3. What We Collect and Why
 
-### 4. Special Considerations
+#### 3.1 What You Give Us
 
-#### 4.1 Form Data & Privacy
+| Data | Why we have it |
+| --- | --- |
+| **Roblox account** (ID, username) | So we can link your in-game identity to your POW profile for moderation and shift tracking |
+| **Discord account** (ID, username) | So the bot can assign roles and send notifications to the right person |
+| **Email address** | For your POW account login and for analytics (see Section 3.3) |
+| **Form responses** | Because your community asked you to fill out a form — we store the answers on their behalf |
+| **File uploads** | Supporting documents attached to form submissions, stored on our servers |
+| **Leave of Absence reason** | The reason you type when requesting time off from duty — this might include personal details; we store it because your server admin needs to review it |
+| **Server configuration** | Webhook URLs, Discord role IDs, automation rules, and the other settings admins configure |
 
-Data collected through the Forms system is managed by the server administrators who created the form. While POW provides the infrastructure, the **server administrators** act as the data controllers for information submitted to their specific forms. We do not sell or use this data for our own marketing purposes.
+#### 3.2 What We Collect Automatically from the Game
 
-#### 4.2 POW Vision Desktop App
+When a PRC server is connected to POW, we sync the following from the PRC API on behalf of the server operator:
 
-POW Vision uses screen-capture technology to perform OCR (Optical Character Recognition) on your screen. This data is intended to assist with moderation in ERLC. Vision captures data only within the scope defined by the application. We do not transmit raw screenshots to our servers; only the extracted text results may be sent for logging or processing.
+| Data | Why we have it |
+| --- | --- |
+| **Join / leave events** | Core moderation audit trail |
+| **Kill logs** | Combat moderation and rule enforcement |
+| **Command logs** | Accountability for in-game commands run by staff and players |
+| **Real-time player locations** | X/Z coordinates, postal code, street name, and building — used for the live map and to give context when a mod call comes in |
+| **Vehicle data** | Vehicle name, licence plate, colour, livery, owner — displayed on the live map in the mod panel |
+| **Mod calls and emergency calls** | Caller name, description, location, and timestamp — displayed to on-duty staff |
 
-#### 4.3 PostHog Analytics & Session Recording
+This data is about **all players in the game**, including people who have never heard of POW. We process it because the server operator needs it for real-time moderation. We don't use it for anything else, and we don't sell it or share it with anyone outside the platform.
 
-We use PostHog to record user sessions. This allows us to visually replay interactions to diagnose technical issues and improve the UX.
+#### 3.3 Analytics (PostHog)
 
-* **Consent:** You may opt-out of persistent tracking via the "Cookie Preferences" banner.
-* **Masking:** Sensitive fields (like passwords or private tokens) are automatically masked by PostHog and never reach our analytics database.
+We use PostHog to understand how people use the dashboard so we can improve it. Here's exactly what that means:
 
-### 5. Legal Basis for Processing (GDPR/UK GDPR)
+- **What PostHog receives:** Your email address, Roblox ID, Roblox username, Discord ID, Discord username, every page you visit, every button you click, and session recordings (a visual replay of your session).
+- **Why identity is linked:** We want to understand usage by account type and subscription plan — "what features are Pro subscribers actually using?" — not to build an advertising profile on you.
+- **Where it lives:** PostHog data is hosted in the EU, on PostHog's infrastructure.
+- **Cookies:** PostHog runs in memory-only mode until you accept cookies. If you decline, it still tracks your current session (in-memory, gone when you close the tab) but doesn't write any persistent cookies or localStorage entries. You can change this at any time via "Cookie Preferences" in the dashboard footer.
+- **What PostHog does NOT get:** Your PRC API key, your custom bot token, your punishment records, or any form response content. Sensitive fields are masked at the SDK level.
+- **We do not sell this data.** PostHog is a product analytics tool. Your data is not shared with advertisers, data brokers, or anyone else.
 
-* **Contractual Necessity:** Account management, shift tracking, and providing core moderation features.
-* **Legitimate Interest:** Security logging, IP banning, and platform stability.
-* **Consent:** Product analytics, session recording, and premium AI features.
+#### 3.4 Security Data
 
-### 6. Data Storage & Security
+Every request to POW is checked for IP bans and rate limiting. We log IP addresses in our security log for security events (rate limit hits, blocked requests, suspicious activity). IP addresses are treated as personal data and are not shared outside the platform.
 
-* **Encryption:** Sensitive data, including custom bot tokens and API keys, are stored using industry-standard AES encryption.
-* **Location:** Our primary infrastructure and databases are self-hosted in secure data centers.
-* **Access:** Only authorized developers and designated server administrators have access to your data.
+---
 
-### 7. Data Retention
+### 4. Data About In-Game Players
 
-* **Active Records:** Retained while you are an active member of a POW-linked community.
-* **Moderation Logs:** Retained according to the server administrator's requirements for historical record-keeping.
-* **Analytics:** PostHog data is retained according to our analytics retention policy (typically 90-180 days).
+If you're a Roblox player who has never used POW but plays on a server that does, here's what you should know:
 
-### 8. Your Rights
+The server operator (the community owner) is the data controller for their server. POW processes in-game data on their behalf as a data processor. This is similar to any other moderation or logging tool a game server might use.
 
-You have the right to:
+**What we store about you:** username, Roblox ID, join/leave events, kill logs, commands you ran, your in-game location at the time of logging, and your vehicle at the time of logging.
 
-* **Access & Portability:** Request a copy of your personal data.
-* **Correction:** Update inaccurate account or profile information.
-* **Deletion:** Request the removal of your personal data (subject to server moderation record requirements).
-* **Opt-Out:** Withdraw consent for non-essential tracking at any time.
+**What we do with it:** We display it to the staff team of that server so they can moderate their community. That's it.
 
-### 9. Contact
+**What we don't do with it:** We don't sell it. We don't share it with other platforms. We don't run ads against it. We don't use it to train AI models. It is scoped entirely to the server that collected it and deleted when that server's retention window expires.
 
-**Data Protection Officer:** Cian Kelly **Email:** `cian@atriasafety.org` **Response Time:** Within 30 days.
+**If you want it deleted:** Contact the server owner directly — they are the controller for their server's data. You can also email us at `cian@atriasafety.org` and we'll point you to the right place.
 
-### 10. Changes to this Policy
+---
 
-We may update this policy to reflect changes in our implementation or legal requirements. Significant changes will be announced via the Dashboard or official Discord server.
+### 5. POW Vision
+
+POW Vision is a desktop app that lets moderators identify players by pointing their crosshair at them. When you trigger the identification feature:
+
+1. Vision captures a screenshot of your screen on **your local device**.
+2. That screenshot is sent as a base64-encoded image to **Mistral AI's API** (Pixtral model) for OCR — to extract the Roblox username from the image.
+3. Mistral returns the username string. The screenshot is not retained by Mistral after processing.
+4. The screenshot is **never sent to or stored on POW's servers**.
+
+In plain terms: your screenshot leaves your computer once, goes to Mistral to be read, and is then discarded. We never see it.
+
+---
+
+### 6. Third-Party Services
+
+Here is every external service we send data to, and exactly what they receive:
+
+| Service | What they receive | Why |
+| --- | --- | --- |
+| **Clerk** | Your email, Roblox OAuth data, Discord OAuth data | Handles login and sessions |
+| **PostHog** | Email, Roblox ID/username, Discord ID/username, pageviews, clicks, session recordings | Analytics and UX improvement. EU-hosted. |
+| **Mistral AI** | Player data summaries (AI Insights); base64 screenshots (Vision) | AI moderation risk assessment; in-game OCR identification |
+| **PRC API** | Your server's API key; outbound game commands | Syncing game logs; executing automation commands |
+| **Discord API** | Bot token, channel/role IDs, message content | Bot notifications and role management |
+
+**File uploads are stored on POW's own servers** — not on any third-party storage service. Nobody outside POW has access to them except the server admin who owns the form.
+
+**We do not work with:** advertising networks, data brokers, social media trackers, surveillance companies, or any intelligence services. Your data does not leave the above list.
+
+---
+
+### 7. Legal Basis (GDPR / UK GDPR)
+
+| What we do | Legal basis |
+| --- | --- |
+| Running your account, shifts, and core dashboard features | Contractual necessity (Art. 6(1)(b)) |
+| Game logs, moderation records, punishment history | Legitimate interest of the server operator (Art. 6(1)(f)) |
+| Real-time location and vehicle tracking | Legitimate interest of the server operator for live moderation (Art. 6(1)(f)) |
+| IP logging and security enforcement | Legitimate interest in platform security (Art. 6(1)(f)) |
+| Session recording and persistent analytics (PostHog) | Consent — you can accept or decline via the cookie banner (Art. 6(1)(a)) |
+| AI insights (Mistral) | Legitimate interest of the server admin for player risk assessment (Art. 6(1)(f)) |
+| Vision screenshot transmission | Legitimate interest of the moderator using Vision (Art. 6(1)(f)) |
+
+---
+
+### 8. How Long We Keep It
+
+| Data | How long |
+| --- | --- |
+| Game logs, player locations, vehicle logs, shifts, mod calls | Per server's retention setting — 30 days (Free), 180 days (Pro), up to 3 years (Max) |
+| Punishment records | Minimum 2 years on all plans — moderation records need to stick around |
+| IP addresses in security log | Up to 1 year from the event date, then purged |
+| Banned IPs | Until a POW admin removes the ban |
+| Form responses and uploaded files | Until the form is deleted by the server admin |
+| Leave of Absence records | While the server exists on POW |
+| PostHog analytics | 90–180 days, per PostHog's retention policy |
+| AI usage counters | Rolling daily records only |
+
+When you or your server leaves POW, active account data is deleted. Punishment records may be retained for the minimum period above for audit purposes.
+
+---
+
+### 9. Your Rights
+
+Depending on where you live, you may have the right to:
+
+- **See your data** — request a copy of what we hold about you
+- **Correct your data** — fix anything inaccurate
+- **Delete your data** — request erasure (some moderation records may need to be kept for server safety)
+- **Restrict processing** — ask us to pause processing while something is being disputed
+- **Data portability** — get your data in a machine-readable format
+- **Object** — push back on processing done under legitimate interest
+- **Withdraw consent** — turn off persistent analytics any time via "Cookie Preferences" in the footer
+
+Email `cian@atriasafety.org` and we'll respond within 30 days.
+
+---
+
+### 10. Security
+
+- PRC API keys and custom bot tokens are encrypted at rest (AES).
+- Only authorised POW developers and your server's admins can access your server's data.
+- We don't log your API keys or bot tokens in plaintext anywhere.
+- If we become aware of a breach affecting your data, we'll notify you within 72 hours as required by GDPR.
+
+---
+
+### 11. Contact
+
+**Data Protection Officer:** Cian Kelly
+**Privacy / data requests:** `cian@atriasafety.org`
+**Legal inquiries:** `legal@atriasafety.org`
+
+---
+
+### 12. Changes
+
+If we make significant changes to this policy, we'll announce it in the dashboard and in the official Project Overwatch Discord server. The "Last Updated" date at the top will always reflect the current version.

@@ -59,7 +59,8 @@ You agree **NOT** to:
 
 * POW Vision is provided as a utility for server moderators.
 * Users are responsible for ensuring that their use of Vision's screen-capture and OCR features complies with local privacy laws and Roblox policies.
-* We do not store raw screenshots on our servers; OCR processing is performed locally or via transient API calls.
+* When you use the player identification feature, a screenshot of your screen is transmitted to Mistral AI's API for OCR processing. The extracted username is returned to POW; the screenshot itself is not stored by POW or retained by Mistral after processing.
+* Raw screenshots are **not** stored on POW's servers.
 
 ### 9. Termination
 
