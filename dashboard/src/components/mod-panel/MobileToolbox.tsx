@@ -316,10 +316,13 @@ export function MobileToolbox({
                         key={auto.id}
                         onClick={() => runAutomation(auto.id)}
                         disabled={!!runningId}
-                        className="w-full flex items-center gap-4 p-4 rounded-xl active:scale-[0.98] transition-all disabled:opacity-60 text-white font-semibold"
-                        style={{ backgroundColor: auto.buttonColor + "20", borderWidth: 1, borderColor: auto.buttonColor + "40" }}
+                        className="w-full flex items-center gap-4 p-4 rounded-xl active:scale-[0.98] transition-all disabled:opacity-60"
+                        style={{
+                            backgroundColor: auto.buttonColor + "1a",
+                            border: `1px solid ${auto.buttonColor}33`,
+                        }}
                     >
-                        <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: auto.buttonColor + "20" }}>
+                        <div className="h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: auto.buttonColor + "1a" }}>
                             {runningId === auto.id ? (
                                 <Loader2 className="h-5 w-5 animate-spin" style={{ color: auto.buttonColor }} />
                             ) : successId === auto.id ? (

@@ -307,8 +307,12 @@ export function Toolbox({
                                 key={auto.id}
                                 onClick={() => runAutomation(auto.id)}
                                 disabled={!!runningId}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium text-sm transition-all flex-shrink-0 disabled:opacity-60"
-                                style={{ backgroundColor: auto.buttonColor, opacity: runningId && runningId !== auto.id ? 0.6 : 1 }}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all flex-shrink-0 disabled:opacity-60"
+                                style={{
+                                    backgroundColor: auto.buttonColor + "1a",
+                                    border: `1px solid ${auto.buttonColor}33`,
+                                    color: auto.buttonColor,
+                                }}
                             >
                                 {runningId === auto.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
