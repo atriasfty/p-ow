@@ -58,16 +58,25 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
     const playerId = log.PlayerId
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
 
+    console.log(`[SHIFT-CMD-DEBUG] enter sub="${subcommand}" player="${playerName}":${playerId} server=${serverId}`)
+
     const s = await getServerSettings(serverId)
 
-    if (!s.inGameShiftEnabled) return
-
-    const { member } = await findMemberByRobloxId(serverId, String(playerId))
-
-    if (!member) {
-        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not registered as staff.`).catch(() => { })
+    if (!s.inGameShiftEnabled) {
+        console.log(`[SHIFT-CMD-DEBUG] EXIT inGameShiftEnabled=false`)
         return
     }
+
+    const { member, clerkId, discordId, possibleUserIds } = await findMemberByRobloxId(serverId, String(playerId))
+
+    if (!member) {
+        console.log(`[SHIFT-CMD-DEBUG] AUTH-FAIL no Member matched. robloxId=${playerId} clerkId=${clerkId} discordId=${discordId} possibleUserIds=${JSON.stringify(possibleUserIds)}`)
+        const pmRes = await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not registered as staff.`).then(() => "ok").catch((e: any) => `err:${e?.message || e}`)
+        console.log(`[SHIFT-CMD-DEBUG] auth-fail PM result: ${pmRes}`)
+        return
+    }
+
+    console.log(`[SHIFT-CMD-DEBUG] AUTH-OK memberId=${member.id} userId=${member.userId} role=${member.role?.name || "none"}`)
 
     const server = await prisma.server.findUnique({ where: { id: serverId }, select: { customName: true, name: true } })
     const serverName = server?.customName || server?.name || serverId
@@ -373,40 +382,59 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient, s
     const playerName = log.PlayerName || parsePrcPlayer(log.Player).name
     const playerId = log.PlayerId
 
+    console.log(`[LOG-CMD-DEBUG] enter cmd="${fullCommand}" player="${playerName}":${playerId} server=${serverId} prefix="${s.inGameCommandPrefix}"`)
+
     const prefix = s.inGameCommandPrefix
     const escapedPrefix = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const logMatch = fullCommand.match(new RegExp(`^${escapedPrefix}\\s+(.*)$`, 'i'))
-    if (!logMatch) return
+    if (!logMatch) {
+        console.log(`[LOG-CMD-DEBUG] EXIT regex did not match. cmd bytes=${JSON.stringify(fullCommand)}`)
+        return
+    }
 
     const parts = logMatch[1].trim().split(/\s+/)
-    if (parts.length < 1) return
+    if (parts.length < 1) {
+        console.log(`[LOG-CMD-DEBUG] EXIT no parts after prefix`)
+        return
+    }
 
     const typeArg = parts[0].toLowerCase()
     if (typeArg === "shift") {
+        console.log(`[LOG-CMD-DEBUG] dispatching to handleShiftCommand args=${JSON.stringify(parts.slice(1))}`)
         await handleShiftCommand(log, serverId, client, parts.slice(1), cachedPlayers)
         return
     }
 
-    if (parts.length < 2) return
+    if (parts.length < 2) {
+        console.log(`[LOG-CMD-DEBUG] EXIT typeArg="${typeArg}" but parts.length<2 (no target)`)
+        return
+    }
     const targetQuery = parts[1].toLowerCase()
     const reason = parts.slice(2).join(" ") || "No reason provided"
 
     const typeMap: Record<string, string> = { "warn": "Warn", "kick": "Kick", "ban": "Ban", "bolo": "Ban Bolo" }
     const punishmentType = typeMap[typeArg]
-    if (!punishmentType) return
-
-    // Per-type enable checks
-    if (typeArg === "warn" && !s.inGameWarnEnabled) return
-    if (typeArg === "kick" && !s.inGameKickEnabled) return
-    if (typeArg === "ban" && !s.inGameBanEnabled) return
-    if (typeArg === "bolo" && !s.inGameBoloEnabled) return
-
-    // Auth check: verify the command issuer is a registered staff member
-    const { member: moderatorMember } = await findMemberByRobloxId(serverId, String(playerId))
-    if (!moderatorMember) {
-        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not registered as staff.`).catch(() => { })
+    if (!punishmentType) {
+        console.log(`[LOG-CMD-DEBUG] EXIT unknown typeArg="${typeArg}" (not warn/kick/ban/bolo/shift)`)
         return
     }
+
+    // Per-type enable checks
+    if (typeArg === "warn" && !s.inGameWarnEnabled) { console.log(`[LOG-CMD-DEBUG] EXIT inGameWarnEnabled=false`); return }
+    if (typeArg === "kick" && !s.inGameKickEnabled) { console.log(`[LOG-CMD-DEBUG] EXIT inGameKickEnabled=false`); return }
+    if (typeArg === "ban" && !s.inGameBanEnabled) { console.log(`[LOG-CMD-DEBUG] EXIT inGameBanEnabled=false`); return }
+    if (typeArg === "bolo" && !s.inGameBoloEnabled) { console.log(`[LOG-CMD-DEBUG] EXIT inGameBoloEnabled=false`); return }
+
+    // Auth check: verify the command issuer is a registered staff member
+    const { member: moderatorMember, clerkId, discordId, possibleUserIds } = await findMemberByRobloxId(serverId, String(playerId))
+    if (!moderatorMember) {
+        console.log(`[LOG-CMD-DEBUG] AUTH-FAIL no Member matched. robloxId=${playerId} clerkId=${clerkId} discordId=${discordId} possibleUserIds=${JSON.stringify(possibleUserIds)}`)
+        const pmRes = await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You are not registered as staff.`).then(() => "ok").catch((e: any) => `err:${e?.message || e}`)
+        console.log(`[LOG-CMD-DEBUG] auth-fail PM result: ${pmRes}`)
+        return
+    }
+
+    console.log(`[LOG-CMD-DEBUG] AUTH-OK type="${typeArg}" target="${targetQuery}" reason="${reason}" memberId=${moderatorMember.id}`)
 
     try {
         let matches = cachedPlayers.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
@@ -791,8 +819,16 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                     } else if (type === "command") {
                         const cmd = log.Command?.toLowerCase() || ""
                         const prefix = s.inGameCommandPrefix.toLowerCase()
+                        const matches = cmd.startsWith(prefix + " ")
+                        console.log(`[DISPATCH-DEBUG] new command log: cmd=${JSON.stringify(log.Command)} prefix=${JSON.stringify(s.inGameCommandPrefix)} matches=${matches}`)
                         // Check for :log (or custom prefix) command
-                        if (cmd.startsWith(prefix + " ")) await handleLogCommand(log, serverId, client, s, v2.Players || [])
+                        if (matches) {
+                            try {
+                                await handleLogCommand(log, serverId, client, s, v2.Players || [])
+                            } catch (e: any) {
+                                console.error(`[DISPATCH-DEBUG] handleLogCommand THREW: ${e?.message || e}`, e?.stack)
+                            }
+                        }
                         // Check for shutdown command patterns
                         const isShutdown = s.shutdownCommandPatterns.some(p => cmd === p.toLowerCase() || cmd.startsWith(p.toLowerCase() + " "))
                         if (isShutdown) await handleShutdownCommand(log, serverId)

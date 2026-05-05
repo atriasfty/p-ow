@@ -170,3 +170,7 @@ check_quotes.py
 gha-creds-*.json
 Escolta Reina \[cO28Hxir6xg\].mp3
 /.github
+migrate_prod.load
+migrate-data.js
+PERFORMANCE_OPTIMIZATIONS.md
+resolve-migrations.sh

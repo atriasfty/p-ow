@@ -99,6 +99,13 @@ export function useServerEvents(serverId: string): ServerEventsState {
     const connect = useCallback(() => {
         if (!mountedRef.current) return
 
+        // Clear any pending reconnect timer — prevents a stale timer from killing
+        // a connection that was just established (e.g. by the visibilitychange handler).
+        if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current)
+            reconnectTimerRef.current = null
+        }
+
         // Close any existing connection
         esRef.current?.close()
 
@@ -116,11 +123,14 @@ export function useServerEvents(serverId: string): ServerEventsState {
             es.close()
             setState(prev => ({ ...prev, connected: false, error: "Reconnecting..." }))
 
-            // Exponential backoff reconnect
+            // Exponential backoff reconnect — calculate next delay before scheduling
+            // so the timer closure doesn't need to mutate backoffRef.
+            const delay = backoffRef.current
+            backoffRef.current = Math.min(delay * 2, MAX_BACKOFF)
             reconnectTimerRef.current = setTimeout(() => {
-                backoffRef.current = Math.min(backoffRef.current * 2, MAX_BACKOFF)
+                reconnectTimerRef.current = null
                 connect()
-            }, backoffRef.current)
+            }, delay)
         }
 
         // ---- Event handlers ----
