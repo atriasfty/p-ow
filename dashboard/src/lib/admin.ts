@@ -46,6 +46,24 @@ export const DEFAULT_PERMISSIONS: RolePermissions = {
     canUseAdminCommands: false
 }
 
+// Zero permissions — returned when user is not a member of the server.
+// Must be all-false so non-members cannot pass any permission check.
+export const NO_PERMISSIONS: RolePermissions = {
+    canShift: false,
+    canViewOtherShifts: false,
+    canViewLogs: false,
+    canViewPunishments: false,
+    canIssueWarnings: false,
+    canKick: false,
+    canBan: false,
+    canBanBolo: false,
+    canUseToolbox: false,
+    canManageBolos: false,
+    canRequestLoa: false,
+    canViewQuota: false,
+    canUseAdminCommands: false
+}
+
 // All permissions (for superadmin and server admins)
 export const ALL_PERMISSIONS: RolePermissions = {
     canShift: true,
@@ -162,7 +180,7 @@ export async function getUserPermissions(user: SessionUser | null, serverId: str
 
     const member = await getOrVerifyMember(user, serverId)
 
-    if (!member) return DEFAULT_PERMISSIONS
+    if (!member) return NO_PERMISSIONS
 
     // If member is marked as Admin in DB, they get everything
     if (member.isAdmin) return ALL_PERMISSIONS
