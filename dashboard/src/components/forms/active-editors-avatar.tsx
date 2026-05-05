@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useLiveEditor } from "./live-editor-provider"
 import { motion, AnimatePresence } from "framer-motion"
 import { Users } from "lucide-react"
@@ -8,16 +8,34 @@ import { Users } from "lucide-react"
 export function ActiveEditorsAvatar() {
     const { awareness, connected } = useLiveEditor()
     const [editors, setEditors] = useState<any[]>([])
+    // Only show Offline after being disconnected for 2s — prevents flicker on initial connect
+    const [showOffline, setShowOffline] = useState(false)
+    const offlineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        if (connected) {
+            if (offlineTimerRef.current) {
+                clearTimeout(offlineTimerRef.current)
+                offlineTimerRef.current = null
+            }
+            setShowOffline(false)
+        } else {
+            offlineTimerRef.current = setTimeout(() => setShowOffline(true), 2000)
+        }
+        return () => {
+            if (offlineTimerRef.current) clearTimeout(offlineTimerRef.current)
+        }
+    }, [connected])
 
     useEffect(() => {
         if (!awareness) return
 
         const updateEditors = () => {
             const statesMap = awareness.getStates() as Map<number, any>
-            
+
             // Map states into unique users (sometimes people have multiple tabs open)
             const uniqueUsers = new Map()
-            
+
             statesMap.forEach((state, clientId) => {
                 if (state.user) {
                     uniqueUsers.set(state.user.id, {
@@ -38,7 +56,7 @@ export function ActiveEditorsAvatar() {
         }
     }, [awareness])
 
-    if (!connected) {
+    if (showOffline) {
         return (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-medium">
                 <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />

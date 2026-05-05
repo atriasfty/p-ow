@@ -46,9 +46,22 @@ const TRIGGERS = [
     { value: "BOLO_CLEARED", label: "BOLO Cleared" },
     { value: "DISCORD_MESSAGE_RECEIVED", label: "Discord Message Received" },
     { value: "TIME_INTERVAL", label: "Every X Minutes (Time)" },
+    { value: "TOOLBOX_BUTTON", label: "Toolbox Button (Manual Trigger)" },
 ]
 
+interface Role { id: string; name: string; color: string }
 
+// Helpers to read/write TOOLBOX_BUTTON config from the conditions JSON string
+function parseToolboxConditions(conditions: string): { buttonColor: string; allowedRoleIds: string[] } {
+    try {
+        const c = JSON.parse(conditions || "{}")
+        if (Array.isArray(c)) return { buttonColor: "#6366f1", allowedRoleIds: [] }
+        return {
+            buttonColor: c.buttonColor || "#6366f1",
+            allowedRoleIds: Array.isArray(c.allowedRoleIds) ? c.allowedRoleIds : []
+        }
+    } catch { return { buttonColor: "#6366f1", allowedRoleIds: [] } }
+}
 
 export function AutomationEditor({ serverId, automation, onClose, onSave }: AutomationEditorProps) {
     const [name, setName] = useState(automation?.name || "")
@@ -62,6 +75,14 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
     )
 
     const [saving, setSaving] = useState(false)
+    const [roles, setRoles] = useState<Role[]>([])
+
+    useEffect(() => {
+        fetch(`/api/admin/roles?serverId=${serverId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(setRoles)
+            .catch(() => {})
+    }, [serverId])
 
     const addAction = (type: Action["type"]) => {
         setActions([...actions, { type, content: "", target: "" }])
@@ -142,10 +163,11 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
                                     onChange={(e) => {
                                         const newTrigger = e.target.value
                                         setTrigger(newTrigger)
-                                        // Auto-reset conditions format when switching between Time and Event triggers
                                         if (newTrigger === "TIME_INTERVAL") {
                                             setConditions(JSON.stringify({ intervalMinutes: "60" }))
-                                        } else if (trigger === "TIME_INTERVAL") {
+                                        } else if (newTrigger === "TOOLBOX_BUTTON") {
+                                            setConditions(JSON.stringify({ buttonColor: "#6366f1", allowedRoleIds: [] }))
+                                        } else if (trigger === "TIME_INTERVAL" || trigger === "TOOLBOX_BUTTON") {
                                             setConditions("[]")
                                         }
                                     }}
@@ -187,6 +209,54 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
                                 </div>
                             )}
 
+                            {trigger === "TOOLBOX_BUTTON" && (() => {
+                                const tb = parseToolboxConditions(conditions)
+                                const setTb = (patch: Partial<typeof tb>) =>
+                                    setConditions(JSON.stringify({ ...tb, ...patch }))
+                                return (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-zinc-400 mb-2">Button Color</label>
+                                            <div className="flex items-center gap-3">
+                                                <input
+                                                    type="color"
+                                                    value={tb.buttonColor}
+                                                    onChange={(e) => setTb({ buttonColor: e.target.value })}
+                                                    className="h-10 w-16 rounded cursor-pointer bg-transparent border-0 p-0"
+                                                />
+                                                <span className="text-sm text-zinc-400 font-mono">{tb.buttonColor}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-zinc-400 mb-2">
+                                                Visible to Roles
+                                                <span className="ml-2 text-xs text-zinc-500 font-normal">(empty = all staff with toolbox access)</span>
+                                            </label>
+                                            <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                                                {roles.length === 0 && <p className="text-xs text-zinc-600 italic">No roles found</p>}
+                                                {roles.map(role => {
+                                                    const checked = tb.allowedRoleIds.includes(role.id)
+                                                    return (
+                                                        <label key={role.id} className="flex items-center gap-2 p-2 rounded bg-[#1a1a1a] border border-[#333] cursor-pointer hover:bg-[#222] transition-colors">
+                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${checked ? 'border-indigo-500 bg-indigo-500' : 'border-zinc-500'}`}>
+                                                                {checked && <Check className="h-2.5 w-2.5 text-white" />}
+                                                            </div>
+                                                            <input type="checkbox" checked={checked} className="hidden" onChange={() => {
+                                                                const next = checked
+                                                                    ? tb.allowedRoleIds.filter(id => id !== role.id)
+                                                                    : [...tb.allowedRoleIds, role.id]
+                                                                setTb({ allowedRoleIds: next })
+                                                            }} />
+                                                            <span className="text-sm font-medium" style={{ color: role.color }}>{role.name}</span>
+                                                        </label>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })()}
+
                             <label className="flex items-center gap-3 p-4 rounded-lg bg-[#222] border border-[#333] cursor-pointer hover:bg-[#2a2a2a] transition-colors">
                                 <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${enabled ? 'bg-indigo-500 border-indigo-500' : 'border-zinc-500'}`}>
                                     {enabled && <Check className="h-3 w-3 text-white" />}
@@ -202,7 +272,7 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
                         </div>
 
                         {/* Conditions Section */}
-                        {trigger !== "TIME_INTERVAL" && (
+                        {trigger !== "TIME_INTERVAL" && trigger !== "TOOLBOX_BUTTON" && (
                             <div>
                                 <div className="flex items-center justify-between mb-4">
                                     <label className="text-sm font-medium text-zinc-400">Conditions (Optional)</label>

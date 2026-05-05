@@ -1,11 +1,13 @@
 
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Command, Zap, Calendar, X, Send, Loader2, Check, Terminal, ClipboardList, Bell, Phone, Map } from "lucide-react"
 import { CallsModal } from "./calls-modal"
 import { MapModal } from "./map-modal"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
+
+interface ToolboxAutomation { id: string; name: string; buttonColor: string }
 
 interface ToolboxProps {
     serverId: string
@@ -53,6 +55,33 @@ export function Toolbox({
     const [staffRequestMessage, setStaffRequestMessage] = useState<{ type: "success" | "error", text: string } | null>(null)
 
     const { permissions } = usePermissions()
+
+    const [toolboxAutomations, setToolboxAutomations] = useState<ToolboxAutomation[]>([])
+    const [runningId, setRunningId] = useState<string | null>(null)
+    const [successId, setSuccessId] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (!permissions.canUseToolbox) return
+        fetch(`/api/automations/toolbox?serverId=${serverId}`)
+            .then(r => r.ok ? r.json() : [])
+            .then(setToolboxAutomations)
+            .catch(() => {})
+    }, [serverId, permissions.canUseToolbox])
+
+    const runAutomation = async (id: string) => {
+        if (runningId) return
+        setRunningId(id)
+        try {
+            await fetch(`/api/automations/${id}/run`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ serverId })
+            })
+            setSuccessId(id)
+            setTimeout(() => setSuccessId(null), 2000)
+        } catch {}
+        finally { setRunningId(null) }
+    }
 
     const handlePermLogSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -268,6 +297,29 @@ export function Toolbox({
                     <Map className="h-4 w-4" />
                     <span className="text-sm font-medium">Map</span>
                 </button>
+
+                {/* Custom Automation Buttons */}
+                {toolboxAutomations.length > 0 && (
+                    <>
+                        <div className="h-4 w-px bg-[#333] flex-shrink-0" />
+                        {toolboxAutomations.map(auto => (
+                            <button
+                                key={auto.id}
+                                onClick={() => runAutomation(auto.id)}
+                                disabled={!!runningId}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium text-sm transition-all flex-shrink-0 disabled:opacity-60"
+                                style={{ backgroundColor: auto.buttonColor, opacity: runningId && runningId !== auto.id ? 0.6 : 1 }}
+                            >
+                                {runningId === auto.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : successId === auto.id ? (
+                                    <Check className="h-4 w-4" />
+                                ) : null}
+                                <span>{auto.name}</span>
+                            </button>
+                        ))}
+                    </>
+                )}
             </div>
 
             {/* Perm Log Modal */}

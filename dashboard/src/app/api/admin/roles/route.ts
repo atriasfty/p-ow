@@ -6,6 +6,26 @@ import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit"
 
 // Create role
+export async function GET(req: Request) {
+    const session = await getSession()
+    if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const serverId = searchParams.get("serverId")
+    if (!serverId) return NextResponse.json({ error: "Missing serverId" }, { status: 400 })
+
+    const hasAccess = await isServerAdmin(session.user, serverId)
+    if (!hasAccess) return new NextResponse("Forbidden", { status: 403 })
+
+    const roles = await prisma.role.findMany({
+        where: { serverId },
+        select: { id: true, name: true, color: true },
+        orderBy: { name: "asc" }
+    })
+
+    return NextResponse.json(roles)
+}
+
 export async function POST(req: Request) {
     if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()

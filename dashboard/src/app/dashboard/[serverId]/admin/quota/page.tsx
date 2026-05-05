@@ -129,9 +129,10 @@ export default async function AdminQuotaPage({
     const weekStart = new Date(periodStart.getTime() + weekOffset * 7 * 86_400_000)
     const weekEnd = new Date(weekStart.getTime() + (settings.quotaPeriodType === "monthly" ? 28 : 7) * 86_400_000)
 
-    // Get shifts for this week - across ALL servers for global quota
+    // Get shifts for this week scoped to this server
     const shifts = await prisma.shift.findMany({
         where: {
+            serverId,
             startTime: { gte: weekStart, lt: weekEnd }
         }
     })
@@ -167,6 +168,15 @@ export default async function AdminQuotaPage({
     }
 
     for (const member of members) {
+        // Skip members whose Clerk account no longer exists and have no stored robloxUsername
+        // — these are terminated/deleted accounts that would otherwise display a raw ID.
+        const clerkMatch = clerkUsers.find(u =>
+            u.id === member.userId ||
+            u.discordId === member.userId ||
+            u.robloxId === member.userId
+        )
+        if (!member.robloxUsername && !clerkMatch) continue
+
         const canonicalId = getCanonicalId(member.userId)
 
         // Calculate shift time for this specific member record

@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useDialog } from "@/components/providers/dialog-provider"
+import { useServerEventsContextSafe } from "@/components/providers/server-events-provider"
 
 interface ShiftButtonProps {
     isActive: boolean
@@ -11,10 +12,20 @@ interface ShiftButtonProps {
     disabled?: boolean
 }
 
-export function ShiftButton({ isActive, serverId, disabled }: ShiftButtonProps) {
+export function ShiftButton({ isActive: initialIsActive, serverId, disabled }: ShiftButtonProps) {
     const [loading, setLoading] = useState(false)
+    const [isActive, setIsActive] = useState(initialIsActive)
     const router = useRouter()
     const { showAlert } = useDialog()
+
+    // Keep button in sync with real-time shift state — catches shifts started/ended
+    // in-game or via the bot without a page reload.
+    const sseState = useServerEventsContextSafe()
+    useEffect(() => {
+        if (sseState?.shiftStatus !== null && sseState?.shiftStatus !== undefined) {
+            setIsActive(!!sseState.shiftStatus.shift)
+        }
+    }, [sseState?.shiftStatus])
 
     const toggleShift = async () => {
         setLoading(true)

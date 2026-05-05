@@ -97,12 +97,12 @@ html {
 /* Mod call panel animations — defined globally so re-renders inside the component
    don't reinject and reset the keyframe timer mid-animation. */
 @keyframes diagonal-wipe-in {
-    from { clip-path: polygon(0% 100%, 0% 100%, 0% 100%); }
-    to   { clip-path: polygon(-100% 200%, 200% -100%, 200% 200%); }
+    from { clip-path: polygon(0% 100%, 0% 100%, 0% 100%, 0% 100%); }
+    to   { clip-path: polygon(0% 100%, 0% -100%, 200% -100%, 200% 100%); }
 }
 @keyframes diagonal-wipe-out {
-    from { clip-path: polygon(-100% 200%, 200% -100%, 200% 200%); }
-    to   { clip-path: polygon(0% 100%, 0% 100%, 0% 100%); }
+    from { clip-path: polygon(0% 100%, 0% -100%, 200% -100%, 200% 100%); }
+    to   { clip-path: polygon(0% 100%, 0% 100%, 0% 100%, 0% 100%); }
 }
 
 /* Standalone PWA status bar area */

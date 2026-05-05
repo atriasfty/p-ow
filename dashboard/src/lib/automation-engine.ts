@@ -20,6 +20,7 @@ export type TriggerType =
     | "DISCORD_MESSAGE_RECEIVED"
     | "TIME_INTERVAL"
     | "EMERGENCY_CALL" | "MOD_CALL"
+    | "TOOLBOX_BUTTON"
 
 export interface AutomationContext {
     serverId: string
