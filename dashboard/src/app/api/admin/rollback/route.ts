@@ -2,12 +2,14 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isSuperAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
 import { RollbackService } from "@/lib/rollback-service"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

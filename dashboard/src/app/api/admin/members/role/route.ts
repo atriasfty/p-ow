@@ -2,7 +2,7 @@
 import { getSession } from "@/lib/auth-clerk"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
-import { isServerAdmin } from "@/lib/admin"
+import { isServerAdmin, isServerOwner } from "@/lib/admin"
 import { NextResponse } from "next/server"
 
 // Update member's role and admin status
@@ -27,7 +27,7 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: "Member not found" }, { status: 404 })
         }
 
-        // Check admin access
+        // Check admin access for role changes
         const hasAccess = await isServerAdmin(session.user, member.serverId)
         if (!hasAccess) {
             return NextResponse.json({ error: "Access denied" }, { status: 403 })
@@ -43,7 +43,14 @@ export async function PATCH(req: Request) {
             }
             dataToUpdate.roleId = roleId || null
         }
-        if (isAdmin !== undefined) dataToUpdate.isAdmin = isAdmin
+        if (isAdmin !== undefined) {
+            // Only the server owner (or superadmin) can grant/revoke the isAdmin flag.
+            // A role-based admin (canAccessAdmin) must not be able to self-escalate.
+            if (!await isServerOwner(session.user, member.serverId)) {
+                return NextResponse.json({ error: "Only the server owner can grant or revoke admin status" }, { status: 403 })
+            }
+            dataToUpdate.isAdmin = isAdmin
+        }
 
         await prisma.member.update({
             where: { id: memberId },
