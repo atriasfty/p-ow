@@ -249,7 +249,7 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
     }
 
     return (
-        <div className="space-y-4 h-full flex flex-col">
+        <div className="h-full flex flex-col">
             {/* Header — only rendered in compact/mod-panel mode */}
             {compact && (
                 <div className="p-4 border-b border-[#2a2a2a] flex items-center justify-between flex-shrink-0">
@@ -284,7 +284,7 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="Search database..."
+                            placeholder="Search logs..."
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             className="w-full rounded bg-[#2a2a2a] px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 pr-8"
@@ -298,11 +298,11 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
                 </div>
             )}
 
-            <div className={compact ? "space-y-2 overflow-y-auto h-full p-2" : "rounded-xl border border-white/5 bg-zinc-900/50 backdrop-blur-sm flex-1 overflow-hidden"}>
-                {loading && logs.length === 0 && !compact ? (
+            <div className={compact ? "overflow-y-auto flex-1 p-2" : "rounded-xl border border-white/5 bg-zinc-900/50 backdrop-blur-sm flex-1 overflow-hidden"}>
+                {loading && logs.length === 0 ? (
                     <div className="text-center text-zinc-500 py-8 flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading logs...
+                        {query || debouncedQuery ? "Searching..." : "Loading logs..."}
                     </div>
                 ) : logs.length === 0 ? (
                     <div className="text-center text-zinc-500 py-8">
