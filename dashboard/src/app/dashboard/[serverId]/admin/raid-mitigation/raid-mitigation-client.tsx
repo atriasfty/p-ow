@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -33,7 +34,7 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
 
         try {
             // 1. Resolve User
-            const userRes = await fetch(`/api/roblox/user?username=${encodeURIComponent(query)}`)
+            const userRes = await apiFetch(`/api/roblox/user?username=${encodeURIComponent(query)}`)
             const userData = await userRes.json()
 
             if (!userRes.ok || !userData.id) {
@@ -46,7 +47,7 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
 
             // 2. Fetch Logs for this user (as actor)
             setLoadingLogs(true)
-            const logsRes = await fetch(`/api/admin/logs?serverId=${serverId}&playerId=${userData.id}&limit=100&type=command`)
+            const logsRes = await apiFetch(`/api/admin/logs?serverId=${serverId}&playerId=${userData.id}&limit=100&type=command`)
             const logsData = await logsRes.json()
 
             if (logsRes.ok) {
@@ -96,7 +97,7 @@ export function RaidMitigationClient({ serverId }: RaidMitigationClientProps) {
 
         setRollingBack(true)
         try {
-            const res = await fetch(`/api/admin/rollback`, {
+            const res = await apiFetch(`/api/admin/rollback`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

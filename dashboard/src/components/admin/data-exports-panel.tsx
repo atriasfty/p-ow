@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -16,7 +17,7 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
 
         setDownloading(type)
         try {
-            const res = await fetch(`/api/admin/exports?serverId=${serverId}&type=${type}`)
+            const res = await apiFetch(`/api/admin/exports?serverId=${serverId}&type=${type}`)
             if (!res.ok) {
                 if (res.status === 403) await showAlert("Upgrade Required", "Subscription upgrade required to export data.", "warning")
                 else await showAlert("Export Failed", "Failed to export data.", "error")

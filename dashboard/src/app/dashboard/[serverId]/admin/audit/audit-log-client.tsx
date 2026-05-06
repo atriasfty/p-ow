@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect } from "react"
@@ -21,7 +22,7 @@ export function AuditLogClient({ serverId }: { serverId: string }) {
             if (eventFilter) url += `&event=${eventFilter}`
             if (originFilter) url += `&origin=${originFilter}`
 
-            const res = await fetch(url)
+            const res = await apiFetch(url)
             if (res.ok) {
                 const data = await res.json()
                 setLogs(data.logs || [])

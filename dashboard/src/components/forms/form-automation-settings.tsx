@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -26,7 +27,7 @@ export function FormAutomationSettings({ serverId, initialData }: FormAutomation
         setMessage("")
 
         try {
-            const res = await fetch("/api/admin/server", {
+            const res = await apiFetch("/api/admin/server", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

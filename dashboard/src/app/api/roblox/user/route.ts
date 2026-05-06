@@ -2,8 +2,12 @@
 import { NextResponse } from "next/server"
 import { getRobloxUser, getRobloxUserById } from "@/lib/roblox"
 import { checkSecurity } from "@/lib/security"
+import { getSession } from "@/lib/auth-clerk"
 
 export async function GET(req: Request) {
+    const session = await getSession()
+    if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
     const { searchParams } = new URL(req.url)
     const username = searchParams.get("username") || searchParams.get("query")
     const requestId = Math.random().toString(36).substring(7)

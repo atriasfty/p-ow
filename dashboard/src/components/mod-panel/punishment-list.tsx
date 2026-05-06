@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
@@ -66,7 +67,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
             const params = new URLSearchParams({ serverId, limit: "30" })
             if (cursor) params.append("cursor", cursor)
 
-            const res = await fetch(`/api/punishments?${params}`)
+            const res = await apiFetch(`/api/punishments?${params}`)
             if (res.ok) {
                 const data = await res.json()
                 setPunishments(prev => {
@@ -111,7 +112,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
             if (uncachedIds.length === 0) return
 
             try {
-                const res = await fetch("/api/roblox/users", {
+                const res = await apiFetch("/api/roblox/users", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ userIds: uncachedIds })
@@ -170,7 +171,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         setLoading(id)
         setConfirmModal(null)
         try {
-            const res = await fetch(`/api/punishments/${id}`, { method: "DELETE" })
+            const res = await apiFetch(`/api/punishments/${id}`, { method: "DELETE" })
             if (res.ok) {
                 setPunishments(prev => prev.filter(p => p.id !== id))
             }
@@ -186,7 +187,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         setLoading(id)
         setConfirmModal(null)
         try {
-            const res = await fetch(`/api/punishments/${id}`, {
+            const res = await apiFetch(`/api/punishments/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ resolved: true })
@@ -205,7 +206,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
     const handleEdit = async (id: string) => {
         setLoading(id)
         try {
-            const res = await fetch(`/api/punishments/${id}`, {
+            const res = await apiFetch(`/api/punishments/${id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ reason: editReason })

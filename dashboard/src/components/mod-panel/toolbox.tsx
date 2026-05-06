@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -62,7 +63,7 @@ export function Toolbox({
 
     useEffect(() => {
         if (!permissions.canUseToolbox) return
-        fetch(`/api/automations/toolbox?serverId=${serverId}`)
+        apiFetch(`/api/automations/toolbox?serverId=${serverId}`)
             .then(r => r.ok ? r.json() : [])
             .then(setToolboxAutomations)
             .catch(() => {})
@@ -72,7 +73,7 @@ export function Toolbox({
         if (runningId) return
         setRunningId(id)
         try {
-            await fetch(`/api/automations/${id}/run`, {
+            await apiFetch(`/api/automations/${id}/run`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })
@@ -91,7 +92,7 @@ export function Toolbox({
         setPermLogMessage(null)
 
         try {
-            const res = await fetch("/api/perm-log", {
+            const res = await apiFetch("/api/perm-log", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -127,7 +128,7 @@ export function Toolbox({
         setLoaMessage("")
 
         try {
-            const res = await fetch("/api/loa", {
+            const res = await apiFetch("/api/loa", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, startDate, endDate, reason: reason.trim() })
@@ -159,7 +160,7 @@ export function Toolbox({
         setCommandMessage(null)
 
         try {
-            const res = await fetch("/api/command", {
+            const res = await apiFetch("/api/command", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, command: commandInput.trim() })
@@ -190,7 +191,7 @@ export function Toolbox({
         setStaffRequestMessage(null)
 
         try {
-            const res = await fetch("/api/staff-request", {
+            const res = await apiFetch("/api/staff-request", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, reason: staffRequestReason.trim() })

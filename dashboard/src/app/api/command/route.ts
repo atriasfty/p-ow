@@ -40,6 +40,16 @@ export const POST = withMetrics("/api/command", async (req: Request) => {
             }, { status: 403 })
         }
 
+        // :kick and :ban require the respective formal permissions — canUseToolbox alone is not enough.
+        const kickPrefixes = [":kick"]
+        const banPrefixes = [":ban", ":unban"]
+        if (kickPrefixes.some(p => lowerCommand.startsWith(p)) && !permissions.canKick) {
+            return NextResponse.json({ error: "You do not have permission to kick players" }, { status: 403 })
+        }
+        if (banPrefixes.some(p => lowerCommand.startsWith(p)) && !permissions.canBan) {
+            return NextResponse.json({ error: "You do not have permission to ban players" }, { status: 403 })
+        }
+
         const server = await prisma.server.findUnique({ where: { id: serverId } })
         if (!server) {
             return NextResponse.json({ error: "Server not found" }, { status: 404 })

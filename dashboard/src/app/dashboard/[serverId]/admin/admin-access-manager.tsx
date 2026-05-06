@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -56,7 +57,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
         setLoadingAdminInfo(true)
         try {
             // Fetch all users and match to admins
-            const res = await fetch("/api/admin/users?limit=200")
+            const res = await apiFetch("/api/admin/users?limit=200")
             if (res.ok) {
                 const data = await res.json()
                 const allUsers: ClerkUser[] = data.users || []
@@ -105,7 +106,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
     const fetchUsers = async () => {
         setLoadingUsers(true)
         try {
-            const res = await fetch(`/api/admin/users?search=${encodeURIComponent(search)}`)
+            const res = await apiFetch(`/api/admin/users?search=${encodeURIComponent(search)}`)
             if (res.ok) {
                 const data = await res.json()
                 setUsers(data.users)
@@ -126,7 +127,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
         const userId = user.robloxId || user.discordId || user.id
 
         try {
-            const res = await fetch("/api/admin/grant", {
+            const res = await apiFetch("/api/admin/grant", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, userId })
@@ -149,7 +150,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
         setRemoving(memberId)
 
         try {
-            const res = await fetch("/api/admin/revoke", {
+            const res = await apiFetch("/api/admin/revoke", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, memberId })
@@ -167,7 +168,7 @@ export function AdminAccessManager({ serverId, admins: initialAdmins, roles: ini
 
     const toggleRoleAdmin = async (roleId: string, currentStatus: boolean) => {
         try {
-            const res = await fetch("/api/admin/roles", {
+            const res = await apiFetch("/api/admin/roles", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ roleId, canAccessAdmin: !currentStatus })

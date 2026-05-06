@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect, use } from "react"
@@ -31,7 +32,7 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
 
     const fetchAutomations = async () => {
         try {
-            const res = await fetch(`/api/admin/automations?serverId=${params.serverId}`)
+            const res = await apiFetch(`/api/admin/automations?serverId=${params.serverId}`)
             if (res.ok) {
                 const data = await res.json()
                 setAutomations(data)
@@ -45,7 +46,7 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
 
     const fetchLimits = async () => {
         try {
-            const res = await fetch(`/api/server/${params.serverId}/plan`)
+            const res = await apiFetch(`/api/server/${params.serverId}/plan`)
             if (res.ok) {
                 const planInfo = await res.json()
                 // Assuming we have a dedicated endpoint for current usage, or we just calculate here
@@ -70,7 +71,7 @@ export default function AutomationsPage({ params: paramsPromise }: { params: Pro
         if (!confirmed) return
 
         try {
-            const res = await fetch("/api/admin/automations", {
+            const res = await apiFetch("/api/admin/automations", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId: params.serverId, id })

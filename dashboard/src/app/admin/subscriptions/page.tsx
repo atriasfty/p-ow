@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useEffect, useState } from "react"
@@ -29,7 +30,7 @@ export default function AdminSubscriptionsPage() {
 
     const fetchServers = async () => {
         try {
-            const res = await fetch("/api/admin/subscriptions")
+            const res = await apiFetch("/api/admin/subscriptions")
             if (res.ok) {
                 const data = await res.json()
                 setServers(data.servers || [])
@@ -44,7 +45,7 @@ export default function AdminSubscriptionsPage() {
     const updateServerPlan = async (serverId: string, plan: string) => {
         setUpdating(serverId)
         try {
-            await fetch("/api/admin/subscriptions", {
+            await apiFetch("/api/admin/subscriptions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type: "server", targetId: serverId, plan })
@@ -61,7 +62,7 @@ export default function AdminSubscriptionsPage() {
         if (!userIdInput.trim()) return
         setUserPlanUpdating(true)
         try {
-            await fetch("/api/admin/subscriptions", {
+            await apiFetch("/api/admin/subscriptions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type: "user", targetId: userIdInput.trim(), plan: "pow-pro-user" })

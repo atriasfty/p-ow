@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect } from "react"
@@ -128,9 +129,9 @@ export default function ResponsesPage({
     const loadData = async (formId: string, serverId: string) => {
         try {
             const [responsesRes, analyticsRes, planRes] = await Promise.all([
-                fetch(`/api/forms/${formId}/responses`),
-                fetch(`/api/forms/${formId}/analytics`),
-                fetch(`/api/server/${serverId}/plan`)
+                apiFetch(`/api/forms/${formId}/responses`),
+                apiFetch(`/api/forms/${formId}/analytics`),
+                apiFetch(`/api/server/${serverId}/plan`)
             ])
 
             if (responsesRes.ok) {
@@ -163,7 +164,7 @@ export default function ResponsesPage({
         if (!confirmed) return
         setDeleting(responseId)
         try {
-            const res = await fetch(`/api/forms/${resolvedParams.formId}/responses?responseId=${responseId}`, {
+            const res = await apiFetch(`/api/forms/${resolvedParams.formId}/responses?responseId=${responseId}`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -184,7 +185,7 @@ export default function ResponsesPage({
         if (!confirmed) return
         setDeleting("all")
         try {
-            const res = await fetch(`/api/forms/${resolvedParams.formId}/responses?deleteAll=true`, {
+            const res = await apiFetch(`/api/forms/${resolvedParams.formId}/responses?deleteAll=true`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -203,7 +204,7 @@ export default function ResponsesPage({
         if (!resolvedParams) return
         setReviewing(`${responseId}-${decision}`)
         try {
-            const res = await fetch(`/api/forms/${resolvedParams.formId}/responses/${responseId}/status`, {
+            const res = await apiFetch(`/api/forms/${resolvedParams.formId}/responses/${responseId}/status`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ status: decision, reason: reviewReason })

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import React, { useEffect, useState, useMemo } from "react"
@@ -22,7 +23,7 @@ export function ShiftHeatmap({ serverId, userId, userName }: ShiftHeatmapProps) 
         async function fetchHeatmap() {
             setLoading(true)
             try {
-                const res = await fetch(`/api/admin/members/${userId}/heatmap?serverId=${serverId}`)
+                const res = await apiFetch(`/api/admin/members/${userId}/heatmap?serverId=${serverId}`)
                 if (res.ok) {
                     const json = await res.json()
                     setData(json)

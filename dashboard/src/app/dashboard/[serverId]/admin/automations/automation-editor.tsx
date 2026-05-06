@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect } from "react"
@@ -78,7 +79,7 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
     const [roles, setRoles] = useState<Role[]>([])
 
     useEffect(() => {
-        fetch(`/api/admin/roles?serverId=${serverId}`)
+        apiFetch(`/api/admin/roles?serverId=${serverId}`)
             .then(r => r.ok ? r.json() : [])
             .then(setRoles)
             .catch(() => {})
@@ -101,7 +102,7 @@ export function AutomationEditor({ serverId, automation, onClose, onSave }: Auto
     const handleSubmit = async () => {
         setSaving(true)
         try {
-            const res = await fetch("/api/admin/automations", {
+            const res = await apiFetch("/api/admin/automations", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

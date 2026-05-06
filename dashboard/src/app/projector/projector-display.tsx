@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
@@ -89,7 +90,7 @@ export function ProjectorDisplay() {
 
     const fetchStats = useCallback(async () => {
         try {
-            const res = await fetch("/api/admin/projector-stats", { cache: "no-store" })
+            const res = await apiFetch("/api/admin/projector-stats", { cache: "no-store" })
             if (!res.ok) { setError(true); return }
             setStats(await res.json())
             setError(false)

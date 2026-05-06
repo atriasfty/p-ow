@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -143,7 +144,7 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
 
     const handleSave = async () => {
         try {
-            const res = await fetch("/api/admin/roles", {
+            const res = await apiFetch("/api/admin/roles", {
                 method: editingRole ? "PATCH" : "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -169,7 +170,7 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
         setDeleting(roleId)
 
         try {
-            const res = await fetch("/api/admin/roles", {
+            const res = await apiFetch("/api/admin/roles", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ roleId })
@@ -189,7 +190,7 @@ export function RolesList({ serverId, roles: initialRoles, servers }: RolesListP
         setSyncing(true)
 
         try {
-            await fetch("/api/admin/roles/sync", {
+            await apiFetch("/api/admin/roles/sync", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })

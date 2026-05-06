@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect } from "react"
@@ -25,7 +26,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
 
     const fetchKeys = async () => {
         try {
-            const res = await fetch(`/api/admin/api-keys?serverId=${serverId}&includeAnalytics=true`)
+            const res = await apiFetch(`/api/admin/api-keys?serverId=${serverId}&includeAnalytics=true`)
             if (res.ok) {
                 const data = await res.json()
                 setKeys(data.keys || data)
@@ -44,7 +45,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
         e.preventDefault()
         if (!newName.trim()) return
 
-        const res = await fetch("/api/admin/api-keys", {
+        const res = await apiFetch("/api/admin/api-keys", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: newName, serverId, allowedIps: newAllowedIps })
@@ -64,7 +65,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
         const confirmed = await showConfirm("Revoke API Key", "Are you sure you want to revoke this API key? This action cannot be undone.", "Revoke", "destructive")
         if (!confirmed) return
 
-        const res = await fetch(`/api/admin/api-keys?id=${id}&serverId=${serverId}`, {
+        const res = await apiFetch(`/api/admin/api-keys?id=${id}&serverId=${serverId}`, {
             method: "DELETE"
         })
 
@@ -74,7 +75,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
     }
 
     const handleUpdate = async (id: string, updates: any) => {
-        const res = await fetch("/api/admin/api-keys", {
+        const res = await apiFetch("/api/admin/api-keys", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id, serverId, ...updates })

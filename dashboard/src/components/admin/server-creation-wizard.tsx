@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect } from "react"
@@ -66,7 +67,7 @@ export function ServerCreationWizard() {
     useEffect(() => {
         const fetchGuilds = async () => {
             try {
-                const res = await fetch("/api/discord/eligible-guilds")
+                const res = await apiFetch("/api/discord/eligible-guilds")
                 if (res.ok) {
                     const data = await res.json()
                     setGuilds(data)
@@ -91,7 +92,7 @@ export function ServerCreationWizard() {
         setError(null)
 
         try {
-            const res = await fetch("/api/admin/server/verify-creation", {
+            const res = await apiFetch("/api/admin/server/verify-creation", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ prcApiKey, discordGuildId })
@@ -131,7 +132,7 @@ export function ServerCreationWizard() {
         setError(null)
 
         try {
-            const res = await fetch("/api/admin/server/create", {
+            const res = await apiFetch("/api/admin/server/create", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

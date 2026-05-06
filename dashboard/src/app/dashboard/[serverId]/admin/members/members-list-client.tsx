@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -87,7 +88,7 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
             setLoading(true)
             try {
                 const offset = (page - 1) * limit
-                const res = await fetch(`/api/admin/server-users?serverId=${serverId}&limit=${limit}&offset=${offset}&search=${encodeURIComponent(debouncedSearch)}`)
+                const res = await apiFetch(`/api/admin/server-users?serverId=${serverId}&limit=${limit}&offset=${offset}&search=${encodeURIComponent(debouncedSearch)}`)
                 if (res.ok && isMounted.current) {
                     const data = await res.json()
                     setUsers(data.users)
@@ -124,20 +125,20 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
 
         try {
             if (member) {
-                await fetch("/api/admin/members/role", {
+                await apiFetch("/api/admin/members/role", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ memberId: member.id, roleId, isAdmin })
                 })
             } else {
-                await fetch("/api/admin/members", {
+                await apiFetch("/api/admin/members", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ serverId, userId, roleId })
                 })
             }
 
-            const res = await fetch(`/api/admin/members?serverId=${serverId}`)
+            const res = await apiFetch(`/api/admin/members?serverId=${serverId}`)
             if (res.ok) {
                 const data = await res.json()
                 const newMap: Record<string, ExistingMember> = {}
@@ -156,7 +157,7 @@ export function MembersListClient({ serverId, roles, servers, existingMembers }:
     const handleSyncRoles = async () => {
         setSyncing(true)
         try {
-            await fetch("/api/admin/members/sync", {
+            await apiFetch("/api/admin/members/sync", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })

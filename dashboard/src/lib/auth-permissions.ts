@@ -49,32 +49,37 @@ export async function verifyPermissionOrRedirect(
 }
 
 /**
- * Simple CSRF protection for API routes that use session cookies.
- * Verifies the Origin or Referer header against the current request host.
+ * CSRF protection for API routes that use session cookies.
+ *
+ * Requires the custom `X-POW-Request: 1` header. Browsers enforce a CORS
+ * preflight for any non-simple request header, so a cross-origin attacker
+ * cannot set it without server cooperation. Our dashboard fetches always
+ * include it; plain form posts and curl attacks do not.
+ *
+ * Also verifies Origin/Referer when present so old browser quirks (no
+ * preflight) are still caught.
  */
 export function verifyCsrf(req: Request): boolean {
+    // Primary check: custom header that cross-origin requests cannot set.
+    if (!req.headers.get("x-pow-request")) return false
+
     const origin = req.headers.get("origin")
     const referer = req.headers.get("referer")
-    const host = req.headers.get("host") // e.g. pow.ciankelly.xyz
+    const host = req.headers.get("host")
 
     if (!host) return false
 
+    // If the browser sent an Origin or Referer, it must match our host.
     try {
-        if (origin) {
-            return new URL(origin).host === host
-        }
-
-        if (referer) {
-            return new URL(referer).host === host
-        }
-    } catch (e) {
+        if (origin) return new URL(origin).host === host
+        if (referer) return new URL(referer).host === host
+    } catch {
         return false
     }
 
-    // Fallback: If it's a browser request with cookies but no origin/referer,
-    // it's likely a standard navigation or a script-less form post.
-    // For our API (fetch), origin is always present in POST/PATCH/DELETE.
-    return false
+    // No Origin/Referer (e.g. same-origin fetch with stripped referrer policy) —
+    // the custom header alone is sufficient.
+    return true
 }
 
 /**

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -148,7 +149,7 @@ export default function CreateFormPage({
             const { serverId } = await params
 
             // Create everything in one go (Atomic)
-            const res = await fetch("/api/forms", {
+            const res = await apiFetch("/api/forms", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

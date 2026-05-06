@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -30,7 +31,7 @@ export function SuperServersTable({ initialServers }: { initialServers: any[] })
         if (!deletingId) return
         setUpdatingId(deletingId)
         try {
-            const res = await fetch(`/api/admin/super/servers/${deletingId}`, {
+            const res = await apiFetch(`/api/admin/super/servers/${deletingId}`, {
                 method: "DELETE"
             })
 

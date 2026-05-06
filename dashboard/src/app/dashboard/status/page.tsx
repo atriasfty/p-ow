@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
@@ -384,7 +385,7 @@ export default function StatusPage() {
 
     const fetchMetrics = useCallback(async () => {
         try {
-            const res = await fetch(`/api/admin/metrics?hours=${hours}`)
+            const res = await apiFetch(`/api/admin/metrics?hours=${hours}`)
             if (!res.ok) {
                 if (res.status === 401) throw new Error("Not authenticated")
                 if (res.status === 403) throw new Error("Superadmin access required")

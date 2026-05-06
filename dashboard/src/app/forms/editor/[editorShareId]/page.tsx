@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useEffect, useState, use } from "react"
@@ -21,7 +22,7 @@ export default function EditorAccessPage({
 
     const claimAccess = async () => {
         try {
-            const res = await fetch("/api/forms/editor-access", {
+            const res = await apiFetch("/api/forms/editor-access", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ editorShareId })

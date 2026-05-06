@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -89,7 +90,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
         setProcessing(loaId)
 
         try {
-            const res = await fetch(`/api/loa/${loaId}/${action}`, {
+            const res = await apiFetch(`/api/loa/${loaId}/${action}`, {
                 method: "POST",
                 headers: {
                     "Origin": window.location.origin
@@ -116,7 +117,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
         setConfirmModal(null)
 
         try {
-            const res = await fetch(`/api/loa/${loaId}`, {
+            const res = await apiFetch(`/api/loa/${loaId}`, {
                 method: "DELETE"
             })
 

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -241,7 +242,7 @@ function EditFormInner({
         if (!resolvedParams) return
         setLoadingEditors(true)
         try {
-            const res = await fetch(`/api/forms/editor-access?formId=${resolvedParams.formId}&listAll=true`)
+            const res = await apiFetch(`/api/forms/editor-access?formId=${resolvedParams.formId}&listAll=true`)
             if (res.ok) {
                 setEditors(await res.json())
             }
@@ -258,7 +259,7 @@ function EditFormInner({
         if (!confirmed) return
 
         try {
-            const res = await fetch(`/api/forms/editor-access?formId=${form.id}&userId=${userId}`, {
+            const res = await apiFetch(`/api/forms/editor-access?formId=${form.id}&userId=${userId}`, {
                 method: "DELETE"
             })
             if (res.ok) {
@@ -272,8 +273,8 @@ function EditFormInner({
     const loadDiscordData = async (serverId: string) => {
         try {
             const [rolesRes, channelsRes] = await Promise.all([
-                fetch(`/api/discord/roles?serverId=${serverId}`),
-                fetch(`/api/discord/channels?serverId=${serverId}`)
+                apiFetch(`/api/discord/roles?serverId=${serverId}`),
+                apiFetch(`/api/discord/channels?serverId=${serverId}`)
             ])
 
             if (rolesRes.ok) setAvailableRoles(await rolesRes.json())
@@ -294,7 +295,7 @@ function EditFormInner({
 
     const loadForm = async (formId: string) => {
         try {
-            const res = await fetch(`/api/forms/${formId}`)
+            const res = await apiFetch(`/api/forms/${formId}`)
             if (!res.ok) throw new Error("Failed to load form")
             const data = await res.json()
 
@@ -334,7 +335,7 @@ function EditFormInner({
         if (!form || !resolvedParams) return
         setSaving(true)
         try {
-            const res = await fetch(`/api/forms/${form.id}`, {
+            const res = await apiFetch(`/api/forms/${form.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updates)
@@ -369,7 +370,7 @@ function EditFormInner({
     const addSection = async () => {
         if (!form) return
         try {
-            const res = await fetch(`/api/forms/${form.id}/sections`, {
+            const res = await apiFetch(`/api/forms/${form.id}/sections`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ title: `Section ${form.sections.length + 1}` })
@@ -381,7 +382,7 @@ function EditFormInner({
     const updateSection = async (sectionId: string, updates: { title?: string; description?: string }) => {
         if (!form) return
         try {
-            await fetch(`/api/forms/${form.id}/sections`, {
+            await apiFetch(`/api/forms/${form.id}/sections`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ sectionId, ...updates })
@@ -400,7 +401,7 @@ function EditFormInner({
     const deleteSection = async (sectionId: string) => {
         if (!form || form.sections.length <= 1) return
         try {
-            await fetch(`/api/forms/${form.id}/sections?sectionId=${sectionId}`, { method: "DELETE" })
+            await apiFetch(`/api/forms/${form.id}/sections?sectionId=${sectionId}`, { method: "DELETE" })
             await loadForm(form.id)
         } catch { }
     }
@@ -417,7 +418,7 @@ function EditFormInner({
         }
 
         try {
-            await fetch(`/api/forms/${form.id}/questions`, {
+            await apiFetch(`/api/forms/${form.id}/questions`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -457,7 +458,7 @@ function EditFormInner({
         setSaving(true)
         questionUpdateTimeouts.current[questionId] = setTimeout(async () => {
             try {
-                const res = await fetch(`/api/forms/${form.id}/questions`, {
+                const res = await apiFetch(`/api/forms/${form.id}/questions`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ questionId, ...updates })
@@ -478,7 +479,7 @@ function EditFormInner({
     const deleteQuestion = async (questionId: string) => {
         if (!form) return
         try {
-            await fetch(`/api/forms/${form.id}/questions?questionId=${questionId}`, { method: "DELETE" })
+            await apiFetch(`/api/forms/${form.id}/questions?questionId=${questionId}`, { method: "DELETE" })
             await loadForm(form.id)
         } catch { }
     }
@@ -527,7 +528,7 @@ function EditFormInner({
 
         // Save to server
         try {
-            await fetch(`/api/forms/${form.id}/questions`, {
+            await apiFetch(`/api/forms/${form.id}/questions`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -563,7 +564,7 @@ function EditFormInner({
 
         // Save to server
         try {
-            await fetch(`/api/forms/${form.id}/sections`, {
+            await apiFetch(`/api/forms/${form.id}/sections`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -581,7 +582,7 @@ function EditFormInner({
         const confirmed = await showConfirm("Delete Form", "Are you sure you want to delete this form? All responses will be lost.", "Delete", "destructive")
         if (!confirmed) return
         try {
-            await fetch(`/api/forms/${form.id}`, { method: "DELETE" })
+            await apiFetch(`/api/forms/${form.id}`, { method: "DELETE" })
             router.push(`/dashboard/${resolvedParams.serverId}/forms`)
         } catch { }
     }

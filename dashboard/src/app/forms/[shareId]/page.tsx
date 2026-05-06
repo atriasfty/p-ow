@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect, use, useRef } from "react"
@@ -73,7 +74,7 @@ export default function PublicFormPage({
         setSavingDraft(true)
         saveTimeoutRef.current = setTimeout(async () => {
             try {
-                const res = await fetch(`/api/forms/${form.id}/submit`, {
+                const res = await apiFetch(`/api/forms/${form.id}/submit`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ answers, saveAsDraft: true, responseId })
@@ -97,7 +98,7 @@ export default function PublicFormPage({
 
     const loadForm = async () => {
         try {
-            const res = await fetch(`/api/forms/public/${shareId}`)
+            const res = await apiFetch(`/api/forms/public/${shareId}`)
             if (!res.ok) {
                 const data = await res.json()
                 setError(data.error || "Form not found")
@@ -174,7 +175,7 @@ export default function PublicFormPage({
         setError("")
 
         try {
-            const res = await fetch(`/api/forms/${form.id}/submit`, {
+            const res = await apiFetch(`/api/forms/${form.id}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ answers, responseId })
@@ -409,7 +410,7 @@ function QuestionInput({
                 formData.append("file", file)
                 formData.append("formId", formId)
 
-                const res = await fetch("/api/forms/upload", {
+                const res = await apiFetch("/api/forms/upload", {
                     method: "POST",
                     body: formData
                 })

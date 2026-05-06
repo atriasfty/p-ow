@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -40,7 +41,7 @@ export function MembersList({ serverId, members: initialMembers, roles, servers 
         setUpdating(memberId)
 
         try {
-            const res = await fetch("/api/admin/members/role", {
+            const res = await apiFetch("/api/admin/members/role", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ memberId, roleId })
@@ -64,7 +65,7 @@ export function MembersList({ serverId, members: initialMembers, roles, servers 
         setSyncing(true)
 
         try {
-            const res = await fetch("/api/admin/members/sync", {
+            const res = await apiFetch("/api/admin/members/sync", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -138,7 +139,7 @@ export function ServerSettingsForm({
     const handleSyncCommands = async () => {
         setIsSyncing(true)
         try {
-            const res = await fetch(`/api/admin/server/${serverId}/sync-commands`, {
+            const res = await apiFetch(`/api/admin/server/${serverId}/sync-commands`, {
                 method: "POST"
             })
             const data = await res.json()
@@ -220,7 +221,7 @@ export function ServerSettingsForm({
         setMessage("")
 
         try {
-            const res = await fetch("/api/admin/server", {
+            const res = await apiFetch("/api/admin/server", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -276,7 +277,7 @@ export function ServerSettingsForm({
 
         setDangerLoading(true)
         try {
-            const res = await fetch("/api/admin/server/danger", {
+            const res = await apiFetch("/api/admin/server/danger", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId, action, value })
@@ -307,7 +308,7 @@ export function ServerSettingsForm({
 
         setDangerLoading(true)
         try {
-            const res = await fetch(`/api/admin/server/danger?serverId=${serverId}`, {
+            const res = await apiFetch(`/api/admin/server/danger?serverId=${serverId}`, {
                 method: "DELETE",
                 headers: {
                     "Content-Type": "application/json",

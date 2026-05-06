@@ -2,9 +2,13 @@
 import { NextResponse } from "next/server"
 import { getFromCache, setToCache } from "@/lib/roblox-cache"
 import { checkSecurity } from "@/lib/security"
+import { getSession } from "@/lib/auth-clerk"
 
 // Batch fetch user data from Roblox
 export async function POST(req: Request) {
+    const session = await getSession()
+    if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
     const body = await req.json()
     const userIds: string[] = body.userIds || []
 

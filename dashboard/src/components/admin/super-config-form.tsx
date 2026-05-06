@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -35,7 +36,7 @@ export function SuperConfigForm() {
         setMessage(null)
 
         try {
-            const res = await fetch("/api/admin/super/config", {
+            const res = await apiFetch("/api/admin/super/config", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ key, value })
@@ -64,7 +65,7 @@ export function SuperConfigForm() {
 
         setLoading(true)
         try {
-            const res = await fetch(`/api/admin/super/config?key=${encodeURIComponent(key)}`, {
+            const res = await apiFetch(`/api/admin/super/config?key=${encodeURIComponent(key)}`, {
                 method: "DELETE"
             })
             if (res.ok) {

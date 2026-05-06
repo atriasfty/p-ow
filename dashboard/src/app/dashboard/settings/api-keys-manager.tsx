@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useEffect } from "react"
@@ -35,7 +36,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
 
     const fetchKeys = async () => {
         try {
-            const res = await fetch("/api/admin/api-keys")
+            const res = await apiFetch("/api/admin/api-keys")
             if (res.ok) setKeys(await res.json())
         } catch (e) {
             console.error("Failed to fetch keys", e)
@@ -48,7 +49,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
         if (!newName) return
         setIsCreating(true)
         try {
-            const res = await fetch("/api/admin/api-keys", {
+            const res = await apiFetch("/api/admin/api-keys", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: newName })
@@ -73,7 +74,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
         const id = confirmId
         setIsDeleting(true)
         try {
-            await fetch(`/api/admin/api-keys?id=${id}`, { method: "DELETE" })
+            await apiFetch(`/api/admin/api-keys?id=${id}`, { method: "DELETE" })
             fetchKeys()
             setConfirmId(null)
         } catch (e) {
@@ -85,7 +86,7 @@ export function ApiKeysManager({ isSuperAdmin }: ApiKeysManagerProps) {
 
     const updateKey = async (id: string, updates: Partial<ApiKey>) => {
         try {
-            await fetch("/api/admin/api-keys", {
+            await apiFetch("/api/admin/api-keys", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id, ...updates })

@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 
 "use client"
 
@@ -55,9 +56,9 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
         const load = async () => {
             try {
                 // Start all fetches in parallel
-                const robloxPromise = fetch(`/api/roblox/user?username=${encodeURIComponent(username)}`)
-                const statusPromise = fetch(`/api/players/status?serverId=${serverId}&username=${encodeURIComponent(username)}`)
-                const adminPromise = fetch(`/api/admin/status?serverId=${serverId}`)
+                const robloxPromise = apiFetch(`/api/roblox/user?username=${encodeURIComponent(username)}`)
+                const statusPromise = apiFetch(`/api/players/status?serverId=${serverId}&username=${encodeURIComponent(username)}`)
+                const adminPromise = apiFetch(`/api/admin/status?serverId=${serverId}`)
 
                 // Wait for Roblox user first (needed for other data)
                 let userStart = null
@@ -100,8 +101,8 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
 
                     // Fetch punishments and shifts in parallel (use isAdminLocal, not state)
                     const [punRes, shiftsRes] = await Promise.all([
-                        fetch(`/api/punishments?serverId=${serverId}&userId=${userStart.id}`),
-                        isAdminLocal ? fetch(`/api/admin/shifts?serverId=${serverId}&userId=${userStart.id}`) : Promise.resolve(null)
+                        apiFetch(`/api/punishments?serverId=${serverId}&userId=${userStart.id}`),
+                        isAdminLocal ? apiFetch(`/api/admin/shifts?serverId=${serverId}&userId=${userStart.id}`) : Promise.resolve(null)
                     ])
 
                     if (punRes.ok) {
@@ -117,7 +118,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
                 } else {
                     // Fallback: check logs
                     try {
-                        const logsRes = await fetch(`/api/logs?serverId=${serverId}&query=${encodeURIComponent(username)}&limit=1`)
+                        const logsRes = await apiFetch(`/api/logs?serverId=${serverId}&query=${encodeURIComponent(username)}&limit=1`)
                         if (logsRes.ok) {
                             const logsData = await logsRes.json()
                             if (logsData.length > 0) {
@@ -156,7 +157,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
 
         const fetchStatus = async () => {
             try {
-                const res = await fetch(`/api/players/status?serverId=${serverId}&username=${encodeURIComponent(username)}&userId=${robloxUser.id}`)
+                const res = await apiFetch(`/api/players/status?serverId=${serverId}&username=${encodeURIComponent(username)}&userId=${robloxUser.id}`)
                 if (res.ok) setPlayerStatus(await res.json())
             } catch (e) { }
         }
@@ -171,7 +172,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
         setShiftLoading(true)
 
         try {
-            const res = await fetch('/api/admin/shifts', {
+            const res = await apiFetch('/api/admin/shifts', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -185,7 +186,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
             })
 
             if (res.ok) {
-                const shiftsRes = await fetch(`/api/admin/shifts?serverId=${serverId}&userId=${robloxUser.id}`)
+                const shiftsRes = await apiFetch(`/api/admin/shifts?serverId=${serverId}&userId=${robloxUser.id}`)
                 if (shiftsRes.ok) {
                     const data = await shiftsRes.json()
                     setWeeklyShifts(data.shifts || [])
@@ -206,7 +207,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
         setShiftLoading(true)
 
         try {
-            const res = await fetch(`/api/admin/shifts?serverId=${serverId}&shiftId=${shiftId}`, {
+            const res = await apiFetch(`/api/admin/shifts?serverId=${serverId}&shiftId=${shiftId}`, {
                 method: 'DELETE',
                 headers: { 'x-csrf-check': '1' }
             })
@@ -579,7 +580,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
                                                     <button
                                                         onClick={async () => {
                                                             // Quick client-side update for responsiveness, then refresh
-                                                            await fetch(`/api/resolve-bolo?id=${p.id}`, {
+                                                            await apiFetch(`/api/resolve-bolo?id=${p.id}`, {
                                                                 method: 'POST',
                                                                 headers: {
                                                                     'x-csrf-check': '1',

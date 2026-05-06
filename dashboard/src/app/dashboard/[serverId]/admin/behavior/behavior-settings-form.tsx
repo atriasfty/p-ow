@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState, useCallback } from "react"
@@ -223,7 +224,7 @@ export function BehaviorSettingsForm({ serverId, initialSettings, plan, planRete
     const save = async (group: string, fields: Partial<ServerSettings>) => {
         setSaving(group)
         try {
-            const res = await fetch("/api/admin/server/settings", {
+            const res = await apiFetch("/api/admin/server/settings", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json", "x-csrf-token": "1" },
                 body: JSON.stringify({ serverId, settings: fields })

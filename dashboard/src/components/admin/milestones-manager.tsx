@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -32,7 +33,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
         setLoading(true)
 
         try {
-            const res = await fetch("/api/admin/milestones", {
+            const res = await apiFetch("/api/admin/milestones", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -62,7 +63,7 @@ export function MilestonesManager({ serverId, initialMilestones }: MilestonesMan
         if (!confirmed) return
 
         try {
-            const res = await fetch(`/api/admin/milestones?serverId=${serverId}&id=${id}`, {
+            const res = await apiFetch(`/api/admin/milestones?serverId=${serverId}&id=${id}`, {
                 method: "DELETE"
             })
 

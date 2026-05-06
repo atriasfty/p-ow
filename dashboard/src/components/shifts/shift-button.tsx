@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useEffect, useState } from "react"
@@ -33,7 +34,7 @@ export function ShiftButton({ isActive: initialIsActive, serverId, disabled }: S
             // We use the same pattern as the admin API but for the current user
             // The server-side will use the session user's IDs
             const method = isActive ? "PATCH" : "POST"
-            const res = await fetch(`/api/shifts/toggle`, {
+            const res = await apiFetch(`/api/shifts/toggle`, {
                 method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })

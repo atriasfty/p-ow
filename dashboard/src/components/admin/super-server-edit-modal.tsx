@@ -1,3 +1,4 @@
+import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
 import { useState } from "react"
@@ -31,7 +32,7 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
     const handleSave = async () => {
         setLoading(true)
         try {
-            const res = await fetch(`/api/admin/super/servers/${server.id}`, {
+            const res = await apiFetch(`/api/admin/super/servers/${server.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(formData)
