@@ -1,12 +1,14 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 function Bone({ className }: { className?: string }) {
     return (
         <div className={`bg-white/5 rounded-lg animate-pulse ${className ?? ""}`} />
     )
 }
 
-function SkeletonCard({ children, className }: { children?: React.ReactNode; className?: string }) {
+function SkeletonCard({ children, className }: { children?: ReactNode; className?: string }) {
     return (
         <div className={`rounded-xl bg-[#1a1a1a] border border-[#333] p-4 ${className ?? ""}`}>
             {children}
