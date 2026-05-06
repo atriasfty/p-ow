@@ -160,15 +160,15 @@ export async function GET(
                 enqueue(type, data)
             })
 
-            // ---- Heartbeat to prevent proxy timeouts (every 25 seconds) ----
+            // ---- Heartbeat — named event so the client can detect stream staleness ----
             const heartbeat = setInterval(() => {
                 try {
-                    controller.enqueue(encoder.encode(": heartbeat\n\n"))
+                    controller.enqueue(encoder.encode(sseMessage("heartbeat", null)))
                 } catch {
                     clearInterval(heartbeat)
                     unsubscribe()
                 }
-            }, 25000)
+            }, 8000)
 
             // ---- Cleanup on client disconnect ----
             req.signal.addEventListener("abort", () => {

@@ -90,12 +90,16 @@ const DEFAULT_STATE: ServerEventsState = {
 
 const MAX_BACKOFF = 30000
 const BASE_BACKOFF = 1000
+const STALE_THRESHOLD_MS = 15000
+const STALE_CHECK_INTERVAL_MS = 3000
 
 export function useServerEvents(serverId: string): ServerEventsState {
     const [state, setState] = useState<ServerEventsState>(DEFAULT_STATE)
     const esRef = useRef<EventSource | null>(null)
     const backoffRef = useRef(BASE_BACKOFF)
     const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const staleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const lastEventAtRef = useRef<number>(0)
     const mountedRef = useRef(true)
 
     const connect = useCallback(() => {
@@ -114,9 +118,12 @@ export function useServerEvents(serverId: string): ServerEventsState {
         const es = new EventSource(`/api/sse/${serverId}`)
         esRef.current = es
 
+        const touch = () => { lastEventAtRef.current = Date.now() }
+
         es.onopen = () => {
             if (!mountedRef.current) return
             backoffRef.current = BASE_BACKOFF
+            touch()
             setState(prev => ({ ...prev, connected: true, error: null }))
         }
 
@@ -136,22 +143,31 @@ export function useServerEvents(serverId: string): ServerEventsState {
         }
 
         // ---- Event handlers ----
+        es.addEventListener("heartbeat", () => {
+            if (!mountedRef.current) return
+            touch()
+            // Restore connected state if we were showing stale banner
+            setState(prev => prev.connected ? prev : { ...prev, connected: true, error: null })
+        })
+
         es.addEventListener("players", (e) => {
             if (!mountedRef.current) return
+            touch()
             const players: ParsedPlayerSSE[] = JSON.parse(e.data)
             setState(prev => ({ ...prev, players, hasInitialData: true }))
         })
 
         es.addEventListener("server-stats", (e) => {
             if (!mountedRef.current) return
+            touch()
             const serverStats: ServerStatsSSE = JSON.parse(e.data)
             setState(prev => ({ ...prev, serverStats, hasInitialData: true }))
         })
 
         es.addEventListener("logs", (e) => {
             if (!mountedRef.current) return
+            touch()
             const newLogs: LogSSE[] = JSON.parse(e.data)
-            // Accumulate new logs; components will prepend them
             setState(prev => ({
                 ...prev,
                 newLogs: [...newLogs, ...prev.newLogs].slice(0, 200)
@@ -160,24 +176,28 @@ export function useServerEvents(serverId: string): ServerEventsState {
 
         es.addEventListener("calls", (e) => {
             if (!mountedRef.current) return
+            touch()
             const calls: CallsSSE = JSON.parse(e.data)
             setState(prev => ({ ...prev, calls }))
         })
 
         es.addEventListener("shift-status", (e) => {
             if (!mountedRef.current) return
+            touch()
             const shiftStatus: ShiftStatusSSE = JSON.parse(e.data)
             setState(prev => ({ ...prev, shiftStatus }))
         })
 
         es.addEventListener("staff-on-duty-ids", (e) => {
             if (!mountedRef.current) return
+            touch()
             const ids: string[] = JSON.parse(e.data)
             setState(prev => ({ ...prev, staffOnDutyIds: ids }))
         })
 
         es.addEventListener("staff-on-duty", (e) => {
             if (!mountedRef.current) return
+            touch()
             const staff: StaffMemberSSE[] = JSON.parse(e.data)
             setState(prev => ({
                 ...prev,
@@ -187,6 +207,7 @@ export function useServerEvents(serverId: string): ServerEventsState {
 
         es.addEventListener("punishments", (e) => {
             if (!mountedRef.current) return
+            touch()
             const event: PunishmentSSE = JSON.parse(e.data)
             setState(prev => ({
                 ...prev,
@@ -196,6 +217,7 @@ export function useServerEvents(serverId: string): ServerEventsState {
 
         es.addEventListener("ssd", (e) => {
             if (!mountedRef.current) return
+            touch()
             const ssd: SsdSSE = JSON.parse(e.data)
             setState(prev => ({ ...prev, ssd }))
         })
@@ -204,6 +226,15 @@ export function useServerEvents(serverId: string): ServerEventsState {
     useEffect(() => {
         mountedRef.current = true
         connect()
+
+        // Staleness check — show banner if no event received within threshold
+        staleTimerRef.current = setInterval(() => {
+            if (!mountedRef.current) return
+            const sinceLastEvent = Date.now() - lastEventAtRef.current
+            if (lastEventAtRef.current > 0 && sinceLastEvent > STALE_THRESHOLD_MS) {
+                setState(prev => prev.connected ? { ...prev, connected: false, error: "Reconnecting..." } : prev)
+            }
+        }, STALE_CHECK_INTERVAL_MS)
 
         // Reconnect when tab becomes visible again
         const handleVisibilityChange = () => {
@@ -218,6 +249,7 @@ export function useServerEvents(serverId: string): ServerEventsState {
         return () => {
             mountedRef.current = false
             if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+            if (staleTimerRef.current) clearInterval(staleTimerRef.current)
             esRef.current?.close()
             esRef.current = null
             document.removeEventListener("visibilitychange", handleVisibilityChange)
