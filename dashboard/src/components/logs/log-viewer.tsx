@@ -287,7 +287,9 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
                         Loading logs...
                     </div>
                 ) : logs.length === 0 ? (
-                    <div className="text-center text-zinc-500 py-8">Waiting for logs...</div>
+                    <div className="text-center text-zinc-500 py-8">
+                        {debouncedQuery ? "No results found" : "Waiting for logs..."}
+                    </div>
                 ) : (
                     <div
                         ref={scrollContainerRef}

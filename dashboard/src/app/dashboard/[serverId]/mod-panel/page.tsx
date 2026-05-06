@@ -152,21 +152,36 @@ export default async function ModPanelPage({
                             {quotaMinutes > 0 ? ` / ${Math.floor(quotaMinutes / 60)}h ${quotaMinutes % 60}m` : ""}
                         </span>
                     </div>
-                    {quotaMinutes > 0 ? (
-                        <div className="space-y-1">
-                            <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full transition-all ${quotaProgress >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                                    style={{ width: `${quotaProgress}%` }}
-                                ></div>
+                    {quotaMinutes > 0 ? (() => {
+                        // Days elapsed since Monday (0 = Mon, 6 = Sun)
+                        const dayOfWeek = now.getDay() // 0=Sun … 6=Sat
+                        const daysElapsed = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Mon=0 … Sun=6
+                        const weekFraction = Math.max((daysElapsed + 1) / 7, 0.01)
+                        const expectedMinutes = quotaMinutes * weekFraction
+                        const isAhead = weeklyDurationMinutes >= expectedMinutes
+                        const isMet = weeklyDurationMinutes >= quotaMinutes
+                        const barColor = isMet ? "bg-emerald-500" : isAhead ? "bg-indigo-500" : "bg-amber-500"
+                        const statusLabel = isMet ? "✓ Met" : isAhead ? "On track" : "Behind"
+                        const statusColor = isMet ? "text-emerald-400" : isAhead ? "text-indigo-400" : "text-amber-400"
+                        // Next Monday reset date
+                        const nextMonday = new Date(weekStart)
+                        nextMonday.setDate(weekStart.getDate() + 7)
+                        const resetStr = nextMonday.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+                        return (
+                            <div className="space-y-1">
+                                <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full transition-all ${barColor}`}
+                                        style={{ width: `${quotaProgress}%` }}
+                                    ></div>
+                                </div>
+                                <div className="flex justify-between text-[10px]">
+                                    <span className={`font-medium ${statusColor}`}>{statusLabel}</span>
+                                    <span className="text-zinc-600">Resets {resetStr}</span>
+                                </div>
                             </div>
-                            <div className="text-[10px] text-right">
-                                <span className={quotaProgress >= 100 ? "text-emerald-400 font-medium" : "text-zinc-500"}>
-                                    {quotaProgress}% {quotaProgress >= 100 ? "✓" : ""}
-                                </span>
-                            </div>
-                        </div>
-                    ) : (
+                        )
+                    })() : (
                         <div className="text-[10px] text-zinc-600">No quota set for your role</div>
                     )}
                 </div>

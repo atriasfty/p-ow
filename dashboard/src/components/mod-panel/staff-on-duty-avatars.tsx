@@ -76,9 +76,16 @@ export function StaffOnDutyAvatars({ serverId, excludeUserId }: { serverId: stri
                     <span className="text-zinc-500 text-xs italic">No other staff on duty</span>
                 )}
                 {staff.length > 0 && (
-                    <span className="text-zinc-400 text-xs ml-3">
-                        {staff.length} other staff
-                    </span>
+                    <div className="relative group/count ml-3">
+                        <span className="text-zinc-400 text-xs cursor-default">
+                            {staff.length} other staff
+                        </span>
+                        <div className="absolute bottom-full left-0 mb-2 px-2 py-1.5 bg-black text-[10px] text-white rounded opacity-0 group-hover/count:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 border border-white/10 shadow-xl space-y-0.5">
+                            {staff.map(m => (
+                                <p key={m.userId} className="font-medium">@{m.robloxUsername}</p>
+                            ))}
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

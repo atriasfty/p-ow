@@ -40,6 +40,9 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
     const [cursor, setCursor] = useState<string | null>(null)
     const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+    // Filter state
+    const [typeFilter, setTypeFilter] = useState<"all" | "Warn" | "Kick" | "Ban" | "Ban Bolo">("all")
+
     // Confirmation modal state
     const [confirmModal, setConfirmModal] = useState<{
         type: "delete" | "complete"
@@ -47,8 +50,11 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         userName: string
     } | null>(null)
 
+    // Filter + sort
+    const filteredByType = typeFilter === "all" ? punishments : punishments.filter(p => p.type === typeFilter)
+
     // Sort to put uncompleted ban bolos first
-    const sortedPunishments = [...punishments].sort((a, b) => {
+    const sortedPunishments = [...filteredByType].sort((a, b) => {
         const aIsUnresolvedBolo = a.type === "Ban Bolo" && !a.resolved
         const bIsUnresolvedBolo = b.type === "Ban Bolo" && !b.resolved
 
@@ -236,11 +242,41 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         return <div className="p-4 text-center text-zinc-500 text-sm">You do not have permission to view punishments.</div>
     }
 
+    const filterLabels: { key: typeof typeFilter, label: string }[] = [
+        { key: "all", label: "All" },
+        { key: "Warn", label: "Warn" },
+        { key: "Kick", label: "Kick" },
+        { key: "Ban", label: "Ban" },
+        { key: "Ban Bolo", label: "Bolo" },
+    ]
+
+    const filterColors: Record<string, string> = {
+        all: "bg-indigo-500 text-white",
+        Warn: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+        Kick: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+        Ban: "bg-red-500/20 text-red-400 border border-red-500/30",
+        "Ban Bolo": "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30",
+    }
+
     return (
         <>
+            {/* Type filter tabs */}
+            <div className="flex gap-1 px-2 pt-2 pb-1 flex-shrink-0">
+                {filterLabels.map(({ key, label }) => (
+                    <button
+                        key={key}
+                        onClick={() => setTypeFilter(key)}
+                        className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${typeFilter === key ? filterColors[key] : "bg-[#2a2a2a] text-zinc-500 hover:text-zinc-300"}`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
             <div ref={scrollContainerRef} className="p-2 space-y-2 overflow-y-auto flex-1">
-                {punishments.length === 0 ? (
-                    <div className="text-center text-zinc-500 text-sm py-8">No punishments yet</div>
+                {sortedPunishments.length === 0 ? (
+                    <div className="text-center text-zinc-500 text-sm py-8">
+                        {typeFilter === "all" ? "No punishments yet" : `No ${typeFilter} punishments`}
+                    </div>
                 ) : (
                     <>
                         {sortedPunishments.map(p => {

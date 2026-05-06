@@ -100,10 +100,12 @@ export function CallsModal({ serverId, onClose }: { serverId: string, onClose: (
                                             <p className="text-xs font-bold text-white mb-0.5">{call.callerName}</p>
                                             <p className="text-xs text-zinc-400 line-clamp-2">{call.description}</p>
                                         </div>
-                                        <div className="flex items-center gap-2 text-[10px] text-zinc-400 bg-black/30 p-1.5 rounded-lg border border-white/5">
-                                            <MapPin className="h-3 w-3 text-amber-500/50" />
-                                            <span className="truncate">{call.positionDescriptor || "Location Data Unavailable"}</span>
-                                        </div>
+                                        {call.positionDescriptor && (
+                                            <div className="flex items-center gap-2 text-[10px] text-zinc-400 bg-black/30 p-1.5 rounded-lg border border-white/5">
+                                                <MapPin className="h-3 w-3 text-amber-500/50" />
+                                                <span className="truncate">{call.positionDescriptor}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             )}
