@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { ShieldOff, Eye } from "lucide-react"
+import { ModPanelSkeleton } from "@/components/mod-panel/mod-panel-skeleton"
 
 // Permission structure
 interface Permissions {
@@ -179,17 +180,11 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
     if (status === "loading") {
         return (
             <PermissionsContext.Provider value={{ permissions, viewerOnly, quotaMinutes }}>
-                {/* Hidden children - still render so they can start fetching */}
+                {/* Hidden children - still render so they can start fetching in parallel */}
                 <div style={{ visibility: "hidden", position: "absolute", pointerEvents: "none" }}>
                     {children}
                 </div>
-                {/* Loading overlay */}
-                <div className="min-h-screen bg-[#111] flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                        <div className="h-8 w-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                        <p className="text-zinc-400 text-sm">Checking access...</p>
-                    </div>
-                </div>
+                <ModPanelSkeleton />
             </PermissionsContext.Provider>
         )
     }

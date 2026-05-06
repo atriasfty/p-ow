@@ -21,6 +21,8 @@ import Link from "next/link"
 import { WarningBanner } from "@/components/ui/warning-banner"
 import { ServerEventsProvider } from "@/components/providers/server-events-provider"
 import { ModCallDetector } from "@/components/mod-panel/mod-call-detector"
+import { SseStatusBanner } from "@/components/mod-panel/sse-status-banner"
+import { ModPanelContentGate } from "@/components/mod-panel/mod-panel-content-gate"
 
 // Force dynamic rendering to ensure shift state is always fresh
 export const dynamic = 'force-dynamic'
@@ -249,6 +251,7 @@ export default async function ModPanelPage({
                     {/* MOBILE LAYOUT */}
                     <div className="md:hidden flex flex-col h-screen">
                         <WarningBanner />
+                        <SseStatusBanner />
                         <div className="flex-1 min-h-0">
                             <MobileModPanel
                                 serverId={serverId}
@@ -270,6 +273,8 @@ export default async function ModPanelPage({
                     {/* DESKTOP LAYOUT */}
                     <div className="hidden md:flex flex-col h-screen bg-[#111] text-zinc-100 font-sans overflow-hidden">
                         <WarningBanner />
+                        <SseStatusBanner />
+                        <ModPanelContentGate>
                         <div className="flex flex-col flex-1 min-h-0 p-4 overflow-hidden">
                             {/* Header */}
                             <div className="flex h-16 items-center justify-between border-b border-white/5 bg-[#1a1a1a] px-6 rounded-t-xl mb-4 flex-shrink-0">
@@ -415,6 +420,7 @@ export default async function ModPanelPage({
                                 </div>
                             </div>
                         </div>
+                        </ModPanelContentGate>
                     </div>
                 </RoleSyncWrapper>
             </ServerEventsProvider>

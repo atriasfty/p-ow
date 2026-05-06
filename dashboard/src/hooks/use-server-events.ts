@@ -71,6 +71,7 @@ export type ServerEventsState = {
     ssd: SsdSSE | null
     connected: boolean
     error: string | null
+    hasInitialData: boolean
 }
 
 const DEFAULT_STATE: ServerEventsState = {
@@ -84,6 +85,7 @@ const DEFAULT_STATE: ServerEventsState = {
     ssd: null,
     connected: false,
     error: null,
+    hasInitialData: false,
 }
 
 const MAX_BACKOFF = 30000
@@ -137,13 +139,13 @@ export function useServerEvents(serverId: string): ServerEventsState {
         es.addEventListener("players", (e) => {
             if (!mountedRef.current) return
             const players: ParsedPlayerSSE[] = JSON.parse(e.data)
-            setState(prev => ({ ...prev, players }))
+            setState(prev => ({ ...prev, players, hasInitialData: true }))
         })
 
         es.addEventListener("server-stats", (e) => {
             if (!mountedRef.current) return
             const serverStats: ServerStatsSSE = JSON.parse(e.data)
-            setState(prev => ({ ...prev, serverStats }))
+            setState(prev => ({ ...prev, serverStats, hasInitialData: true }))
         })
 
         es.addEventListener("logs", (e) => {
