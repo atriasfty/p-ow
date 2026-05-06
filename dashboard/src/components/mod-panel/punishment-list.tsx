@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/api-fetch"
 import { useEffect, useState, useRef, useCallback } from "react"
-import { MoreVertical, Pencil, Trash2, User, X, Check, Loader2, CheckCircle2, AlertTriangle, ChevronDown } from "lucide-react"
+import { MoreVertical, Pencil, Trash2, User, X, Check, Loader2, CheckCircle2, AlertTriangle, ChevronDown, Filter } from "lucide-react"
 import Link from "next/link"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
 import { useServerEventsContext } from "@/components/providers/server-events-provider"
@@ -42,6 +42,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
 
     // Filter state
     const [typeFilter, setTypeFilter] = useState<"all" | "Warn" | "Kick" | "Ban" | "Ban Bolo">("all")
+    const [showFilter, setShowFilter] = useState(false)
 
     // Confirmation modal state
     const [confirmModal, setConfirmModal] = useState<{
@@ -260,18 +261,32 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
 
     return (
         <>
-            {/* Type filter tabs */}
-            <div className="flex gap-1 px-2 pt-2 pb-1 flex-shrink-0">
-                {filterLabels.map(({ key, label }) => (
-                    <button
-                        key={key}
-                        onClick={() => setTypeFilter(key)}
-                        className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${typeFilter === key ? filterColors[key] : "bg-[#2a2a2a] text-zinc-500 hover:text-zinc-300"}`}
-                    >
-                        {label}
-                    </button>
-                ))}
+            {/* Header */}
+            <div className="p-4 border-b border-[#2a2a2a] flex items-center justify-between flex-shrink-0">
+                <h3 className="font-bold text-white">Punishments</h3>
+                <button
+                    onClick={() => setShowFilter(f => !f)}
+                    className={`p-1 rounded transition-colors ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                    title="Toggle filters"
+                >
+                    <Filter className="h-4 w-4" />
+                </button>
             </div>
+
+            {/* Type filter tabs */}
+            {showFilter && (
+                <div className="flex gap-1 px-2 pt-2 pb-1 flex-shrink-0 border-b border-[#2a2a2a]">
+                    {filterLabels.map(({ key, label }) => (
+                        <button
+                            key={key}
+                            onClick={() => setTypeFilter(key)}
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${typeFilter === key ? filterColors[key] : "bg-[#2a2a2a] text-zinc-500 hover:text-zinc-300"}`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            )}
             <div ref={scrollContainerRef} className="p-2 space-y-2 overflow-y-auto flex-1">
                 {sortedPunishments.length === 0 ? (
                     <div className="text-center text-zinc-500 text-sm py-8">

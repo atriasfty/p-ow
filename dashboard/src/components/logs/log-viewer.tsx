@@ -2,7 +2,7 @@
 
 
 import { useEffect, useState, useRef, useCallback, useLayoutEffect } from "react"
-import { ScrollText, Sword, Terminal, LogOut, Loader2, Lock } from "lucide-react"
+import { ScrollText, Sword, Terminal, LogOut, Loader2, Lock, Filter } from "lucide-react"
 import Link from "next/link"
 import { usePermissions } from "@/components/auth/role-sync-wrapper"
 import { useServerEventsContextSafe } from "@/components/providers/server-events-provider"
@@ -35,6 +35,7 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
     const [hasMore, setHasMore] = useState(true)
     const [filter, setFilter] = useState<"all" | "join" | "kill" | "command">("all")
     const [query, setQuery] = useState("")
+    const [showFilter, setShowFilter] = useState(false)
     const [debouncedQuery, setDebouncedQuery] = useState("")
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const snapshotRef = useRef<{ scrollHeight: number, scrollTop: number } | null>(null)
@@ -249,36 +250,53 @@ export function LogViewer({ serverId, compact = false, userId, username }: { ser
 
     return (
         <div className="space-y-4 h-full flex flex-col">
-            <div className="flex flex-col gap-2 p-2 border-b border-[#2a2a2a]">
-                <div className="flex gap-2">
-                    {(["all", "join", "kill", "command"] as const).map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${filter === f
-                                ? "bg-indigo-500 text-white"
-                                : "bg-[#2a2a2a] text-zinc-400 hover:text-white"
-                                }`}
-                        >
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </button>
-                    ))}
+            {/* Header — only rendered in compact/mod-panel mode */}
+            {compact && (
+                <div className="p-4 border-b border-[#2a2a2a] flex items-center justify-between flex-shrink-0">
+                    <h3 className="font-bold text-white">Live Logs</h3>
+                    <button
+                        onClick={() => setShowFilter(f => !f)}
+                        className={`p-1 rounded transition-colors ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                        title="Toggle filters"
+                    >
+                        <Filter className="h-4 w-4" />
+                    </button>
                 </div>
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Search database..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        className="w-full rounded bg-[#2a2a2a] px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 pr-8"
-                    />
-                    {query !== debouncedQuery && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                            <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />
-                        </div>
-                    )}
+            )}
+
+            {/* Filter bar — always visible outside compact mode, toggled in compact mode */}
+            {(!compact || showFilter) && (
+                <div className="flex flex-col gap-2 p-2 border-b border-[#2a2a2a] flex-shrink-0">
+                    <div className="flex gap-2">
+                        {(["all", "join", "kill", "command"] as const).map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${filter === f
+                                    ? "bg-indigo-500 text-white"
+                                    : "bg-[#2a2a2a] text-zinc-400 hover:text-white"
+                                    }`}
+                            >
+                                {f.charAt(0).toUpperCase() + f.slice(1)}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search database..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            className="w-full rounded bg-[#2a2a2a] px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 pr-8"
+                        />
+                        {query !== debouncedQuery && (
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className={compact ? "space-y-2 overflow-y-auto h-full p-2" : "rounded-xl border border-white/5 bg-zinc-900/50 backdrop-blur-sm flex-1 overflow-hidden"}>
                 {loading && logs.length === 0 && !compact ? (

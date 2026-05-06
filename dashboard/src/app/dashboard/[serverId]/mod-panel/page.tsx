@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { redirect } from "next/navigation"
-import { Shield, Zap, MessageSquare, Briefcase, History, Filter, Search, MoreVertical, Play, Settings, Calendar, FileText } from "lucide-react"
+import { Shield, Zap, MessageSquare, Briefcase, History, Search, MoreVertical, Play, Settings, Calendar, FileText } from "lucide-react"
 import { EnsureDiscordConnection } from "@/components/auth/ensure-discord"
 import { RoleSyncWrapper } from "@/components/auth/role-sync-wrapper"
 import { ShiftButton } from "@/components/shifts/shift-button"
@@ -395,27 +395,16 @@ export default async function ModPanelPage({
                                         featurePermLog={(server as any).featurePermLog}
                                     />
 
-                                    {/* Logs Panel */}
                                     {/* Logs Panel - Gated */}
                                     {permissions.canViewLogs && (
                                         <div className="flex-1 flex flex-col min-h-0 bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#222] relative">
-                                            <div className="p-4 border-b border-[#2a2a2a]">
-                                                <h3 className="font-bold text-white">Live Logs</h3>
-                                            </div>
-                                            <div className="flex-1 overflow-hidden p-0">
-                                                {/* We reuse the Logic of LogViewer but likely need to strip its internal container styling to fit here seamlessly */}
-                                                <LogViewer serverId={serverId} compact={true} />
-                                            </div>
+                                            <LogViewer serverId={serverId} compact={true} />
                                         </div>
                                     )}
                                 </div>
 
                                 {/* RIGHT COLUMN: Punishments */}
                                 <div className="lg:col-span-1 flex flex-col h-full min-h-0 bg-[#1a1a1a] rounded-xl overflow-hidden border border-[#222]">
-                                    <div className="p-4 border-b border-[#2a2a2a] flex items-center justify-between flex-shrink-0">
-                                        <h3 className="font-bold text-white">Punishments</h3>
-                                        <Filter className="h-4 w-4 text-zinc-500" />
-                                    </div>
                                     <PunishmentList serverId={serverId} initialPunishments={recentPunishments} />
                                 </div>
                             </div>
