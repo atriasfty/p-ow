@@ -81,25 +81,30 @@ export async function PATCH(req: Request) {
             }
         }
 
+        // Only write fields that were explicitly included in the request body.
+        // Unconditional writes were silently nulling out fields (including
+        // discordGuildId) when callers PATCHed a partial body, bypassing
+        // the owner-only gate above.
         const updated = await prisma.server.update({
             where: { id: serverId },
             data: {
-                customName: customName || null,
-                bannerUrl: bannerUrl || null,
-                onDutyRoleId: onDutyRoleId || null,
-                discordGuildId: discordGuildId || null,
-                autoSyncRoles: autoSyncRoles ?? false,
-                suspendedRoleId: suspendedRoleId || null,
-                terminatedRoleId: terminatedRoleId || null,
-                staffRoleId: staffRoleId || null,
-                permLogChannelId: permLogChannelId || null,
-                staffRequestChannelId: staffRequestChannelId || null,
-                commandLogChannelId: commandLogChannelId || null,
-                raidAlertChannelId: raidAlertChannelId || null,
-                milestoneChannelId: milestoneChannelId || null,
-                loaChannelId: loaChannelId || null,
-                onLoaRoleId: onLoaRoleId || null,
-                staffRequestRateLimit: staffRequestRateLimit || null,
+                ...(customName !== undefined && { customName: customName || null }),
+                ...(bannerUrl !== undefined && { bannerUrl: bannerUrl || null }),
+                ...(onDutyRoleId !== undefined && { onDutyRoleId: onDutyRoleId || null }),
+                ...(discordGuildId !== undefined && { discordGuildId: discordGuildId || null }),
+                ...(autoSyncRoles !== undefined && { autoSyncRoles: autoSyncRoles ?? false }),
+                ...(suspendedRoleId !== undefined && { suspendedRoleId: suspendedRoleId || null }),
+                ...(terminatedRoleId !== undefined && { terminatedRoleId: terminatedRoleId || null }),
+                ...(staffRoleId !== undefined && { staffRoleId: staffRoleId || null }),
+                ...(permLogChannelId !== undefined && { permLogChannelId: permLogChannelId || null }),
+                ...(staffRequestChannelId !== undefined && { staffRequestChannelId: staffRequestChannelId || null }),
+                ...(commandLogChannelId !== undefined && { commandLogChannelId: commandLogChannelId || null }),
+                ...(raidAlertChannelId !== undefined && { raidAlertChannelId: raidAlertChannelId || null }),
+                ...(milestoneChannelId !== undefined && { milestoneChannelId: milestoneChannelId || null }),
+                ...(loaChannelId !== undefined && { loaChannelId: loaChannelId || null }),
+                ...(onLoaRoleId !== undefined && { onLoaRoleId: onLoaRoleId || null }),
+                ...(staffRequestRateLimit !== undefined && { staffRequestRateLimit: staffRequestRateLimit || null }),
+                ...(finalBotToken !== undefined && { customBotToken: finalBotToken }),
                 ...(finalBotEnabled !== undefined && { customBotEnabled: finalBotEnabled }),
                 ...(featureLoa !== undefined && { featureLoa }),
                 ...(featureStaffReq !== undefined && { featureStaffReq }),

@@ -53,18 +53,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, discordId, updated: true })
         }
 
-        // No existing member found - create one
-        const newMember = await prisma.member.create({
-            data: {
-                userId: clerkId,
-                serverId,
-                discordId,
-                robloxId: robloxId || null,
-                isAdmin: false
-            }
-        })
-
-        return NextResponse.json({ success: true, discordId, created: true })
+        // Do NOT create a new Member record here. Membership is granted via
+        // Discord role auto-sync (handled by the bot) or by an admin manually
+        // adding the user. Allowing self-creation here let any authenticated
+        // user join any server and inherit DEFAULT_PERMISSIONS (which include
+        // canUseToolbox), letting them execute PRC commands on that server.
+        return NextResponse.json(
+            { error: "Not a member of this server" },
+            { status: 403 }
+        )
 
     } catch (e) {
         console.error("[LINK] Error:", e)
