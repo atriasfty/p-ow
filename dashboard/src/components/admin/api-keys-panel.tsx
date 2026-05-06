@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
+import { apiFetch } from "@/lib/api-fetch"
 import { useState, useEffect } from "react"
 import { ShieldAlert, Plus, Trash2, Key, Activity, Copy, Check, AlertTriangle, X } from "lucide-react"
 import { Button } from "@/components/ui/button"

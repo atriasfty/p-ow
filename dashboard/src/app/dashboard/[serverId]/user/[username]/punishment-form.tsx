@@ -1,5 +1,5 @@
-
 "use client"
+
 
 import { useActionState, useState, useEffect } from "react"
 import { submitPunishment } from "./actions"

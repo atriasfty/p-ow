@@ -1,5 +1,5 @@
-
 "use client"
+
 
 import { useState, useEffect } from "react"
 import { Sparkles, X, ArrowRight } from "lucide-react"

@@ -1,5 +1,5 @@
-
 "use client"
+
 
 import { useEffect, useState } from "react"
 import { User, Loader2, Shield, Star, Truck } from "lucide-react"

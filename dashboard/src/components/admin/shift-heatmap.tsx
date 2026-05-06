@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
+import { apiFetch } from "@/lib/api-fetch"
 import React, { useEffect, useState, useMemo } from "react"
 import { Loader2, Info } from "lucide-react"
 

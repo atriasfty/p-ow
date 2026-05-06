@@ -1,5 +1,4 @@
-
-"use client" // Client component for usePathname
+"use client"
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"

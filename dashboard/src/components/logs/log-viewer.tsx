@@ -1,5 +1,5 @@
-
 "use client"
+
 
 import { useEffect, useState, useRef, useCallback, useLayoutEffect } from "react"
 import { ScrollText, Sword, Terminal, LogOut, Loader2, Lock } from "lucide-react"

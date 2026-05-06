@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
-
 "use client"
+
+import { apiFetch } from "@/lib/api-fetch"
 
 import { useEffect, useState } from "react"
 import { ArrowLeft, Shield, Ban, AlertTriangle, Gavel, Calendar, User, History, Clock, Siren, ScrollText, Car, Radio, Users, Star, Crown, Wifi, WifiOff, StopCircle, Trash2, ChevronDown, ChevronUp } from "lucide-react"

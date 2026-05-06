@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
-
 "use client"
+
+import { apiFetch } from "@/lib/api-fetch"
 
 import React, { useState, useEffect } from "react"
 import { Command, Zap, Calendar, X, Send, Loader2, Check, Terminal, ClipboardList, Bell, Phone, Map } from "lucide-react"

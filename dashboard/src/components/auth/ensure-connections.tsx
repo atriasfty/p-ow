@@ -1,5 +1,6 @@
-
 "use client"
+
+
 import { useUser, UserButton } from "@clerk/nextjs"
 import { ConnectionRequirementScreen } from "@/components/auth/connection-requirement-screen"
 

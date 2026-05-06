@@ -1,5 +1,5 @@
-
 "use client"
+
 
 import { useFormState, useFormStatus } from "react-dom"
 import { createInvitation } from "./actions"

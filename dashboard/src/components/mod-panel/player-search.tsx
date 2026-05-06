@@ -1,5 +1,5 @@
-
 "use client"
+
 
 import { Search, User as UserIcon } from "lucide-react"
 import { useState, useEffect, useRef } from "react"

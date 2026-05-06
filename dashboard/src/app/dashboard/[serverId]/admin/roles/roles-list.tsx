@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
-
 "use client"
+
+import { apiFetch } from "@/lib/api-fetch"
 
 import { useState } from "react"
 import { RefreshCw, Plus, Edit2, Trash2, Loader2, X, Check } from "lucide-react"

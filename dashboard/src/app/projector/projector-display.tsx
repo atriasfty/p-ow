@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
+import { apiFetch } from "@/lib/api-fetch"
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 
 interface PhLatency { avgMs: number; errorRate: number; totalCalls: number }

@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
+import { apiFetch } from "@/lib/api-fetch"
 import { useState, useEffect, use } from "react"
 import { Plus, Zap, Trash2, Edit2, Loader2 } from "lucide-react"
 import { AutomationEditor } from "./automation-editor"

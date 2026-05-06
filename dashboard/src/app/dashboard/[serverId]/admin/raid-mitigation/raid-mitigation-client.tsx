@@ -1,6 +1,6 @@
-import { apiFetch } from "@/lib/api-fetch"
 "use client"
 
+import { apiFetch } from "@/lib/api-fetch"
 import { useState } from "react"
 import { Search, Loader2, History, RotateCcw, Clock } from "lucide-react"
 import { usePostHog } from "posthog-js/react"
