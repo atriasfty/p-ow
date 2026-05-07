@@ -185,9 +185,17 @@ function getEndpointBreakdown(serviceEvents: PostHogEvent[], service: string) {
 
 export async function GET(req: Request) {
     // Check for IP bypass (Tailscale/VPN)
+    // Extract IP securely: prioritize cf-connecting-ip, then the last entry of x-forwarded-for
+    const cfIp = req.headers.get("cf-connecting-ip")
     const forwardedFor = req.headers.get("x-forwarded-for")
     const remoteAddr = req.headers.get("remote-addr")
-    const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : remoteAddr
+
+    let ip = remoteAddr
+    if (cfIp) {
+        ip = cfIp
+    } else if (forwardedFor) {
+        ip = forwardedFor.split(",").at(-1)?.trim()
+    }
 
     const isAllowedIp = ip === "92.60.38.109"
 
