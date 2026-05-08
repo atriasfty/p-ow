@@ -67,10 +67,17 @@ Write the exact DDL (`ALTER TABLE`, `CREATE TABLE`, etc.) in that file. `migrate
 ## Deployment
 
 Use `./deploy.sh [prod|staging]` — zero-downtime blue-green deployment via PM2 and a `current` symlink.
-- **prod**: `main` branch, port 41729, `pow.db`
-- **staging**: `staging` branch, port 41731, `pow-staging.db`
+- **prod**: `main` branch, `https://pow.atriasafety.org`, port 41729, `pow.db`
+- **staging**: `staging` branch, `https://staging.atriasafety.org`, port 41731, `pow-staging.db`
 
 Never instruct the user to upload `Archive.zip` — the deploy script uses `git fetch` + `git reset --hard` on the VPS directly.
+
+### PM2 processes & ports
+| Process | Port | Health endpoint |
+|---|---|---|
+| `pow-dashboard-{env}` | 41729 (prod) / 41731 (staging) | `GET /api/health` |
+| `pow-sync-{env}` | 41730 | `GET :41730/health` |
+| `pow-bot-{env}` | — | `GET :41732/health` (`BOT_HEALTH_PORT`) |
 
 ## Architecture
 
@@ -113,11 +120,17 @@ Requests from the Vision Electron app use dual-layer auth: Clerk JWT + HMAC-SHA2
 |---|---|
 | `db.ts` | Singleton Prisma client with query metrics middleware |
 | `admin.ts` | Permission helpers, `SUPER_ADMIN_ID`, `isServerAdmin()` |
-| `prc.ts` | `PrcClient` — rate-limited PRC API wrapper |
+| `prc.ts` | `PrcClient` — rate-limited PRC API wrapper (base URL from `config.ts`) |
 | `security.ts` | IP ban checking + rate limiting for API routes |
 | `log-syncer.ts` | PRC polling loop, SSE event emission |
 | `event-bus.ts` | In-process event bus for SSE |
 | `auth-clerk.ts` | `getSession()` — wraps Clerk with Roblox/Discord identity |
+
+### Sync server (`dashboard/src/sync-server.js`)
+Separate Node.js process (`pow-sync-{env}`) running a Yjs WebSocket server on port 41730. Authenticated via `INTERNAL_SYNC_SECRET` query param. Not part of Next.js — runs alongside it via PM2.
+
+### PRC API
+Base domain is `api.erlc.gg`. The dashboard uses v2 (`config.ts → PRC_BASE_URL`), the bot uses v1 (`bot/src/lib/prc.ts → BASE_URL`). Both are sourced from those constants — do not hardcode the domain elsewhere.
 
 ## Common Pitfalls
 
@@ -129,3 +142,5 @@ Requests from the Vision Electron app use dual-layer auth: Clerk JWT + HMAC-SHA2
 - **ModCalls from PRC REST API:** Returns `{ Caller, Moderator, Timestamp }` — there is no `Players` array.
 - **Termination behavior:** `terminatedRoleId` removes the user from the POW member list; it does not delete their Clerk account.
 - **Bot Prisma:** The bot has its own Prisma client generation. Always verify `bot/prisma/schema.prisma` is in sync before writing bot code that touches shared models.
+- **UI terminology:** "Departments" has been removed from the UI. Use "servers" only.
+- **Clerk domain:** Auth is scoped to `atriasafety.org` — `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` encodes this. Do not reference `pow.ciankelly.xyz` anywhere.

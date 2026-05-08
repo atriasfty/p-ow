@@ -24,10 +24,19 @@ Project Overwatch is composed of three interconnected systems sharing a single s
 
 ### CI/CD Deployment Architecture (CRITICAL)
 POW strictly enforces a zero-downtime, dual-environment Git deployment via `./deploy.sh [target]`.
-- **Production (`./deploy.sh prod`):** Isolates strictly to the `main` git branch, port 41729, and `/root/data/pow.db`.
-- **Staging (`./deploy.sh staging`):** Isolates strictly to the `staging` branch, port 41731, and `/root/data/pow-staging.db` (which perfectly clones Prod data on its first build).
+- **Production (`./deploy.sh prod`):** `main` branch → `https://pow.atriasafety.org`, port 41729, `/root/data/pow.db`.
+- **Staging (`./deploy.sh staging`):** `staging` branch → `https://staging.atriasafety.org`, port 41731, `/root/data/pow-staging.db`.
 - PM2 processes automatically inject environment tags (e.g. `pow-dashboard-staging`) to prevent cross-process collisions.
 - **NEVER** instruct the user to upload `Archive.zip`. The deploy script authentically uses `git fetch` and `--hard reset` natively on the VPS.
+
+### PM2 Process Map
+| PM2 name | Entrypoint | Port | Health check |
+|---|---|---|---|
+| `pow-dashboard-{env}` | `npm run start` (Next.js) | 41729 prod / 41731 staging | `GET /api/health` |
+| `pow-sync-{env}` | `node src/sync-server.js` | 41730 | `GET :41730/health` |
+| `pow-bot-{env}` | `npm run start` (ts-node) | — | `GET :41732/health` |
+
+The sync server (`dashboard/src/sync-server.js`) is a standalone Yjs WebSocket server. It is **not** part of Next.js. WebSocket connections require a valid `?token=<INTERNAL_SYNC_SECRET>` query param or they are closed with code 4001.
 
 ---
 
@@ -127,6 +136,12 @@ Located in `api/forms/[formId]/submit/route.ts`.
 
 ## 7. Discord Integration & Bot Logic
 
+### PRC API
+- **Root domain:** `api.erlc.gg` (changed from `api.policeroleplay.community`).
+- Dashboard uses **v2**: constant `PRC_BASE_URL` in `dashboard/src/lib/config.ts`.
+- Bot uses **v1**: constant `BASE_URL` in `bot/src/lib/prc.ts`.
+- Never hardcode the domain outside these two constants.
+
 ### log-syncer.ts
 This is the heart of the bot's game-to-web bridge.
 - **Rate Limits:** It polls PRC logs. Because SQLite does not support `skipDuplicates: true` in Prisma, you **must** manually deduplicate logs by fetching existing timestamps before calling `createMany`.
@@ -165,6 +180,9 @@ The `PWAGate.tsx` component blocks mobile browser access to force PWA installati
 - **Roblox Username Cache:** Many tables store `robloxId`. When displaying usernames, check the `Member` cache or fetch from Clerk. Do not assume the username is always available in the `Punishment` record.
 - **Quota Logic:** Quotas are stored in **Minutes** but shifts are recorded in **Seconds**. Divide by 60 for comparison.
 - **SSE Context:** Never use `useServerEventsContext()` in components that are rendered outside the mod panel. Use `useServerEventsContextSafe()` instead.
+- **UI Terminology:** The word "departments" has been removed from the UI. Always use "servers" — never "departments".
+- **Root domain:** `pow.atriasafety.org`. Do not reference `pow.ciankelly.xyz` anywhere in code or copy. Staging is `staging.atriasafety.org`.
+- **Clerk:** Auth is scoped to `atriasafety.org`. The publishable key encodes the domain — never copy a key from one environment to another.
 
 ---
 
@@ -177,4 +195,4 @@ The `PWAGate.tsx` component blocks mobile browser access to force PWA installati
 - `EMERGENCY_CALL` (Triggered when a new 911 call is created)
 
 ---
-*Last updated: April 18, 2026*
+*Last updated: May 8, 2026*
