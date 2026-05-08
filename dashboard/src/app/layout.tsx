@@ -18,7 +18,19 @@ const isStaging = process.env.NEXT_PUBLIC_APP_ENV === 'staging';
 
 export const metadata: Metadata = {
   title: isStaging ? "POW STAGING" : "Project Overwatch",
-  description: "ERLC Multi-Server Dashboard",
+  description: "ERLC moderation but better",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://pow.atriasafety.org"),
+  openGraph: {
+    title: isStaging ? "POW STAGING" : "Project Overwatch",
+    description: "ERLC moderation but better",
+    images: ["/logo.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: isStaging ? "POW STAGING" : "Project Overwatch",
+    description: "ERLC moderation but better",
+    images: ["/logo.png"],
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
