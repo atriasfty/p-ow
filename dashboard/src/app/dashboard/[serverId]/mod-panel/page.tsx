@@ -130,8 +130,6 @@ export default async function ModPanelPage({
 
     const weeklyDurationSeconds = weeklyShifts.reduce((acc: number, s: any) => acc + (s.duration || 0), 0)
     const weeklyDurationMinutes = Math.floor(weeklyDurationSeconds / 60)
-    const quotaPercent = quotaMinutes > 0 ? Math.round((weeklyDurationMinutes / quotaMinutes) * 100) : 0
-    const quotaProgress = Math.min(100, quotaPercent)
 
     // Check if user is on LOA
     const activeLoa = await getActiveLeave(session.user.id, serverId)
@@ -144,24 +142,7 @@ export default async function ModPanelPage({
     const ShiftSection = (
         <div className="rounded-xl bg-[#1a1a1a] p-4 text-center space-y-4 border border-[#333] bg-gradient-to-b from-[#1a1a1a] to-[#151515]">
             <ShiftButton isActive={!!myShift} serverId={serverId} disabled={isOnLoa} />
-            {myShift && <ShiftTimer serverId={serverId} initialStartTime={myShift.startTime} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
-            {!myShift && <ShiftTimer serverId={serverId} initialStartTime={null} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
-            {!myShift && !isOnLoa && quotaMinutes > 0 && (
-                <div className="border-t border-white/5 pt-4 mt-2 space-y-1">
-                    <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all ${quotaPercent >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                            style={{ width: `${quotaProgress}%` }}
-                        ></div>
-                    </div>
-                    {quotaPercent >= 100 && (
-                        <div className="flex justify-between text-[10px]">
-                            <span className="text-emerald-400">{Math.floor(weeklyDurationMinutes / 60)}h {weeklyDurationMinutes % 60}m</span>
-                            <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
-                        </div>
-                    )}
-                </div>
-            )}
+            <ShiftTimer serverId={serverId} initialStartTime={myShift?.startTime ?? null} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />
             {(server as any)?.featureLoa && isOnLoa && activeLoa && (
                 <div className="rounded-xl bg-orange-500/10 border border-orange-500/30 p-3 flex items-center gap-3 text-left">
                     <Calendar className="h-5 w-5 text-orange-400 flex-shrink-0" />
@@ -313,24 +294,7 @@ export default async function ModPanelPage({
                                     {/* Shift Button & Timer */}
                                     <div className="rounded-xl bg-[#1a1a1a] p-4 text-center space-y-4 border border-[#333] bg-gradient-to-b from-[#1a1a1a] to-[#151515] flex-shrink-0">
                                         <ShiftButton isActive={!!myShift} serverId={serverId} disabled={isOnLoa} />
-                                        {myShift && <ShiftTimer serverId={serverId} initialStartTime={myShift.startTime} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
-                                        {!myShift && <ShiftTimer serverId={serverId} initialStartTime={null} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
-                                        {!myShift && !isOnLoa && quotaMinutes > 0 && (
-                                            <div className="border-t border-white/5 pt-4 mt-2 space-y-1">
-                                                <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={`h-full rounded-full transition-all ${quotaPercent >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                                                        style={{ width: `${quotaProgress}%` }}
-                                                    ></div>
-                                                </div>
-                                                {quotaPercent >= 100 && (
-                                                    <div className="flex justify-between text-[10px]">
-                                                        <span className="text-emerald-400">{Math.floor(weeklyDurationMinutes / 60)}h {weeklyDurationMinutes % 60}m</span>
-                                                        <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                        <ShiftTimer serverId={serverId} initialStartTime={myShift?.startTime ?? null} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />
                                     </div>
 
                                     {/* Players Status - Flex grow to fill remaining height */}

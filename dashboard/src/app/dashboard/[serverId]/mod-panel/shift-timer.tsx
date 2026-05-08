@@ -57,21 +57,21 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
     const isMet = totalMinutes >= quotaMinutes
     const barColor = isMet ? "bg-emerald-500" : "bg-indigo-500"
 
-    if (!startTime) {
-        return null
-    }
-
     return (
         <div className="flex flex-col items-center w-full">
-            <div className="text-3xl font-mono font-bold text-white tracking-widest tabular-nums">
-                {format(hours)}:{format(minutes)}:{format(seconds)}
-            </div>
-            <div className="text-xs text-emerald-400 mt-1 font-bold tracking-wide uppercase mb-4">
-                Current Session
-            </div>
+            {startTime && (
+                <>
+                    <div className="text-3xl font-mono font-bold text-white tracking-widest tabular-nums">
+                        {format(hours)}:{format(minutes)}:{format(seconds)}
+                    </div>
+                    <div className="text-xs text-emerald-400 mt-1 font-bold tracking-wide uppercase mb-4">
+                        Current Session
+                    </div>
+                </>
+            )}
 
             {quotaMinutes > 0 && (
-                <div className="w-full border-t border-white/5 pt-3 space-y-1">
+                <div className={`w-full border-t border-white/5 pt-3 space-y-1 ${!startTime ? "mt-0" : ""}`}>
                     <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
                         <div
                             className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
