@@ -44,7 +44,7 @@ if [ "$TARGET_ENV" == "prod" ]; then
     BRANCH="main"
     PORT="41729"
     SYNC_PORT="41730"
-    APP_URL="https://pow.ciankelly.xyz"
+    APP_URL="https://pow.atriasafety.org"
     WS_URL=""
     DEFAULT_DB_URL="postgresql://pow:@localhost:5432/pow_prod"
     CURRENT_SYMLINK="current-prod"

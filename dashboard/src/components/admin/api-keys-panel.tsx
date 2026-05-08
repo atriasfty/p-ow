@@ -100,7 +100,7 @@ export function ApiKeysPanel({ serverId }: { serverId: string }) {
                     <h2 className="text-xl font-semibold text-white">Public API Keys</h2>
                     <p className="text-sm text-zinc-400">Manage API keys for accessing public endpoints programmatically.</p>
                     <a
-                        href="https://pow.ciankelly.xyz/api/docs"
+                        href="https://pow.atriasafety.org/api/docs"
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-indigo-400 hover:text-indigo-300 hover:underline transition-all"

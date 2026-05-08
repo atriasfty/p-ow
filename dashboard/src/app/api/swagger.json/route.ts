@@ -9,12 +9,12 @@ export async function GET() {
             description: "The official REST API for integrating your external tools, bots, and services securely with your POW Server.",
             contact: {
                 name: "Developer Support",
-                url: "https://pow.ciankelly.xyz/support"
+                url: "https://pow.atriasafety.org/support"
             }
         },
         servers: [
             {
-                url: "https://pow.ciankelly.xyz/api/public/v1",
+                url: "https://pow.atriasafety.org/api/public/v1",
                 description: "Production Environment"
             }
         ],

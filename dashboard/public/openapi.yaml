@@ -28,7 +28,7 @@ info:
     ### 🔒 Authentication
     - **Header**: `Authorization: Bearer <your_key>`
     - **Key Format**: Keys are prefixed with `pow_`.
-    - **Manage Keys**: `https://pow.ciankelly.xyz/dashboard/settings`
+    - **Manage Keys**: `https://pow.atriasafety.org/dashboard/settings`
     
     ### ⚠️ Rate Limiting
     - **429 Too Many Requests**: Returned when you exceed the request frequency limit.
