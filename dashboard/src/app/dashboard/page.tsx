@@ -171,7 +171,7 @@ export default async function ServerSelectorPage() {
                         {/* Servers Section */}
                         <div className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold text-white">My Servers & Departments</h2>
+                                <h2 className="text-xl font-semibold text-white">My Servers</h2>
                                 <div className="flex gap-4 items-center">
                                     {canCreateServer && (
                                         <Link
@@ -187,7 +187,7 @@ export default async function ServerSelectorPage() {
                                     </div>
                                 </div>
                             </div>
-                            <p className="text-zinc-500">Here are the servers and departments that you are a member of.</p>
+                            <p className="text-zinc-500">Here are the servers that you are a member of.</p>
 
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {serversWithStats.length === 0 ? (
