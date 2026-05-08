@@ -1,0 +1,3 @@
+## 2025-02-17 - Prevent Unbounded Temporal Location Queries During N+1 Optimizations
+**Learning:** When resolving an N+1 database performance issue by replacing individual `findFirst` operations (which implicitly use `LIMIT 1` per call) with a batched `findMany` over temporal data like user location history, simply using an `in` array of IDs causes the database to query *all* history for those users simultaneously. This can accidentally fetch an unbounded volume of records directly into Node.js memory.
+**Action:** When batching lookups for historical or temporal records to solve an N+1 problem, always compute and apply extremely tight date boundaries (e.g., both `gte` and `lte` timestamps) derived from the source data to dramatically limit the scope of the pre-fetch.
