@@ -56,7 +56,6 @@ export async function GET(req: Request) {
         }
 
         if (Date.now() > handshake.expiresAt) {
-            await handshakeCodes.delete(code)
             return NextResponse.json({ valid: false, error: "expired" }, { headers: getVisionCorsHeaders(req) })
         }
 

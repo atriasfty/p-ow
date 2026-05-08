@@ -34,10 +34,6 @@ export async function GET(req: Request) {
         // Only show if event is within the last 30 minutes (extended from 5)
         const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000)
         if (eventTime < thirtyMinutesAgo) {
-            // Auto-cleanup old events
-            await prisma.config.delete({
-                where: { key: `ssd_${serverId}` }
-            }).catch(() => { })
             return NextResponse.json({ ssd: null })
         }
 

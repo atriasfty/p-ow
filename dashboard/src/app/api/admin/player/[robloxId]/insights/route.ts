@@ -6,7 +6,7 @@ import { clerkClient } from "@clerk/nextjs/server"
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY
 
-export async function GET(
+export async function POST(
     req: Request,
     { params }: { params: Promise<{ robloxId: string }> }
 ) {
