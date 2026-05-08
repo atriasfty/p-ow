@@ -134,14 +134,16 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
                 if (req === 0) return // Skip if no quota
 
                 const met = totalMinutes >= req
-                const remaining = Math.max(0, req - totalMinutes)
-                const remainingHours = Math.floor(remaining / 60)
-                const remainingMins = remaining % 60
-                const status = met ? "✅ Met" : `❌ ${remainingHours}h ${remainingMins}m remaining`
+                const pct = Math.round((totalMinutes / req) * 100)
+                const reqH = Math.floor(req / 60)
+                const reqM = req % 60
+                const status = met
+                    ? `✅ ${pct}% (${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m / ${reqH}h ${reqM}m)`
+                    : `❌ ${pct}% (${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m / ${reqH}h ${reqM}m)`
 
                 embed.addFields({
                     name: m.server.customName || m.server.name,
-                    value: `Quota: ${Math.floor(req / 60)}h ${req % 60}m\nStatus: ${status}`,
+                    value: status,
                     inline: true
                 })
             })
@@ -297,19 +299,17 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             }
 
             if (!entry.hasQuota) {
-                // No quota assigned
                 lines.push(`**${i + 1}.** ${mention} - ${timeWorked} *(No quota)*`)
             } else {
                 const reqH = Math.floor(entry.quotaMins / 60)
                 const reqM = entry.quotaMins % 60
                 const quotaStr = `${reqH}h ${reqM}m`
+                const pct = Math.round((entry.mins / entry.quotaMins) * 100)
 
                 if (entry.metQuota) {
-                    lines.push(`**${i + 1}.** ${mention} - ${timeWorked} / ${quotaStr} ✅`)
+                    lines.push(`**${i + 1}.** ${mention} - ${timeWorked} / ${quotaStr} ✅ *(${pct}%)*`)
                 } else {
-                    const remH = Math.floor(entry.remaining / 60)
-                    const remM = entry.remaining % 60
-                    lines.push(`**${i + 1}.** ${mention} - ${timeWorked} / ${quotaStr} ❌ *(${remH}h ${remM}m left)*`)
+                    lines.push(`**${i + 1}.** ${mention} - ${timeWorked} / ${quotaStr} ❌ *(${pct}%)*`)
                 }
             }
         }

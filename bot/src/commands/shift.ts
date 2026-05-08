@@ -199,12 +199,36 @@ export async function handleShiftCommand(interaction: ChatInputCommandInteractio
         const minutes = Math.floor((duration % 3600) / 60)
         const seconds = duration % 60
 
+        // Weekly quota summary
+        const s = await getBotServerSettings(serverId)
+        const weekStart = (() => {
+            const d = new Date(); const day = d.getUTCDay(); const diff = (day === 0 ? -6 : 1) - day
+            return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diff))
+        })()
+        const weeklyTotal = await prisma.shift.aggregate({
+            where: { serverId, userId: member.userId, endTime: { not: null }, startTime: { gte: weekStart } },
+            _sum: { duration: true }
+        })
+        const weeklySeconds = weeklyTotal._sum.duration || 0
+        const weeklyMins = Math.floor(weeklySeconds / 60)
+        const quotaMins = member.role?.quotaMinutes || 0
+        const quotaPct = quotaMins > 0 ? Math.round((weeklyMins / quotaMins) * 100) : null
+
         const embed = new EmbedBuilder()
             .setTitle("Shift Ended")
             .setDescription(`You went off duty on **${activeShift.server.customName || activeShift.server.name}**.`)
             .addFields({ name: "Duration", value: `${hours}h ${minutes}m ${seconds}s` })
             .setColor(0xef4444)
             .setTimestamp()
+
+        if (quotaPct !== null) {
+            const reqH = Math.floor(quotaMins / 60)
+            const reqM = quotaMins % 60
+            embed.addFields({
+                name: "Weekly Quota",
+                value: `${Math.floor(weeklyMins / 60)}h ${weeklyMins % 60}m / ${reqH}h ${reqM}m — **${quotaPct}%**`
+            })
+        }
 
         await interaction.editReply({ embeds: [embed] })
 
