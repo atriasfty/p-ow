@@ -178,7 +178,7 @@ export function SuperSettingsPanel({ initialConfigs }: SuperSettingsPanelProps) 
                             label="PRC API Base"
                             description="Primary endpoint for Police Roleplay Community."
                             icon={Globe}
-                            placeholder="https://api.policeroleplay.community/v1"
+                            placeholder="https://api.erlc.gg/v1"
                         />
                         <InputSetting 
                             id="MAX_REQUESTS_PER_MINUTE"
