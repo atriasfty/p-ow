@@ -70,22 +70,26 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
                 </>
             )}
 
-            {quotaMinutes > 0 && (
-                <div className={`w-full border-t border-white/5 pt-3 space-y-1 ${!startTime ? "mt-0" : ""}`}>
-                    <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
-                            style={{ width: `${barWidth}%` }}
-                        ></div>
-                    </div>
-                    {isMet && (
-                        <div className="flex justify-between text-[10px]">
-                            <span className="text-emerald-400">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m</span>
-                            <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
+            <div className="w-full border-t border-white/5 pt-3 space-y-1">
+                {quotaMinutes > 0 ? (
+                    <>
+                        <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                                className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
+                                style={{ width: `${barWidth}%` }}
+                            ></div>
                         </div>
-                    )}
-                </div>
-            )}
+                        {isMet && (
+                            <div className="flex justify-between text-[10px]">
+                                <span className="text-emerald-400">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m</span>
+                                <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="text-[10px] text-zinc-600 text-center">No quota set</div>
+                )}
+            </div>
         </div>
     )
 }
