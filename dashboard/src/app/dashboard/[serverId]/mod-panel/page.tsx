@@ -130,7 +130,8 @@ export default async function ModPanelPage({
 
     const weeklyDurationSeconds = weeklyShifts.reduce((acc: number, s: any) => acc + (s.duration || 0), 0)
     const weeklyDurationMinutes = Math.floor(weeklyDurationSeconds / 60)
-    const quotaProgress = quotaMinutes > 0 ? Math.min(100, Math.round((weeklyDurationMinutes / quotaMinutes) * 100)) : 0
+    const quotaPercent = quotaMinutes > 0 ? Math.round((weeklyDurationMinutes / quotaMinutes) * 100) : 0
+    const quotaProgress = Math.min(100, quotaPercent)
 
     // Check if user is on LOA
     const activeLoa = await getActiveLeave(session.user.id, serverId)
@@ -145,46 +146,19 @@ export default async function ModPanelPage({
             <ShiftButton isActive={!!myShift} serverId={serverId} disabled={isOnLoa} />
             {myShift && <ShiftTimer serverId={serverId} initialStartTime={myShift.startTime} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
             {!myShift && <ShiftTimer serverId={serverId} initialStartTime={null} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
-            {!myShift && !isOnLoa && (
-                <div className="text-xs text-zinc-400 border-t border-white/5 pt-4 mt-2">
-                    <div className="flex justify-between items-center mb-1">
-                        <span>Weekly Quota</span>
-                        <span className={weeklyDurationMinutes >= quotaMinutes && quotaMinutes > 0 ? "text-emerald-400" : "text-zinc-300"}>
-                            {Math.floor(weeklyDurationMinutes / 60)}h {weeklyDurationMinutes % 60}m
-                            {quotaMinutes > 0 ? ` / ${Math.floor(quotaMinutes / 60)}h ${quotaMinutes % 60}m` : ""}
-                        </span>
+            {!myShift && !isOnLoa && quotaMinutes > 0 && (
+                <div className="border-t border-white/5 pt-4 mt-2 space-y-1">
+                    <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full rounded-full transition-all ${quotaPercent >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                            style={{ width: `${quotaProgress}%` }}
+                        ></div>
                     </div>
-                    {quotaMinutes > 0 ? (() => {
-                        // Days elapsed since Monday (0 = Mon, 6 = Sun)
-                        const dayOfWeek = now.getDay() // 0=Sun … 6=Sat
-                        const daysElapsed = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Mon=0 … Sun=6
-                        const weekFraction = Math.max((daysElapsed + 1) / 7, 0.01)
-                        const expectedMinutes = quotaMinutes * weekFraction
-                        const isAhead = weeklyDurationMinutes >= expectedMinutes
-                        const isMet = weeklyDurationMinutes >= quotaMinutes
-                        const barColor = isMet ? "bg-emerald-500" : isAhead ? "bg-indigo-500" : "bg-amber-500"
-                        const statusLabel = isMet ? "✓ Met" : isAhead ? "On track" : "Behind"
-                        const statusColor = isMet ? "text-emerald-400" : isAhead ? "text-indigo-400" : "text-amber-400"
-                        // Next Monday reset date
-                        const nextMonday = new Date(weekStart)
-                        nextMonday.setDate(weekStart.getDate() + 7)
-                        const resetStr = nextMonday.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
-                        return (
-                            <div className="space-y-1">
-                                <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full transition-all ${barColor}`}
-                                        style={{ width: `${quotaProgress}%` }}
-                                    ></div>
-                                </div>
-                                <div className="flex justify-between text-[10px]">
-                                    <span className={`font-medium ${statusColor}`}>{statusLabel}</span>
-                                    <span className="text-zinc-600">Resets {resetStr}</span>
-                                </div>
-                            </div>
-                        )
-                    })() : (
-                        <div className="text-[10px] text-zinc-600">No quota set for your role</div>
+                    {quotaPercent >= 100 && (
+                        <div className="flex justify-between text-[10px]">
+                            <span className="text-emerald-400">{Math.floor(weeklyDurationMinutes / 60)}h {weeklyDurationMinutes % 60}m</span>
+                            <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
+                        </div>
                     )}
                 </div>
             )}
@@ -341,31 +315,19 @@ export default async function ModPanelPage({
                                         <ShiftButton isActive={!!myShift} serverId={serverId} disabled={isOnLoa} />
                                         {myShift && <ShiftTimer serverId={serverId} initialStartTime={myShift.startTime} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
                                         {!myShift && <ShiftTimer serverId={serverId} initialStartTime={null} quotaMinutes={quotaMinutes} weeklyMinutes={weeklyDurationMinutes} />}
-                                        {!myShift && !isOnLoa && (
-                                            <div className="text-xs text-zinc-400 border-t border-white/5 pt-4 mt-2">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span>Weekly Quota</span>
-                                                    <span className={weeklyDurationMinutes >= quotaMinutes && quotaMinutes > 0 ? "text-emerald-400" : "text-zinc-300"}>
-                                                        {Math.floor(weeklyDurationMinutes / 60)}h {weeklyDurationMinutes % 60}m
-                                                        {quotaMinutes > 0 ? ` / ${Math.floor(quotaMinutes / 60)}h ${quotaMinutes % 60}m` : ""}
-                                                    </span>
+                                        {!myShift && !isOnLoa && quotaMinutes > 0 && (
+                                            <div className="border-t border-white/5 pt-4 mt-2 space-y-1">
+                                                <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all ${quotaPercent >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
+                                                        style={{ width: `${quotaProgress}%` }}
+                                                    ></div>
                                                 </div>
-                                                {quotaMinutes > 0 ? (
-                                                    <div className="space-y-1">
-                                                        <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full rounded-full transition-all ${quotaProgress >= 100 ? "bg-emerald-500" : "bg-indigo-500"}`}
-                                                                style={{ width: `${quotaProgress}%` }}
-                                                            ></div>
-                                                        </div>
-                                                        <div className="text-[10px] text-right">
-                                                            <span className={quotaProgress >= 100 ? "text-emerald-400 font-medium" : "text-zinc-500"}>
-                                                                {quotaProgress}% {quotaProgress >= 100 ? "✓" : ""}
-                                                            </span>
-                                                        </div>
+                                                {quotaPercent >= 100 && (
+                                                    <div className="flex justify-between text-[10px]">
+                                                        <span className="text-emerald-400">{Math.floor(weeklyDurationMinutes / 60)}h {weeklyDurationMinutes % 60}m</span>
+                                                        <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
                                                     </div>
-                                                ) : (
-                                                    <div className="text-[10px] text-zinc-600">No quota set for your role</div>
                                                 )}
                                             </div>
                                         )}
