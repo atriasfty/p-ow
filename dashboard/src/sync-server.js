@@ -14,6 +14,11 @@ if (!SYNC_SECRET) {
 }
 
 const server = http.createServer((request, response) => {
+  if (request.url === '/health') {
+    response.writeHead(200, { 'Content-Type': 'application/json' })
+    response.end(JSON.stringify({ ok: true, service: 'pow-sync' }))
+    return
+  }
   response.writeHead(200, { 'Content-Type': 'text/plain' })
   response.end('POW Yjs Sync Server Running')
 })

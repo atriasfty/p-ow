@@ -1,3 +1,4 @@
+import http from "http"
 import { client, prisma } from "./client"
 import { Events, Interaction, MessageFlags } from "discord.js"
 import { handleLoaCommand } from "./commands/loa"
@@ -158,6 +159,20 @@ client.on(Events.GuildCreate, async (guild) => {
     } catch (error) {
         console.error("Failed to cancel server deletion:", error)
     }
+})
+
+// Health check server
+const healthPort = parseInt(process.env.BOT_HEALTH_PORT || "41732")
+http.createServer((req, res) => {
+    if (req.url === "/health") {
+        res.writeHead(200, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ ok: true, service: "pow-bot" }))
+        return
+    }
+    res.writeHead(404)
+    res.end()
+}).listen(healthPort, () => {
+    console.log(`Health server listening on port ${healthPort}`)
 })
 
 // Login

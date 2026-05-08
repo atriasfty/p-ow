@@ -27,6 +27,9 @@ module.exports = {
       cwd: `${currentLink}/bot`,
       watch: false,
       autorestart: true,
+      env: {
+        BOT_HEALTH_PORT: process.env.BOT_HEALTH_PORT || 41732
+      }
     },
     {
       name: `pow-sync-${envPrefix}`,
