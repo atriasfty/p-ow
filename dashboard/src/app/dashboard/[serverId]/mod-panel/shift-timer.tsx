@@ -87,7 +87,10 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
                         )}
                     </>
                 ) : (
-                    <div className="text-[10px] text-zinc-600 text-center">No quota set</div>
+                    <div className="flex justify-between text-[10px]">
+                        <span className="text-zinc-600">No quota set</span>
+                        <span className="text-zinc-400">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m</span>
+                    </div>
                 )}
             </div>
         </div>
