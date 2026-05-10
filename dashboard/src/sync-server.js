@@ -6,10 +6,10 @@ const ywsUtils = require('y-websocket/bin/utils')
 const url = require('url')
 
 const port = process.env.SYNC_PORT || 41730
-const SYNC_SECRET = process.env.INTERNAL_SYNC_SECRET
+const SYNC_SECRET = process.env.SYNC_WS_SECRET
 
 if (!SYNC_SECRET) {
-  console.error('FATAL: INTERNAL_SYNC_SECRET env var is not set — sync server refusing to start')
+  console.error('FATAL: SYNC_WS_SECRET env var is not set — sync server refusing to start')
   process.exit(1)
 }
 

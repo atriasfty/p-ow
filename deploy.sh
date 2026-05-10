@@ -165,6 +165,7 @@ if [ ! -f "${SHARED_ENV_FILE}" ]; then
     
     # Generate automatic internal secrets
     INTERNAL_SYNC_SECRET_GEN="$(openssl rand -base64 32)"
+    SYNC_WS_SECRET_GEN="$(openssl rand -base64 32)"
     VISION_JWT_SECRET_GEN="$(openssl rand -base64 32)"
     NEXTAUTH_SECRET_GEN="$(openssl rand -base64 32)"
     
@@ -188,6 +189,8 @@ DISCORD_PUNISHMENT_WEBHOOK="${DISCORD_PUNISHMENT_WEBHOOK}"
 
 # Internal Secrets
 INTERNAL_SYNC_SECRET="${INTERNAL_SYNC_SECRET_GEN}"
+SYNC_WS_SECRET="${SYNC_WS_SECRET_GEN}"
+NEXT_PUBLIC_SYNC_WS_SECRET="${SYNC_WS_SECRET_GEN}"
 VISION_JWT_SECRET="${VISION_JWT_SECRET_GEN}"
 VISION_HMAC_SECRET="${VISION_HMAC_SECRET}"
 
@@ -253,6 +256,14 @@ else
         echo "Adding missing INTERNAL_SYNC_SECRET..."
         sed -i '/^INTERNAL_SYNC_SECRET=/d' "${SHARED_ENV_FILE}" 2>/dev/null || true
         echo "INTERNAL_SYNC_SECRET=\"$(openssl rand -base64 32)\"" >> "${SHARED_ENV_FILE}"
+    fi
+    if ! grep -q "SYNC_WS_SECRET=" "${SHARED_ENV_FILE}" || grep -q 'SYNC_WS_SECRET=""' "${SHARED_ENV_FILE}"; then
+        echo "Adding missing SYNC_WS_SECRET..."
+        NEW_WS_SECRET="$(openssl rand -base64 32)"
+        sed -i '/^SYNC_WS_SECRET=/d' "${SHARED_ENV_FILE}" 2>/dev/null || true
+        sed -i '/^NEXT_PUBLIC_SYNC_WS_SECRET=/d' "${SHARED_ENV_FILE}" 2>/dev/null || true
+        echo "SYNC_WS_SECRET=\"${NEW_WS_SECRET}\"" >> "${SHARED_ENV_FILE}"
+        echo "NEXT_PUBLIC_SYNC_WS_SECRET=\"${NEW_WS_SECRET}\"" >> "${SHARED_ENV_FILE}"
     fi
     
     # VISION_HMAC_SECRET must match the hardcoded value in the Vision desktop app

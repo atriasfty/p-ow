@@ -45,12 +45,15 @@ export function LiveEditorProvider({
         // 1. Create the shared Yjs document
         const ydoc = new Y.Doc()
 
-        // 2. Connect to our localized WebSocket server via the Cloudflare Tunnel
-        // The room name is strictly bound to the formId
+        // 2. Connect to the Yjs sync server. URL and secret come from env vars so
+        //    prod/staging can point at the correct tunnel without a code change.
+        const syncUrl = process.env.NEXT_PUBLIC_SYNC_URL || "wss://powsync.ciankelly.xyz"
+        const syncSecret = process.env.NEXT_PUBLIC_SYNC_WS_SECRET || ""
         const wsProvider = new WebsocketProvider(
-            "wss://powsync.ciankelly.xyz",
+            syncUrl,
             `form-room-${formId}`,
-            ydoc
+            ydoc,
+            { params: { token: syncSecret } }
         )
 
         // 3. Set up the Awareness protocol (for cursors & presence)
