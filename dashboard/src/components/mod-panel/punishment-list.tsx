@@ -266,8 +266,10 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                 <h3 className="font-bold text-white">Punishments</h3>
                 <button
                     onClick={() => setShowFilter(f => !f)}
-                    className={`p-1 rounded transition-colors ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                    className={`p-1 rounded transition-colors ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
                     title="Toggle filters"
+                    aria-expanded={showFilter}
+                    aria-label="Toggle filters"
                 >
                     <Filter className="h-4 w-4" />
                 </button>
@@ -280,7 +282,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                         <button
                             key={key}
                             onClick={() => setTypeFilter(key)}
-                            className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${typeFilter === key ? filterColors[key] : "bg-[#2a2a2a] text-zinc-500 hover:text-zinc-300"}`}
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold transition-colors ${typeFilter === key ? filterColors[key] : "bg-[#2a2a2a] text-zinc-500 hover:text-zinc-300"} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500`}
                         >
                             {label}
                         </button>
@@ -330,9 +332,11 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                             e.stopPropagation()
                                                             setOpenMenu(openMenu === p.id ? null : p.id)
                                                         }}
-                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                                                         aria-label={`Manage punishment for ${user?.name || p.userId}`}
                                                         title={`Manage punishment for ${user?.name || p.userId}`}
+                                                        aria-expanded={openMenu === p.id}
+                                                        aria-haspopup="menu"
                                                     >
                                                         <MoreVertical className="h-3 w-3 text-zinc-500" />
                                                     </button>
@@ -344,7 +348,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                     setEditReason(p.reason || "")
                                                                     setOpenMenu(null)
                                                                 }}
-                                                                className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                                                                className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2 focus-visible:outline-none focus-visible:bg-zinc-700"
                                                                 aria-label={`Edit reason for ${user?.name || p.userId}`}
                                                             >
                                                                 <Pencil className="h-3 w-3" /> Edit Reason
@@ -359,7 +363,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                         })
                                                                         setOpenMenu(null)
                                                                     }}
-                                                                    className="w-full px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-zinc-700 flex items-center gap-2"
+                                                                    className="w-full px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-zinc-700 flex items-center gap-2 focus-visible:outline-none focus-visible:bg-zinc-700"
                                                                     aria-label={`Complete ban bolo for ${user?.name || p.userId}`}
                                                                 >
                                                                     <CheckCircle2 className="h-3 w-3" /> Complete
@@ -374,7 +378,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                     })
                                                                     setOpenMenu(null)
                                                                 }}
-                                                                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-zinc-700 flex items-center gap-2"
+                                                                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-zinc-700 flex items-center gap-2 focus-visible:outline-none focus-visible:bg-zinc-700"
                                                                 aria-label={`Delete punishment for ${user?.name || p.userId}`}
                                                             >
                                                                 <Trash2 className="h-3 w-3" /> Delete
@@ -414,7 +418,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 <button
                                                     onClick={() => handleEdit(p.id)}
                                                     disabled={loading === p.id}
-                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                                     aria-label={`Save reason for ${user?.name || p.userId}`}
                                                     title={loading === p.id ? "Saving..." : "Save reason"}
                                                 >
@@ -422,7 +426,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 </button>
                                                 <button
                                                     onClick={() => setEditingId(null)}
-                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                                                     aria-label="Cancel editing reason"
                                                     title="Cancel"
                                                 >
@@ -446,7 +450,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                 ) : (
                                     <button
                                         onClick={loadMore}
-                                        className="flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition-colors"
+                                        className="flex items-center gap-2 text-xs text-zinc-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded px-2 py-1"
                                     >
                                         <ChevronDown className="h-4 w-4" />
                                         Load more
