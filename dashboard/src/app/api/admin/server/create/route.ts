@@ -92,7 +92,7 @@ export async function POST(req: Request) {
             const newServer = await tx.server.create({
                 data: {
                     name: serverName,
-                    customName: `${guildName} Backend`,
+                    customName: guildName,
                     apiUrl: prcApiKey,
                     discordGuildId: discordGuildId,
                     subscriptionPlan: "free", // Default to free tier
