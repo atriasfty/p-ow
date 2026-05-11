@@ -1,0 +1,3 @@
+## 2024-05-11 - Custom Dropdowns and Inline Buttons Keyboard Accessibility
+**Learning:** Custom UI comboboxes/dropdown triggers and inline action buttons embedded within mapped lists (like punishments or players) often lack explicit keyboard navigability indicators. Screen reader context is also frequently missing for custom dropdowns.
+**Action:** Always apply `focus-visible:outline-none focus-visible:ring-2` with appropriate ring colors to triggers and inline buttons, add `focus-visible:bg-zinc-700` to custom dropdown items, and ensure `aria-expanded`/`aria-haspopup` attributes are present to comply with a11y standards.
