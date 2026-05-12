@@ -41,6 +41,10 @@
 
 * [PWA Mobile App](pwa-mobile-app.md)
 
+## Self-Hosting
+
+* [Self-Hosting](self-hosting.md)
+
 ## Legal
 
 * [Terms of Service](legal-terms-of-service.md)
