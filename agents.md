@@ -6,7 +6,7 @@ This document is the authoritative technical reference for AI agents. It details
 
 ## 1. System Architecture & Monorepo Structure
 
-Project Overwatch is composed of three interconnected systems sharing a single source of truth (SQLite).
+Project Overwatch is composed of three interconnected systems sharing a single source of truth (PostgreSQL).
 
 ### `/dashboard` (Next.js 15+, Tailwind, Lucide)
 - **Role:** Central management hub, API provider, and PWA host.
@@ -24,8 +24,8 @@ Project Overwatch is composed of three interconnected systems sharing a single s
 
 ### CI/CD Deployment Architecture (CRITICAL)
 POW strictly enforces a zero-downtime, dual-environment Git deployment via `./deploy.sh [target]`.
-- **Production (`./deploy.sh prod`):** `main` branch → `https://pow.atriasafety.org`, port 41729, `/root/data/pow.db`.
-- **Staging (`./deploy.sh staging`):** `staging` branch → `https://staging.atriasafety.org`, port 41731, `/root/data/pow-staging.db`.
+- **Production (`./deploy.sh prod`):** `main` branch → `https://pow.atriasafety.org`, port 41729.
+- **Staging (`./deploy.sh staging`):** `staging` branch → `https://staging.atriasafety.org`, port 41731.
 - PM2 processes automatically inject environment tags (e.g. `pow-dashboard-staging`) to prevent cross-process collisions.
 - **NEVER** instruct the user to upload `Archive.zip`. The deploy script authentically uses `git fetch` and `--hard reset` natively on the VPS.
 
@@ -42,7 +42,7 @@ The sync server (`dashboard/src/sync-server.js`) is a standalone Yjs WebSocket s
 
 ## 2. Database & Schema Management (CRITICAL)
 
-The production database is **remote and NOT accessible from the local machine**. The `dashboard/prisma/dev.db` file is only used for local development.
+The database is **PostgreSQL**. The production database is remote and NOT accessible from the local machine. Local development uses a local PostgreSQL instance pointed to by `DATABASE_URL` in `dashboard/.env` and `bot/.env`.
 
 ### Synchronization Requirement
 The `bot` and `dashboard` directories have **separate** `prisma/schema.prisma` files.
@@ -144,7 +144,7 @@ Located in `api/forms/[formId]/submit/route.ts`.
 
 ### log-syncer.ts
 This is the heart of the bot's game-to-web bridge.
-- **Rate Limits:** It polls PRC logs. Because SQLite does not support `skipDuplicates: true` in Prisma, you **must** manually deduplicate logs by fetching existing timestamps before calling `createMany`.
+- **Deduplication:** It polls PRC logs and manually deduplicates them by fetching existing timestamps before calling `createMany`. Do not remove this logic — the PRC API returns overlapping windows and duplicates will appear if deduplication is skipped.
 - **Commands:** The bot parses raw chat logs for triggers like `:log warn`, `:log shift start`, and `:shutdown`.
 - **ModCalls:** The PRC REST API returns `{ Caller, Moderator, Timestamp }` for mod calls. There is NO `Players` array on mod calls from the REST API.
 
@@ -172,7 +172,31 @@ The `PWAGate.tsx` component blocks mobile browser access to force PWA installati
 
 ---
 
-## 10. Common Pitfalls & Anti-Patterns
+## 10. Subscription & Plan System
+
+Plans are defined in `dashboard/src/lib/subscription.ts`. There are two independent plan states:
+
+### Server plan (`Server.subscriptionPlan` in DB)
+Values: `null` (free) | `'pow-pro'` | `'pow-max'`
+Controls feature availability for all users of that server (raid detection, exports, Vision, white-label bot, automations limits, etc.).
+
+### User plan (Clerk `publicMetadata.subscriptionPlan`)
+Values: `null` (free) | `'pow-pro-user'` | `'pow-pro'` | `'pow-max'`
+Controls per-user entitlements such as Vision access. Read via `getUserPlan()` in `subscription.ts`.
+
+### How plans are set
+On the managed service, Clerk Billing webhooks populate these. Both can also be set by the superadmin (hardcoded `SUPER_ADMIN_ID` in `admin.ts`) via:
+- `adminGrantServerPlan()` — sets `Server.subscriptionPlan` directly in the DB
+- `adminGrantUserPlan()` — sets Clerk user `publicMetadata.subscriptionPlan`
+
+The superadmin panel at `/admin/super` exposes UI for both. Superadmin grants bypass Clerk Billing entirely.
+
+### Checking access
+Always use `getServerPlan(serverId)` or `getUserPlan(userId)` from `subscription.ts` — never read `subscriptionPlan` directly from the DB in feature-gate logic, as the helpers apply the correct fallback defaults.
+
+---
+
+## 11. Common Pitfalls & Anti-Patterns
 
 - **Never create unauthenticated API routes.** Every route must call `getSession()` and validate the user's server membership if a `serverId` is involved.
 - **Hallucinating UI:** The "Toolbox" does **not** have Kick/Ban buttons. Those are on the **Player Panel**. The Toolbox has: Perm Log, LOA Request, Run Command, Staff Request.
@@ -186,7 +210,7 @@ The `PWAGate.tsx` component blocks mobile browser access to force PWA installati
 
 ---
 
-## 11. Critical Triggers for Automations
+## 12. Critical Triggers for Automations
 - `PLAYER_JOIN` / `PLAYER_LEAVE`
 - `COMMAND_USED` (Check `details.command` for patterns)
 - `PUNISHMENT_ISSUED` (Triggers on Warn, Kick, Ban, BOLO)
@@ -195,4 +219,4 @@ The `PWAGate.tsx` component blocks mobile browser access to force PWA installati
 - `EMERGENCY_CALL` (Triggered when a new 911 call is created)
 
 ---
-*Last updated: May 8, 2026*
+*Last updated: May 13, 2026*
