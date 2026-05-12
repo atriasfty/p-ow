@@ -44,6 +44,10 @@ p-ow/
   - System tray support with hotkey toggle
 
 
+## Self-Hosting
+
+POW is open-source and can be self-hosted. See the [self-hosting guide](https://powdocs.atriasafety.org/self-hosting/self-hosting) for instructions.
+
 ---
 
 Built with ❤️ by the Atria Team
