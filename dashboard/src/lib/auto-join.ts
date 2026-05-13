@@ -103,13 +103,14 @@ export async function performAutoJoin(sessionUser: SessionUser) {
 
                 const guildMemberData = await guildMemberRes.json()
                 const userDiscordRoles: string[] = guildMemberData.roles || []
+                const userDiscordRolesSet = new Set(userDiscordRoles)
 
                 // Check for suspended/terminated
-                if (server.terminatedRoleId && userDiscordRoles.includes(server.terminatedRoleId)) {
+                if (server.terminatedRoleId && userDiscordRolesSet.has(server.terminatedRoleId)) {
                     // Do not add them, maybe delete account but we skip for now
                     return
                 }
-                if (server.suspendedRoleId && userDiscordRoles.includes(server.suspendedRoleId)) {
+                if (server.suspendedRoleId && userDiscordRolesSet.has(server.suspendedRoleId)) {
                     return
                 }
 
@@ -134,7 +135,7 @@ export async function performAutoJoin(sessionUser: SessionUser) {
 
                     for (const panelRole of panelRoles) {
                         if (!panelRole.discordRoleId) continue
-                        if (userDiscordRoles.includes(panelRole.discordRoleId)) {
+                        if (userDiscordRolesSet.has(panelRole.discordRoleId)) {
                             const position = rolePositionMap.get(panelRole.discordRoleId) || 0
                             if (position > bestPosition) {
                                 bestPosition = position
@@ -145,7 +146,7 @@ export async function performAutoJoin(sessionUser: SessionUser) {
                 }
 
                 // Check if user is staff or has a role
-                const isStaff = server.staffRoleId && userDiscordRoles.includes(server.staffRoleId)
+                const isStaff = server.staffRoleId && userDiscordRolesSet.has(server.staffRoleId)
 
                 if (bestRoleId || isStaff) {
                     // Add member to DB
