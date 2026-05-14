@@ -185,9 +185,14 @@ function getEndpointBreakdown(serviceEvents: PostHogEvent[], service: string) {
 
 export async function GET(req: Request) {
     // Check for IP bypass (Tailscale/VPN)
+    const cfIp = req.headers.get("cf-connecting-ip")
     const forwardedFor = req.headers.get("x-forwarded-for")
     const remoteAddr = req.headers.get("remote-addr")
-    const ip = forwardedFor ? forwardedFor.split(",")[0].trim() : remoteAddr
+
+    // Never trust XFF[0] for security decisions. Trust Cloudflare or the LAST proxy-appended XFF.
+    let ip = remoteAddr
+    if (cfIp) ip = cfIp
+    else if (forwardedFor) ip = forwardedFor.split(",").at(-1)?.trim()
 
     const isAllowedIp = ip === "92.60.38.109"
 
