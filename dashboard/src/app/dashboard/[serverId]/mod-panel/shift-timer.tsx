@@ -79,12 +79,12 @@ export function ShiftTimer({ serverId, initialStartTime, quotaMinutes: propQuota
                                 style={{ width: `${barWidth}%` }}
                             ></div>
                         </div>
-                        {isMet && (
-                            <div className="flex justify-between text-[10px]">
-                                <span className="text-emerald-400">{Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m</span>
-                                <span className="text-emerald-400 font-medium">{quotaPercent}%</span>
-                            </div>
-                        )}
+                        <div className="flex justify-between text-[10px]">
+                            <span className={isMet ? "text-emerald-400" : "text-zinc-400"}>
+                                {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m / {Math.floor(quotaMinutes / 60)}h {quotaMinutes % 60}m
+                            </span>
+                            <span className={`font-medium ${isMet ? "text-emerald-400" : "text-zinc-400"}`}>{quotaPercent}%</span>
+                        </div>
                     </>
                 ) : (
                     <div className="flex justify-between text-[10px]">
