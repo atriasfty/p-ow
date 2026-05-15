@@ -29,19 +29,20 @@ export interface RolePermissions {
     canUseAdminCommands: boolean
 }
 
-// Default permissions (viewer/staff access)
+// Default permissions (viewer/staff access) — read-only, no actions.
+// Must stay in sync with VIEWER_PERMISSIONS in discord/auto-assign/route.ts.
 export const DEFAULT_PERMISSIONS: RolePermissions = {
-    canShift: true,
-    canViewOtherShifts: false,
+    canShift: false,
+    canViewOtherShifts: true,
     canViewLogs: true,
     canViewPunishments: true,
     canIssueWarnings: false,
     canKick: false,
     canBan: false,
     canBanBolo: false,
-    canUseToolbox: true,
+    canUseToolbox: false,
     canManageBolos: false,
-    canRequestLoa: true,
+    canRequestLoa: false,
     canViewQuota: true,
     canUseAdminCommands: false
 }

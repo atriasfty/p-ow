@@ -93,7 +93,7 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
             try {
                 const res = await fetch("/api/discord/auto-assign", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { "Content-Type": "application/json", "x-pow-request": "1" },
                     body: JSON.stringify({ serverId })
                 })
 
