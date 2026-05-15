@@ -29,6 +29,7 @@ export const dynamic = 'force-dynamic'
 
 import { checkConnectionRequirements } from "@/lib/auth-server"
 import { ConnectionRequirementScreen } from "@/components/auth/connection-requirement-screen"
+import { HideGitBook } from "@/components/providers/hide-gitbook"
 
 export default async function ModPanelPage({
     params,
@@ -199,6 +200,7 @@ export default async function ModPanelPage({
 
     return (
         <EnsureDiscordConnection>
+            <HideGitBook />
             <ServerEventsProvider serverId={serverId}>
                 <SsdNotification serverId={serverId} />
                 <ModCallDetector serverId={serverId} userRobloxId={session.user.robloxId || null} />
