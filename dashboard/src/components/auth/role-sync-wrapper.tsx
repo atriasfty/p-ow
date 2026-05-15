@@ -70,12 +70,14 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
 
 export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
     const [status, setStatus] = useState<"loading" | "ok" | "suspended" | "terminated" | "noAccess" | "error">("loading")
+    const [retryCount, setRetryCount] = useState(0)
     const [permissions, setPermissions] = useState<Permissions>(DEFAULT_PERMISSIONS)
     const [viewerOnly, setViewerOnly] = useState(false)
     const [quotaMinutes, setQuotaMinutes] = useState(0)
     const router = useRouter()
 
     useEffect(() => {
+        setStatus("loading")
         async function syncRole() {
             // Check cache first
             const cached = permissionCache.get(serverId)
@@ -94,7 +96,8 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
                 const res = await fetch("/api/discord/auto-assign", {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "x-pow-request": "1" },
-                    body: JSON.stringify({ serverId })
+                    body: JSON.stringify({ serverId }),
+                    signal: AbortSignal.timeout(15000)
                 })
 
                 if (!res.ok) {
@@ -166,14 +169,17 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
                     })
                 }
 
-            } catch (e) {
-                // On error, block access (fail closed for security)
-                setStatus("noAccess")
+            } catch (e: any) {
+                if (e?.name === "TimeoutError" || e?.name === "AbortError") {
+                    setStatus("error")
+                } else {
+                    setStatus("noAccess")
+                }
             }
         }
 
         syncRole()
-    }, [serverId, router])
+    }, [serverId, router, retryCount])
 
     // Render children immediately but hidden during loading (allows parallel data fetching)
     // Show loading overlay on top
@@ -236,6 +242,27 @@ export function RoleSyncWrapper({ serverId, children }: RoleSyncWrapperProps) {
                     <a href="/dashboard" className="inline-block mt-4 px-4 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors">
                         Return to Dashboard
                     </a>
+                </div>
+            </div>
+        )
+    }
+
+    // Error/timeout state
+    if (status === "error") {
+        return (
+            <div className="min-h-screen bg-[#111] flex items-center justify-center">
+                <div className="text-center space-y-4 max-w-md p-8">
+                    <div className="h-16 w-16 bg-zinc-700/50 rounded-full flex items-center justify-center mx-auto">
+                        <ShieldOff className="h-8 w-8 text-zinc-500" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-zinc-400">Connection Timed Out</h1>
+                    <p className="text-zinc-500">Couldn't reach the server. Check your connection and try again.</p>
+                    <button
+                        onClick={() => setRetryCount(c => c + 1)}
+                        className="inline-block mt-4 px-4 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors"
+                    >
+                        Retry
+                    </button>
                 </div>
             </div>
         )

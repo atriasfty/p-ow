@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Schema validation could be added here (e.g. Zod) but keeping it simple for now
 
@@ -28,6 +29,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -94,6 +96,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

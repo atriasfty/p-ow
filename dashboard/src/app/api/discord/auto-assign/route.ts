@@ -70,9 +70,8 @@ export async function POST(req: Request) {
         const guildMemberRes = await fetch(
             `https://discord.com/api/v10/guilds/${discordGuildId}/members/${discordId}`,
             {
-                headers: {
-                    Authorization: `Bot ${botToken}`
-                }
+                headers: { Authorization: `Bot ${botToken}` },
+                signal: AbortSignal.timeout(10000)
             }
         )
 
@@ -131,7 +130,7 @@ export async function POST(req: Request) {
         // Fetch guild roles so we can rank by Discord hierarchy position.
         const guildRolesRes = await fetch(
             `https://discord.com/api/v10/guilds/${discordGuildId}/roles`,
-            { headers: { Authorization: `Bot ${botToken}` } }
+            { headers: { Authorization: `Bot ${botToken}` }, signal: AbortSignal.timeout(10000) }
         )
 
         let rolePositionMap = new Map<string, number>()

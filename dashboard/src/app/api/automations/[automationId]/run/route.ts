@@ -2,11 +2,13 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { AutomationEngine } from "@/lib/automation-engine"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 export async function POST(
     req: Request,
     { params }: { params: Promise<{ automationId: string }> }
 ) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

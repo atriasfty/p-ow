@@ -3,6 +3,7 @@ import { clerkClient } from "@clerk/nextjs/server"
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Helper to check form access
 async function canViewResponses(user: { id: string, discordId?: string }, formId: string): Promise<boolean> {
@@ -209,6 +210,7 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ formId: string }> }
 ) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     try {
         const session = await getSession()
         if (!session) {
