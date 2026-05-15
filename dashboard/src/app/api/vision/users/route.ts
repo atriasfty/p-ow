@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
-import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
 
 // Handle preflight requests
 export async function OPTIONS(req: Request) {
@@ -33,15 +33,6 @@ export async function GET(req: Request) {
 
         const VISION_SECRET = new TextEncoder().encode(process.env.VISION_JWT_SECRET)
 
-        // Verify HMAC signature
-        const signature = req.headers.get("X-Vision-Sig")
-        if (!verifyVisionSignature(signature)) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 403, headers: getVisionCorsHeaders(req) }
-            )
-        }
-
         // Verify Vision token
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
@@ -49,20 +40,40 @@ export async function GET(req: Request) {
         }
 
         const token = authHeader.substring(7)
+        let visionPayload: any
         try {
-            await jwtVerify(token, VISION_SECRET, {
+            const result = await jwtVerify(token, VISION_SECRET, {
                 issuer: "pow-dashboard",
                 audience: "pow-vision"
             })
+            visionPayload = result.payload
         } catch {
             return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
-        // Fetch active servers
+        // Verify the request came from a registered Vision device
+        const validDevice = await verifyVisionDevice(
+            req.headers.get("X-Vision-Sig"),
+            visionPayload.userId as string
+        )
+        if (!validDevice) {
+            return NextResponse.json(
+                { error: "Unauthorized: invalid or unregistered device" },
+                { status: 403, headers: getVisionCorsHeaders(req) }
+            )
+        }
+
+        // Scope to only the servers where the requesting user is a member
+        const memberServers = await prisma.member.findMany({
+            where: { userId: visionPayload.userId as string },
+            select: { serverId: true }
+        })
+        const serverIds = memberServers.map((m: { serverId: string }) => m.serverId)
+
         const servers = await prisma.server.findMany({
             where: {
-                apiUrl: { not: "" }, // Only servers with API URL
-                suspendedRoleId: null // Skip suspended servers if applicable, or just check API
+                id: { in: serverIds },
+                apiUrl: { not: "" }
             }
         })
 

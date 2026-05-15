@@ -11,6 +11,8 @@ interface StoreSchema {
     overlayOpacity: number
     panelPosition: { x: number; y: number }
     authToken: string | null
+    deviceSecret: string | null
+    deviceId: string | null
 }
 
 // Secure store for settings
@@ -20,9 +22,38 @@ const store = new Store<StoreSchema>({
         toggleHotkey: 'Alt+Shift+V',
         overlayOpacity: 0.95,
         panelPosition: { x: 100, y: 100 },
-        authToken: null
+        authToken: null,
+        deviceSecret: null,
+        deviceId: null
     }
 })
+
+const APP_URL = app.isPackaged ? 'https://pow.atriasafety.org' : 'http://localhost:3000'
+
+function getStoredSecret(key: 'authToken' | 'deviceSecret'): string | null {
+    const stored = store.get(key)
+    if (!stored) return null
+    try {
+        if (safeStorage.isEncryptionAvailable()) {
+            return safeStorage.decryptString(Buffer.from(stored, 'base64'))
+        }
+        return stored
+    } catch {
+        return null
+    }
+}
+
+function storeSecret(key: 'authToken' | 'deviceSecret', value: string): void {
+    try {
+        if (safeStorage.isEncryptionAvailable()) {
+            store.set(key, safeStorage.encryptString(value).toString('base64'))
+        } else {
+            store.set(key, value)
+        }
+    } catch (e) {
+        console.error(`[Vision] Failed to store ${key}:`, e)
+    }
+}
 
 let overlayWindow: BrowserWindow | null = null
 let isOverlayVisible = false
@@ -276,54 +307,79 @@ ipcMain.handle('set-settings', (_event, settings: { hotkey?: string; toggleHotke
 // Auth token storage (using Electron's safe storage for encryption at rest)
 ipcMain.handle('store-auth-token', (_event, token: string) => {
     try {
-        if (safeStorage.isEncryptionAvailable()) {
-            const encrypted = safeStorage.encryptString(token)
-            store.set('authToken', encrypted.toString('base64'))
-        } else {
-            // Fallback for systems where encryption is not available (rare)
-            store.set('authToken', token)
-        }
+        storeSecret('authToken', token)
         return true
     } catch (e) {
-        console.error('Failed to encrypt/store auth token:', e)
+        console.error('Failed to store auth token:', e)
         return false
     }
 })
 
-ipcMain.handle('get-auth-token', () => {
-    const stored = store.get('authToken')
-    if (!stored) return null
-
-    try {
-        if (safeStorage.isEncryptionAvailable()) {
-            return safeStorage.decryptString(Buffer.from(stored, 'base64'))
-        }
-        return stored
-    } catch (e) {
-        console.error('Failed to decrypt auth token:', e)
-        return null
-    }
-})
+ipcMain.handle('get-auth-token', () => getStoredSecret('authToken'))
 
 ipcMain.handle('clear-auth-token', () => {
     store.delete('authToken')
+    store.delete('deviceId') // Device is tied to the session; clear on logout
     return true
 })
 
-// Shared secret for HMAC verification - hardcoded to match server
-const VISION_HMAC_SECRET = 'pow-vision-hmac-secret-2024'
-// Generate a random instance ID for this session
-const SESSION_INSTANCE_ID = crypto.randomBytes(8).toString('hex')
+// Per-device HMAC signature for Vision API auth.
+// The device secret lives in the OS keychain (safeStorage) and is registered
+// with the server once after the user completes Clerk auth. No secret is ever
+// baked into the binary — rotation requires no rebuild.
+ipcMain.handle('generate-signature', async () => {
+    // Get or create the device secret
+    let deviceSecret = getStoredSecret('deviceSecret')
+    if (!deviceSecret) {
+        deviceSecret = crypto.randomBytes(32).toString('hex')
+        storeSecret('deviceSecret', deviceSecret)
+    }
 
-ipcMain.handle('generate-signature', () => {
+    let deviceId = store.get('deviceId') as string | null
+
+    // If not yet registered, try now using the stored Vision JWT
+    if (!deviceId) {
+        const jwt = getStoredSecret('authToken')
+        if (jwt) {
+            try {
+                const os = await import('os')
+                const res = await fetch(`${APP_URL}/api/vision/register-device`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${jwt}`,
+                        'x-pow-request': '1'
+                    },
+                    body: JSON.stringify({
+                        deviceSecret,
+                        deviceName: os.hostname()
+                    })
+                })
+                if (res.ok) {
+                    const data = await res.json()
+                    deviceId = data.deviceId
+                    store.set('deviceId', deviceId)
+                } else {
+                    console.warn('[Vision] Device registration failed:', res.status)
+                }
+            } catch (e) {
+                console.error('[Vision] Device registration error:', e)
+            }
+        }
+    }
+
+    // Pre-auth requests (handshake, token verify) don't need device auth —
+    // return an empty string; those routes ignore the header.
+    if (!deviceId) return ''
+
+    // Signature: deviceId:timestamp:HMAC-SHA256(timestamp:deviceId, deviceSecret)
     const timestamp = Date.now().toString()
-    const message = `${timestamp}:${SESSION_INSTANCE_ID}`
     const signature = crypto
-        .createHmac('sha256', VISION_HMAC_SECRET)
-        .update(message)
+        .createHmac('sha256', deviceSecret)
+        .update(`${timestamp}:${deviceId}`)
         .digest('hex')
 
-    return `${timestamp}:${SESSION_INSTANCE_ID}:${signature}`
+    return `${deviceId}:${timestamp}:${signature}`
 })
 
 // Open URL in system default browser - with security allowlist

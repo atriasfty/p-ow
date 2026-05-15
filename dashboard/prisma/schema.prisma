@@ -556,3 +556,15 @@ model VehicleLog {
   @@index([serverId, createdAt])
 }
 
+
+model VisionDevice {
+  id           String    @id @default(cuid())
+  userId       String
+  deviceSecret String
+  deviceName   String?
+  createdAt    DateTime  @default(now())
+  lastUsedAt   DateTime?
+  revokedAt    DateTime?
+
+  @@index([userId])
+}

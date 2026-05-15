@@ -1,51 +1,54 @@
 import crypto from "crypto"
-
-// Shared secret for HMAC verification - must match Vision desktop app
-// Fallback to hardcoded value if env var not set (for development/first deploys)
-const VISION_HMAC_SECRET = process.env.VISION_HMAC_SECRET || 'pow-vision-hmac-secret-2024'
+import { prisma } from "@/lib/db"
 
 /**
- * Verifies the HMAC signature from Vision app headers.
- * Format: X-Vision-Sig: timestamp:instanceId:signature
- * Signature = HMAC-SHA256(timestamp:instanceId, secret)
+ * Verifies a per-device HMAC signature from Vision app requests.
+ *
+ * Header format — X-Vision-Sig: deviceId:timestamp:signature
+ * Signature = HMAC-SHA256(timestamp:deviceId, deviceSecret)
+ *
+ * The deviceSecret lives in the DB (registered on first launch) and in the
+ * user's OS keychain via Electron safeStorage — never in the binary.
  */
-export function verifyVisionSignature(header: string | null): boolean {
-    if (!header) return false
+export async function verifyVisionDevice(
+    sigHeader: string | null,
+    expectedUserId: string
+): Promise<boolean> {
+    if (!sigHeader) return false
 
-    const parts = header.split(':')
+    const parts = sigHeader.split(":")
     if (parts.length !== 3) return false
 
-    const [timestamp, instanceId, signature] = parts
+    const [deviceId, timestamp, signature] = parts
     const ts = parseInt(timestamp, 10)
 
-    // Check timestamp is within 5 minutes (allows for clock drift)
-    const now = Date.now()
-    if (isNaN(ts) || Math.abs(now - ts) > 300000) {
-        return false
-    }
+    if (isNaN(ts) || Math.abs(Date.now() - ts) > 300_000) return false
 
-    // Compute expected signature
-    const message = `${timestamp}:${instanceId}`
-    const expectedSig = crypto
-        .createHmac('sha256', VISION_HMAC_SECRET)
-        .update(message)
-        .digest('hex')
+    const device = await prisma.visionDevice.findUnique({ where: { id: deviceId } })
+    if (!device || device.revokedAt || device.userId !== expectedUserId) return false
 
-    // Constant-time comparison to prevent timing attacks
-    const sigBuffer = Buffer.from(signature)
-    const expectedBuffer = Buffer.from(expectedSig)
+    const expected = crypto
+        .createHmac("sha256", device.deviceSecret)
+        .update(`${timestamp}:${deviceId}`)
+        .digest("hex")
 
-    if (sigBuffer.length !== expectedBuffer.length) {
-        return false
-    }
+    const sigBuf = Buffer.from(signature)
+    const expBuf = Buffer.from(expected)
+    if (sigBuf.length !== expBuf.length) return false
+    if (!crypto.timingSafeEqual(sigBuf, expBuf)) return false
 
-    return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
+    // Fire-and-forget lastUsedAt update
+    prisma.visionDevice.update({
+        where: { id: deviceId },
+        data: { lastUsedAt: new Date() }
+    }).catch(() => {})
+
+    return true
 }
 
 export function getVisionCorsHeaders(req: Request) {
     const origin = req.headers.get("origin") || ""
 
-    // Allowed origins: Electron app (null/file://), local dev, and production web app
     const allowedOrigins = [
         "null", // Electron file:// protocol
         "http://localhost:3000",

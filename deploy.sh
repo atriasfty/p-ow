@@ -160,9 +160,6 @@ if [ ! -f "${SHARED_ENV_FILE}" ]; then
     read -p "PostHog Personal API Key - from PostHog Settings -> Personal API Keys: " POSTHOG_PERSONAL_KEY
     read -p "PostHog Project ID - number from PostHog URL e.g. 12345: " POSTHOG_PROJECT_ID
     
-    read -p "Vision HMAC Secret (default: pow-vision-hmac-secret-2024): " VISION_HMAC_INPUT
-    VISION_HMAC_SECRET=${VISION_HMAC_INPUT:-"pow-vision-hmac-secret-2024"}
-    
     # Generate automatic internal secrets
     INTERNAL_SYNC_SECRET_GEN="$(openssl rand -base64 32)"
     SYNC_WS_SECRET_GEN="$(openssl rand -base64 32)"
@@ -192,7 +189,6 @@ INTERNAL_SYNC_SECRET="${INTERNAL_SYNC_SECRET_GEN}"
 SYNC_WS_SECRET="${SYNC_WS_SECRET_GEN}"
 NEXT_PUBLIC_SYNC_WS_SECRET="${SYNC_WS_SECRET_GEN}"
 VISION_JWT_SECRET="${VISION_JWT_SECRET_GEN}"
-VISION_HMAC_SECRET="${VISION_HMAC_SECRET}"
 
 # Roblox Config
 ROBLOX_API_KEY="${ROBLOX_API_KEY}"
@@ -266,12 +262,6 @@ else
         echo "NEXT_PUBLIC_SYNC_WS_SECRET=\"${NEW_WS_SECRET}\"" >> "${SHARED_ENV_FILE}"
     fi
     
-    # VISION_HMAC_SECRET must match the hardcoded value in the Vision desktop app
-    if ! grep -q "VISION_HMAC_SECRET=" "${SHARED_ENV_FILE}"; then
-        read -p "Missing Vision HMAC Secret (default: pow-vision-hmac-secret-2024): " VISION_HMAC_INPUT
-        VAL=${VISION_HMAC_INPUT:-"pow-vision-hmac-secret-2024"}
-        echo "VISION_HMAC_SECRET=\"$VAL\"" >> "${SHARED_ENV_FILE}"
-    fi
     
     # Discord Config
     if ! grep -q "DISCORD_TOKEN=" "${SHARED_ENV_FILE}" && ! grep -q "DISCORD_BOT_TOKEN=" "${SHARED_ENV_FILE}"; then
@@ -599,6 +589,7 @@ echo "Useful commands:"
 echo "  pm2 logs          - View live application logs"
 echo "  pm2 status        - Show service status"
 echo ""
+
 
 # =================================================================
 # EMERGENCY ROLLBACK INSTRUCTIONS

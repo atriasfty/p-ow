@@ -172,7 +172,8 @@ export class AutomationEngine {
     }
 
     private static isPrivateIp(hostname: string): boolean {
-        const host = hostname.toLowerCase()
+        // Strip IPv6 brackets so "[::1]" matches "::1", "[::ffff:...]" matches the inner value
+        const host = hostname.replace(/^\[|\]$/g, "").toLowerCase()
         if (host === "localhost" || host === "::1" || host.endsWith(".local") || host === "0.0.0.0" || host === "::" || host === "[::]") return true
 
         // Check for common private IP patterns (IPv4)

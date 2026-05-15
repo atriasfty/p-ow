@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { SignJWT, jwtVerify } from "jose"
-import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { getVisionCorsHeaders } from "@/lib/vision-auth"
 import { canAccessVision } from "@/lib/subscription"
 
 // Handle preflight requests
@@ -79,15 +79,8 @@ export async function POST(req: Request) {
 
         const VISION_SECRET = new TextEncoder().encode(process.env.VISION_JWT_SECRET)
 
-        // Verify the request is from Vision app using HMAC signature
-        const signature = req.headers.get("X-Vision-Sig")
-        if (!verifyVisionSignature(signature)) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 403, headers: getVisionCorsHeaders(req) }
-            )
-        }
-
+        // No device auth here — this is the pre-auth token verification endpoint
+        // used during the login flow. Device registration happens after this call.
         const { token } = await req.json()
 
         if (!token) {

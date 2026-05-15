@@ -3,7 +3,7 @@ import { jwtVerify } from "jose"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
-import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
 
 export async function OPTIONS(req: Request) {
     return NextResponse.json({}, { headers: getVisionCorsHeaders(req) })
@@ -22,16 +22,7 @@ export async function POST(req: Request) {
 
         const VISION_SECRET = new TextEncoder().encode(process.env.VISION_JWT_SECRET)
 
-        // 1. Verify HMAC signature
-        const signature = req.headers.get("X-Vision-Sig")
-        if (!verifyVisionSignature(signature)) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid Signature" },
-                { status: 403, headers: getVisionCorsHeaders(req) }
-            )
-        }
-
-        // 2. Verify JWT token
+        // 1. Verify JWT token
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
             return NextResponse.json({ error: "No token provided" }, { status: 401, headers: getVisionCorsHeaders(req) })
@@ -47,6 +38,18 @@ export async function POST(req: Request) {
             payload = result.payload
         } catch {
             return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
+        }
+
+        // 2. Verify the request came from a registered Vision device
+        const validDevice = await verifyVisionDevice(
+            req.headers.get("X-Vision-Sig"),
+            payload.userId as string
+        )
+        if (!validDevice) {
+            return NextResponse.json(
+                { error: "Unauthorized: invalid or unregistered device" },
+                { status: 403, headers: getVisionCorsHeaders(req) }
+            )
         }
 
         // 3. Parse request body

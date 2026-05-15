@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
-import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
 
 // Mistral API Key
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY
@@ -28,29 +28,34 @@ export async function POST(req: Request) {
         }
 
         const VISION_SECRET = new TextEncoder().encode(process.env.VISION_JWT_SECRET)
-        // 1. Verify Request Signature (HMAC)
-        const signature = req.headers.get("X-Vision-Sig")
-        if (!verifyVisionSignature(signature)) {
-            return NextResponse.json(
-                { error: "Unauthorized - Invalid Signature" },
-                { status: 403, headers: getVisionCorsHeaders(req) }
-            )
-        }
-
-        // 2. Verify Session Token (JWT)
+        // 1. Verify Session Token (JWT)
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
             return NextResponse.json({ error: "No token provided" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
         const token = authHeader.substring(7)
+        let identifyPayload: any
         try {
-            await jwtVerify(token, VISION_SECRET, {
+            const result = await jwtVerify(token, VISION_SECRET, {
                 issuer: "pow-dashboard",
                 audience: "pow-vision"
             })
+            identifyPayload = result.payload
         } catch {
             return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
+        }
+
+        // 2. Verify the request came from a registered Vision device
+        const validDevice = await verifyVisionDevice(
+            req.headers.get("X-Vision-Sig"),
+            identifyPayload.userId as string
+        )
+        if (!validDevice) {
+            return NextResponse.json(
+                { error: "Unauthorized: invalid or unregistered device" },
+                { status: 403, headers: getVisionCorsHeaders(req) }
+            )
         }
 
         // 3. Get Image Data

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { getVisionCorsHeaders } from "@/lib/vision-auth"
 import { handshakeCodes } from "@/lib/handshake-store"
 
 // Handle preflight requests
@@ -11,15 +11,9 @@ export async function OPTIONS(req: Request) {
 // Generate a one-time handshake code for Vision auth
 export async function POST(req: Request) {
     try {
-        // Verify the request is from Vision app using HMAC signature
-        const signature = req.headers.get("X-Vision-Sig")
-        if (!verifyVisionSignature(signature)) {
-            console.log("[Vision Handshake] Invalid signature:", signature?.substring(0, 50))
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 403, headers: getVisionCorsHeaders(req) }
-            )
-        }
+        // No device auth here — this is the pre-auth bootstrap endpoint.
+        // The code is short-lived (5 min), single-use, and grants no access
+        // by itself. Device auth begins after the Clerk auth flow completes.
 
         // Cleanup expired codes (optional, could be a cron)
         await handshakeCodes.cleanup()

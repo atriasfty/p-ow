@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { clerkClient } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/db"
-import { verifyVisionSignature, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
 import { isFeatureEnabled } from "@/lib/feature-flags"
 
 // Check if user has Pro User subscription via Clerk metadata
@@ -35,15 +35,6 @@ export async function GET(req: Request) {
 
         const VISION_SECRET = new TextEncoder().encode(process.env.VISION_JWT_SECRET)
 
-        // Verify the request is from Vision app using HMAC signature
-        const signature = req.headers.get("X-Vision-Sig")
-        if (!verifyVisionSignature(signature)) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 403, headers: getVisionCorsHeaders(req) }
-            )
-        }
-
         // Verify Vision token from Authorization header
         const authHeader = req.headers.get("Authorization")
         if (!authHeader?.startsWith("Bearer ")) {
@@ -60,6 +51,18 @@ export async function GET(req: Request) {
             payload = result.payload
         } catch {
             return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
+        }
+
+        // Verify the request came from a registered Vision device
+        const validDevice = await verifyVisionDevice(
+            req.headers.get("X-Vision-Sig"),
+            payload.userId as string
+        )
+        if (!validDevice) {
+            return NextResponse.json(
+                { error: "Unauthorized: invalid or unregistered device" },
+                { status: 403, headers: getVisionCorsHeaders(req) }
+            )
         }
 
         // Check subscription - Vision requires Pro User OR member of Max server
@@ -134,18 +137,26 @@ export async function GET(req: Request) {
             // Avatar fetch failed, continue without it
         }
 
-        // Get punishment count from database (across all servers) using Roblox ID
+        // Scope all queries to servers where the requesting user is a member
         const robloxIdStr = String(userData.id)
+        const memberServers = await prisma.member.findMany({
+            where: { userId: payload.userId as string },
+            select: { serverId: true }
+        })
+        const serverIds = memberServers.map(m => m.serverId)
+
         const punishmentCount = await prisma.punishment.count({
             where: {
-                userId: robloxIdStr
+                userId: robloxIdStr,
+                serverId: { in: serverIds }
             }
         })
 
         // Get recent punishments (last 5)
         const recentPunishments = await prisma.punishment.findMany({
             where: {
-                userId: robloxIdStr
+                userId: robloxIdStr,
+                serverId: { in: serverIds }
             },
             orderBy: { createdAt: "desc" },
             take: 5,
@@ -159,12 +170,13 @@ export async function GET(req: Request) {
             }
         })
 
-        // Feature 1: Identify Active BOLOs
+        // Feature 1: Identify Active BOLOs — scoped to the user's servers
         const activeBolos = await prisma.punishment.findMany({
             where: {
                 userId: robloxIdStr,
                 type: { in: ["Ban Bolo", "Bolo"] },
-                resolved: false
+                resolved: false,
+                serverId: { in: serverIds }
             },
             include: {
                 server: {
