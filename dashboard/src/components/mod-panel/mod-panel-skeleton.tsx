@@ -1,8 +1,10 @@
 "use client"
 
-function Bone({ className }: { className?: string }) {
+import type { CSSProperties } from "react"
+
+function Bone({ className, style }: { className?: string; style?: CSSProperties }) {
     return (
-        <div className={`bg-white/5 rounded animate-pulse ${className ?? ""}`} />
+        <div className={`bg-white/5 rounded animate-pulse ${className ?? ""}`} style={style} />
     )
 }
 
