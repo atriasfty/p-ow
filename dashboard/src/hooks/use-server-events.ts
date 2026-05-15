@@ -125,6 +125,12 @@ export function useServerEvents(serverId: string): ServerEventsState {
             backoffRef.current = BASE_BACKOFF
             touch()
             setState(prev => ({ ...prev, connected: true, error: null }))
+            // Fallback: unblock the desktop gate after 5s even if the game server
+            // is offline and never sends players/server-stats events.
+            setTimeout(() => {
+                if (!mountedRef.current) return
+                setState(prev => prev.hasInitialData ? prev : { ...prev, hasInitialData: true })
+            }, 5000)
         }
 
         es.onerror = () => {
@@ -146,8 +152,14 @@ export function useServerEvents(serverId: string): ServerEventsState {
         es.addEventListener("heartbeat", () => {
             if (!mountedRef.current) return
             touch()
-            // Restore connected state if we were showing stale banner
-            setState(prev => prev.connected ? prev : { ...prev, connected: true, error: null })
+            // Heartbeat fires even when game server is offline — use it to unblock
+            // the desktop gate so the panel doesn't stay on skeleton indefinitely.
+            setState(prev => ({
+                ...prev,
+                connected: true,
+                error: null,
+                hasInitialData: true,
+            }))
         })
 
         es.addEventListener("players", (e) => {
