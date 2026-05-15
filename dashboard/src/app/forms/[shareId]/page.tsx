@@ -567,7 +567,12 @@ function QuestionInput({
                                         <FileText className="h-5 w-5 text-indigo-400" />
                                         <span className="text-white text-sm truncate max-w-[200px]">{file.filename}</span>
                                     </div>
-                                    <button onClick={() => removeFile(index)} className="text-zinc-500 hover:text-red-400">
+                                    <button
+                                        onClick={() => removeFile(index)}
+                                        className="text-zinc-500 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded"
+                                        aria-label={"Remove file " + file.filename}
+                                        title={"Remove file " + file.filename}
+                                    >
                                         <X className="h-4 w-4" />
                                     </button>
                                 </div>
