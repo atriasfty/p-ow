@@ -25,8 +25,11 @@ const server = await resolveServer(auth.apiKey)
         const userIds = activeShifts.map((s: any) => s.userId)
         const clerkUsers = await clerk.users.getUserList({ userId: userIds })
 
+        // Pre-compute O(1) lookup Map for Clerk users to avoid O(N*M) lookups inside the loop
+        const clerkUserMap = new Map(clerkUsers.data.map((u: any) => [u.id, u]))
+
         const staffOnDuty = activeShifts.map((shift: any) => {
-            const user = clerkUsers.data.find((u: any) => u.id === shift.userId)
+            const user = clerkUserMap.get(shift.userId)
             if (!user) return null
 
             const robloxAccount = user.externalAccounts.find((a: any) => {

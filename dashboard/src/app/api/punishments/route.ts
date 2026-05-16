@@ -72,6 +72,9 @@ export async function GET(req: Request) {
             console.error("Clerk fetch error", e)
         }
 
+        // Pre-compute O(1) lookup Map for Clerk users to avoid O(N*M) lookups inside the loop
+        const clerkUserMap = new Map(users.map((u: any) => [u.id, u]))
+
         // 5. Build Map: ModeratorID -> { name, avatar }
         const modMap = new Map()
 
@@ -80,7 +83,7 @@ export async function GET(req: Request) {
             const clerkId = modId.startsWith("user_") ? modId : discordToMemberMap.get(modId)
 
             if (clerkId) {
-                user = (users as any[]).find(u => u.id === clerkId)
+                user = clerkUserMap.get(clerkId)
             }
 
             if (user) {
