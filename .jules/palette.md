@@ -1,0 +1,3 @@
+## 2024-05-16 - Custom Combobox Accessibility
+**Learning:** Custom div/button-based dropdowns (like `RoleCombobox` and `ChannelCombobox`) replacing native `<select>` elements require explicit ARIA attributes (`aria-expanded`, `aria-haspopup="listbox"`, `role="combobox"`, `role="listbox"`, `role="option"`, `aria-selected`) and robust keyboard focus styling (`focus-visible:ring-2` on the trigger, `focus-visible:bg-zinc-700` on options) to be accessible to screen readers and keyboard navigation.
+**Action:** When creating or modifying custom select/dropdown components, always implement these required ARIA roles and explicit `focus-visible` styling patterns.
