@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
+import { getServerSettings } from "@/lib/server-settings"
 import { revalidatePath } from "next/cache"
 
 export async function submitPunishment(prevState: any, formData: FormData) {
@@ -94,9 +95,11 @@ export async function submitPunishment(prevState: any, formData: FormData) {
 
                 // Send PM for warnings
                 if (type === "Warn") {
+                    const settings = await getServerSettings(serverId)
                     const modName = session.user.robloxUsername || session.user.username || "Staff"
                     const reasonText = reason || "No reason provided"
-                    const pmCommand = `:pm ${username} You have been warned by ${modName} for ${reasonText} - Project Overwatch`
+                    const branding = settings.shiftPmBranding ? ` ${settings.shiftPmBranding}` : ""
+                    const pmCommand = `:pm ${username} You have been warned by ${modName} for ${reasonText}${branding}`
                     promises.push(client.executeCommand(pmCommand))
                 }
 

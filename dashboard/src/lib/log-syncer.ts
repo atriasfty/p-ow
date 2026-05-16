@@ -418,6 +418,10 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient, s
         console.log(`[LOG-CMD-DEBUG] EXIT unknown typeArg="${typeArg}" (not warn/kick/ban/bolo/shift)`)
         return
     }
+    if (!s.punishmentTypes.includes(punishmentType)) {
+        console.log(`[LOG-CMD-DEBUG] EXIT punishmentType="${punishmentType}" not in server punishmentTypes=${JSON.stringify(s.punishmentTypes)}`)
+        return
+    }
 
     // Per-type enable checks
     if (typeArg === "warn" && !s.inGameWarnEnabled) { console.log(`[LOG-CMD-DEBUG] EXIT inGameWarnEnabled=false`); return }
@@ -748,7 +752,7 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
         if (v2.ModCalls?.length || v2.EmergencyCalls?.length) {
             try {
                 const [rawModCalls, latestEmerCalls] = await Promise.all([
-                    prisma.modCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: 400 }),
+                    prisma.modCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: s.sseModCallSnapshotLimit }),
                     prisma.emergencyCall.findMany({ where: { serverId }, orderBy: { timestamp: 'desc' }, take: s.sseEmergencySnapshotLimit })
                 ])
 
