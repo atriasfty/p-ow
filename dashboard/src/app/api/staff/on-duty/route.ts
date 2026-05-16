@@ -44,9 +44,12 @@ export async function GET(req: Request) {
             userId: userIds
         })
 
-        // 3. Map active shifts to Clerk users (ensures we show everyone we can find)
+        // 3. Pre-compute O(1) lookup Map for Clerk users to avoid O(N*M) lookups inside the loop
+        const clerkUserMap = new Map(clerkUsers.data.map((u: any) => [u.id, u]))
+
+        // 4. Map active shifts to Clerk users (ensures we show everyone we can find)
         const staffOnDuty = activeShifts.map((shift: any) => {
-            const user = clerkUsers.data.find((u: any) => u.id === shift.userId)
+            const user = clerkUserMap.get(shift.userId)
             if (!user) return null
 
             // Find roblox username from external accounts

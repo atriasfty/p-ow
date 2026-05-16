@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         // 2. By Roblox ID (some older code might use this)
         // 3. By Discord ID (already linked)
 
-        let existingMember = await prisma.member.findFirst({
+        const existingMember = await prisma.member.findFirst({
             where: {
                 serverId,
                 OR: [

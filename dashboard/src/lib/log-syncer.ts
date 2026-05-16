@@ -437,7 +437,7 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient, s
     console.log(`[LOG-CMD-DEBUG] AUTH-OK type="${typeArg}" target="${targetQuery}" reason="${reason}" memberId=${moderatorMember.id}`)
 
     try {
-        let matches = cachedPlayers.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
+        const matches = cachedPlayers.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
         let target: { name: string; id: string } | null = null
 
         if (matches.length === 1) {
