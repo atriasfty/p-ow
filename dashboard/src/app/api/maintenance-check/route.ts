@@ -26,10 +26,12 @@ export async function GET() {
         )
     } catch (error) {
         console.error('[Maintenance Check] Error:', error)
-        // If there's an error, assume NOT in maintenance (fail open)
+        // Fail closed: if we cannot read the maintenance flag we refuse to
+        // serve, rather than letting a transient DB error bypass the gate.
         return NextResponse.json(
-            { maintenance: false },
+            { error: 'maintenance-check unavailable' },
             {
+                status: 503,
                 headers: {
                     'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
                 },

@@ -16,7 +16,7 @@ interface ElectronAPI {
     onTriggerCapture: (callback: () => void) => () => void
     moveWindow: (x: number, y: number) => void
     openExternal: (url: string) => Promise<void>
-    generateSignature: () => Promise<string>
+    generateSignature: (request?: { method?: string; path?: string; body?: string }) => Promise<string>
     hideOverlay: () => Promise<boolean>
 }
 

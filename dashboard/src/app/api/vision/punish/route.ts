@@ -40,10 +40,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
-        // 2. Verify the request came from a registered Vision device
+        // 2. Read raw body once so we can verify HMAC over it before parsing.
+        const rawBody = await req.text()
+
         const validDevice = await verifyVisionDevice(
             req.headers.get("X-Vision-Sig"),
-            payload.userId as string
+            payload.userId as string,
+            req,
+            rawBody
         )
         if (!validDevice) {
             return NextResponse.json(
@@ -53,7 +57,12 @@ export async function POST(req: Request) {
         }
 
         // 3. Parse request body
-        const body = await req.json()
+        let body: any
+        try {
+            body = JSON.parse(rawBody)
+        } catch {
+            return NextResponse.json({ error: "Invalid JSON body" }, { status: 400, headers: getVisionCorsHeaders(req) })
+        }
         const { playerId, playerUsername, type, reason, serverId: requestedServerId } = body
 
         if (!playerId || !playerUsername || !type || !reason) {

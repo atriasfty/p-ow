@@ -18,8 +18,12 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         setError(null)
 
         try {
-            // Generate HMAC signature for verification
-            const signature = await window.electronAPI.generateSignature()
+            // Generate HMAC signature for verification (no body)
+            const signature = await window.electronAPI.generateSignature({
+                method: 'POST',
+                path: '/api/vision/handshake',
+                body: ''
+            })
 
             // Get a one-time handshake code from the API
             const res = await fetch(`${API_BASE}/api/vision/handshake`, {
@@ -57,8 +61,13 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         setError(null)
 
         try {
-            // Generate HMAC signature
-            const signature = await window.electronAPI.generateSignature()
+            const authBody = JSON.stringify({ token: tokenInput.trim() })
+
+            const signature = await window.electronAPI.generateSignature({
+                method: 'POST',
+                path: '/api/vision/auth',
+                body: authBody
+            })
 
             // Verify the token with the API
             const res = await fetch(`${API_BASE}/api/vision/auth`, {
@@ -67,7 +76,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     'Content-Type': 'application/json',
                     'X-Vision-Sig': signature
                 },
-                body: JSON.stringify({ token: tokenInput.trim() })
+                body: authBody
             })
 
             if (res.ok) {

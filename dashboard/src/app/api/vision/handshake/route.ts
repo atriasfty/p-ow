@@ -2,21 +2,59 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getVisionCorsHeaders } from "@/lib/vision-auth"
 import { handshakeCodes } from "@/lib/handshake-store"
+import { checkSecurity } from "@/lib/security"
+import { prisma } from "@/lib/db"
 
 // Handle preflight requests
 export async function OPTIONS(req: Request) {
     return NextResponse.json({}, { headers: getVisionCorsHeaders(req) })
 }
 
+// Per-IP soft cap on simultaneous outstanding handshake codes. The global
+// rate-limit (checkSecurity) bounds the call frequency; this bounds the
+// number of rows a single source can keep alive in the table.
+const PENDING_PER_IP_LIMIT = 20
+const ipPending = new Map<string, number[]>()
+
+function getClientIp(req: Request): string {
+    const cfIp = req.headers.get("cf-connecting-ip")
+    if (cfIp) return cfIp
+    const forwarded = req.headers.get("x-forwarded-for")
+    if (forwarded) return forwarded.split(",").at(-1)?.trim() ?? "unknown"
+    const realIp = req.headers.get("x-real-ip")
+    if (realIp) return realIp
+    return "unknown"
+}
+
 // Generate a one-time handshake code for Vision auth
 export async function POST(req: Request) {
     try {
-        // No device auth here — this is the pre-auth bootstrap endpoint.
-        // The code is short-lived (5 min), single-use, and grants no access
-        // by itself. Device auth begins after the Clerk auth flow completes.
+        // Pre-auth endpoint — anyone can call. Apply the standard rate limit
+        // so a single source can't flood the VisionHandshake table.
+        const securityBlock = await checkSecurity(req)
+        if (securityBlock) return securityBlock
 
-        // Cleanup expired codes (optional, could be a cron)
+        const ip = getClientIp(req)
+        if (ip !== "unknown") {
+            const now = Date.now()
+            const windowStart = now - 5 * 60 * 1000
+            const recent = (ipPending.get(ip) || []).filter(t => t > windowStart)
+            if (recent.length >= PENDING_PER_IP_LIMIT) {
+                return NextResponse.json(
+                    { error: "Too many pending handshakes" },
+                    { status: 429, headers: getVisionCorsHeaders(req) }
+                )
+            }
+            recent.push(now)
+            ipPending.set(ip, recent)
+        }
+
+        // Cleanup expired codes opportunistically. Cheap upper-bound on
+        // table size from a determined attacker even at the rate-limit cap.
         await handshakeCodes.cleanup()
+        await prisma.visionHandshake.deleteMany({
+            where: { expiresAt: { lt: new Date() } }
+        }).catch(() => {})
 
         // Generate a random code
         const code = crypto.randomBytes(32).toString('hex')

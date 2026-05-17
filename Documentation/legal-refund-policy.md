@@ -27,7 +27,7 @@ If a charge appears to have been made in error, please contact us **before** ini
 
 ### 5. Non-Profit Operation
 
-Project Overwatch is operated by **Atria**, a registered 501(c)(3) non-profit organization. Subscription revenue directly funds the continued operation, hosting, and development of the platform.
+Project Overwatch is operated by **Atria**, which is fiscally sponsored by **The Hack Foundation** (d.b.a. Hack Club), a 501(c)(3) non-profit organization (EIN: 81-2908499). Subscription revenue directly funds the continued operation, hosting, and development of the platform.
 
 ### 6. Exceptions Required by Law
 
@@ -39,4 +39,4 @@ We may update this Refund Policy from time to time. Material changes will be com
 
 ### 8. Contact
 
-For billing questions, email **billing@atriasafety.org**.
+For billing questions, email **help@atriasafety.org**.

@@ -68,10 +68,16 @@ export function useOcr() {
                 return null
             }
 
-            const signature = await window.electronAPI.generateSignature()
-
             // Use environment variable or fallback to production
             const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'https://pow.ciankelly.xyz'
+
+            const identifyBody = JSON.stringify({ image: optimizedImage })
+
+            const signature = await window.electronAPI.generateSignature({
+                method: 'POST',
+                path: '/api/vision/identify',
+                body: identifyBody
+            })
 
             // Call the Vision API with timeout
             const controller = new AbortController()
@@ -84,7 +90,7 @@ export function useOcr() {
                     'Authorization': `Bearer ${token}`,
                     'X-Vision-Sig': signature
                 },
-                body: JSON.stringify({ image: optimizedImage }),
+                body: identifyBody,
                 signal: controller.signal
             })
 

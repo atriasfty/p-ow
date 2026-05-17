@@ -174,7 +174,9 @@ export async function isServerMember(user: SessionUser | null, serverId: string)
  * Get the user's role and permissions for a server
  */
 export async function getUserPermissions(user: SessionUser | null, serverId: string): Promise<RolePermissions> {
-    if (!user) return DEFAULT_PERMISSIONS
+    // Unauthenticated callers get nothing. DEFAULT_PERMISSIONS is the
+    // viewer/staff baseline applied only to authenticated members below.
+    if (!user) return NO_PERMISSIONS
 
     // Superadmin has all permissions
     if (isSuperAdmin(user)) return ALL_PERMISSIONS

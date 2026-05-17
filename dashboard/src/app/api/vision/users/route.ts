@@ -51,10 +51,12 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Invalid token" }, { status: 401, headers: getVisionCorsHeaders(req) })
         }
 
-        // Verify the request came from a registered Vision device
+        // Verify the request came from a registered Vision device (GET, empty body)
         const validDevice = await verifyVisionDevice(
             req.headers.get("X-Vision-Sig"),
-            visionPayload.userId as string
+            visionPayload.userId as string,
+            req,
+            ""
         )
         if (!validDevice) {
             return NextResponse.json(

@@ -13,27 +13,43 @@ export async function POST(req: Request) {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
-    // Check admin permissions - assuming basic admin access is enough for this tool
-    // Ideally we should check strict permissions
+    // Rollback runs reversal commands against the live server. Restricted to
+    // server owner or superadmin — regular admins/staff cannot trigger it.
     const body = await req.json().catch(() => ({}))
     const { serverId, targetUserId, timestamp } = body
 
-    if (!serverId || !targetUserId) {
+    if (typeof serverId !== "string" || typeof targetUserId !== "string" || !serverId || !targetUserId) {
         return new NextResponse("Missing serverId or targetUserId", { status: 400 })
     }
 
-    const member = await prisma.member.findFirst({
-        where: { serverId, userId: session.user.id }
+    const server = await prisma.server.findUnique({
+        where: { id: serverId },
+        select: { subscriberUserId: true }
     })
+    if (!server) return new NextResponse("Server not found", { status: 404 })
 
-    if (!member?.isAdmin && !isSuperAdmin(session.user)) {
+    const isOwner = server.subscriberUserId === session.user.id
+    if (!isOwner && !isSuperAdmin(session.user)) {
         return new NextResponse("Forbidden", { status: 403 })
     }
 
     try {
-        // 1. Determine time range
-        // If timestamp is provided, use it. Otherwise default to 24 hours ago.
-        const startTime = timestamp ? new Date(timestamp) : new Date(Date.now() - 24 * 60 * 60 * 1000)
+        // 1. Determine time range. Reject malformed timestamps; clamp to a
+        // sane lower bound so we can't sweep arbitrarily far back.
+        let startTime: Date
+        if (timestamp !== undefined && timestamp !== null) {
+            const parsed = new Date(timestamp)
+            if (isNaN(parsed.getTime())) {
+                return new NextResponse("Invalid timestamp", { status: 400 })
+            }
+            const earliestAllowed = Date.now() - 7 * 24 * 60 * 60 * 1000
+            if (parsed.getTime() < earliestAllowed) {
+                return new NextResponse("Timestamp too far in the past (max 7 days)", { status: 400 })
+            }
+            startTime = parsed
+        } else {
+            startTime = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        }
 
         // We need to find logs where this user was the ACTOR.
         // In our Log model:

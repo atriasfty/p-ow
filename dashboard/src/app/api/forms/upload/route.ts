@@ -72,6 +72,17 @@ export async function POST(request: NextRequest) {
         const filePath = path.join(uploadsDir, filename)
         await writeFile(filePath, buffer)
 
+        // Sidecar metadata records the true uploader. The download route
+        // trusts this rather than scanning unrelated answer values, which
+        // was previously bypassable by submitting a crafted response.
+        const metaPath = `${filePath}.meta.json`
+        await writeFile(metaPath, JSON.stringify({
+            uploaderId: session.user.id,
+            originalName: file.name,
+            mime: file.type,
+            uploadedAt: new Date().toISOString()
+        }))
+
         // Return API URL for download (not public folder)
         const fileUrl = `/api/forms/download?formId=${formId}&file=${filename}`
 

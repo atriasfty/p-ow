@@ -31,6 +31,14 @@ export async function GET(req: Request) {
 
     if (!serverId) return new NextResponse("Missing params", { status: 400 })
 
+    // Verify permission BEFORE consulting cache to prevent cross-tenant reads.
+    const error = await verifyPermissionOrError(session.user, serverId, "canViewLogs")
+    if (error) return error
+
+    // --- SECURITY CHECK ---
+    const securityBlock = await checkSecurity(req)
+    if (securityBlock) return securityBlock
+
     // Dynamic TTL from server config
     const cacheTtl = await getServerOverride(serverId, "logCacheTtl")
 
@@ -48,14 +56,6 @@ export async function GET(req: Request) {
 
     const server = await getServerConfig(serverId)
     if (!server) return new NextResponse("Server not found", { status: 404 })
-
-    // Verify permission - require canViewLogs
-    const error = await verifyPermissionOrError(session.user, serverId, "canViewLogs")
-    if (error) return error
-
-    // --- SECURITY CHECK ---
-    const securityBlock = await checkSecurity(req)
-    if (securityBlock) return securityBlock
 
     // Build query for historical logs from database
     const oneMonthAgo = new Date()

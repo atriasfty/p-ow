@@ -327,7 +327,7 @@ ipcMain.handle('clear-auth-token', () => {
 // The device secret lives in the OS keychain (safeStorage) and is registered
 // with the server once after the user completes Clerk auth. No secret is ever
 // baked into the binary — rotation requires no rebuild.
-ipcMain.handle('generate-signature', async () => {
+ipcMain.handle('generate-signature', async (_event, request?: { method?: string; path?: string; body?: string }) => {
     // Get or create the device secret
     let deviceSecret = getStoredSecret('deviceSecret')
     if (!deviceSecret) {
@@ -372,14 +372,22 @@ ipcMain.handle('generate-signature', async () => {
     // return an empty string; those routes ignore the header.
     if (!deviceId) return ''
 
-    // Signature: deviceId:timestamp:HMAC-SHA256(timestamp:deviceId, deviceSecret)
+    // Signature scope: timestamp:deviceId:nonce:METHOD:path:sha256(body)
+    // Including method/path/body prevents a captured signature from being
+    // replayed against a different endpoint or with a swapped body.
+    const method = (request?.method || 'GET').toUpperCase()
+    const path = request?.path || ''
+    const body = request?.body || ''
     const timestamp = Date.now().toString()
+    const nonce = crypto.randomBytes(16).toString('hex')
+    const bodyHash = body ? crypto.createHash('sha256').update(body).digest('hex') : ''
+
     const signature = crypto
         .createHmac('sha256', deviceSecret)
-        .update(`${timestamp}:${deviceId}`)
+        .update(`${timestamp}:${deviceId}:${nonce}:${method}:${path}:${bodyHash}`)
         .digest('hex')
 
-    return `${deviceId}:${timestamp}:${signature}`
+    return `${deviceId}:${timestamp}:${nonce}:${signature}`
 })
 
 // Open URL in system default browser - with security allowlist

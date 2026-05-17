@@ -42,47 +42,73 @@ export function LiveEditorProvider({
     useEffect(() => {
         if (!user || !formId) return
 
-        // 1. Create the shared Yjs document
-        const ydoc = new Y.Doc()
+        let cancelled = false
+        let wsProvider: WebsocketProvider | null = null
+        let ydoc: Y.Doc | null = null
 
-        // 2. Connect to the Yjs sync server. URL and secret come from env vars so
-        //    prod/staging can point at the correct tunnel without a code change.
-        const syncUrl = process.env.NEXT_PUBLIC_SYNC_URL || "wss://powsync.ciankelly.xyz"
-        const syncSecret = process.env.NEXT_PUBLIC_SYNC_WS_SECRET || ""
-        const wsProvider = new WebsocketProvider(
-            syncUrl,
-            `form-room-${formId}`,
-            ydoc,
-            { params: { token: syncSecret } }
-        )
+        ;(async () => {
+            // 1. Get a per-document JWT — the server validates form access
+            //    before issuing it. Replaces the previous global shared
+            //    NEXT_PUBLIC_SYNC_WS_SECRET that any client could read.
+            let token: string
+            let room: string
+            try {
+                const res = await fetch(`/api/forms/${formId}/sync-token`, {
+                    credentials: "include"
+                })
+                if (!res.ok) {
+                    console.warn("[LiveEditor] sync-token denied:", res.status)
+                    return
+                }
+                const json = await res.json()
+                token = json.token
+                room = json.room
+            } catch (e) {
+                console.error("[LiveEditor] sync-token fetch failed:", e)
+                return
+            }
 
-        // 3. Set up the Awareness protocol (for cursors & presence)
-        const awareness = wsProvider.awareness
+            if (cancelled) return
 
-        // Inject the current user into the awareness state
-        awareness.setLocalStateField("user", {
-            id: user.id,
-            name: user.username || user.firstName || "Unknown Admin",
-            imageUrl: user.imageUrl,
-            color: "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
-            cursor: null // { x, y } will be updated by listeners
-        })
+            ydoc = new Y.Doc()
 
-        wsProvider.on('status', (event: { status: string }) => {
-            setContextValue(prev => ({ ...prev, connected: event.status === 'connected' }))
-        })
+            const syncUrl = process.env.NEXT_PUBLIC_SYNC_URL || "wss://powsync.ciankelly.xyz"
+            wsProvider = new WebsocketProvider(
+                syncUrl,
+                room,
+                ydoc,
+                { params: { token } }
+            )
 
-        setContextValue({
-            doc: ydoc,
-            provider: wsProvider,
-            awareness,
-            connected: wsProvider.wsconnected
-        })
+            const awareness = wsProvider.awareness
+
+            awareness.setLocalStateField("user", {
+                id: user.id,
+                name: user.username || user.firstName || "Unknown Admin",
+                imageUrl: user.imageUrl,
+                color: "#" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0'),
+                cursor: null
+            })
+
+            wsProvider.on('status', (event: { status: string }) => {
+                setContextValue(prev => ({ ...prev, connected: event.status === 'connected' }))
+            })
+
+            setContextValue({
+                doc: ydoc,
+                provider: wsProvider,
+                awareness,
+                connected: wsProvider.wsconnected
+            })
+        })()
 
         return () => {
-            wsProvider.disconnect()
-            wsProvider.destroy()
-            ydoc.destroy()
+            cancelled = true
+            if (wsProvider) {
+                wsProvider.disconnect()
+                wsProvider.destroy()
+            }
+            if (ydoc) ydoc.destroy()
         }
     }, [formId, user])
 

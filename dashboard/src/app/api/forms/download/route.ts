@@ -31,28 +31,6 @@ export async function GET(request: NextRequest) {
             where: { formId_userId: { formId, userId: session.user.id } }
         })
 
-        // Check if user is the respondent who uploaded the file.
-        // Parse stored answer values and check the url field exactly — a substring
-        // check on just the filename would be bypassable by pasting the filename into
-        // a text answer on a different response.
-        const fileUrl = `/api/forms/download?formId=${formId}&file=${filename}`
-        const userAnswers = await prisma.formAnswer.findMany({
-            where: { response: { formId, respondentId: session.user.id } },
-            select: { value: true }
-        })
-        const isRespondent = userAnswers.some(a => {
-            try {
-                const parsed = JSON.parse(a.value)
-                if (typeof parsed === "string") return parsed === fileUrl
-                if (typeof parsed === "object" && parsed !== null) return parsed.url === fileUrl
-                return false
-            } catch { return false }
-        })
-
-        if (!isStaff && !hasEditorAccess && !isRespondent) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-        }
-
         // Sanitize inputs to prevent directory traversal
         const safeFormId = formId.replace(/[^a-zA-Z0-9_-]/g, "")
         const safeFilename = path.basename(filename)
@@ -66,6 +44,51 @@ export async function GET(request: NextRequest) {
             await stat(filePath)
         } catch {
             return NextResponse.json({ error: "File not found" }, { status: 404 })
+        }
+
+        // Source of truth for ownership: sidecar .meta.json written at upload
+        // time. The previous "is the URL in any of your answers" check was an
+        // IDOR — an attacker could paste another user's URL into their own
+        // response and trivially grant themselves access.
+        let isRespondent = false
+        try {
+            const meta = JSON.parse(await readFile(`${filePath}.meta.json`, "utf8"))
+            if (meta?.uploaderId && meta.uploaderId === session.user.id) {
+                isRespondent = true
+            }
+        } catch {
+            // No sidecar → legacy upload predating the metadata file. Walk
+            // every response on this form and collect the set of respondents
+            // whose file_upload answers reference this URL. If exactly one
+            // respondent claims it, they are the rightful owner — otherwise
+            // the ownership is ambiguous (someone replayed the URL) and we
+            // refuse to grant respondent access, falling back to staff only.
+            const fileUrl = `/api/forms/download?formId=${formId}&file=${filename}`
+            const candidateAnswers = await prisma.formAnswer.findMany({
+                where: {
+                    response: { formId },
+                    question: { type: "file_upload" }
+                },
+                select: { value: true, response: { select: { respondentId: true } } }
+            })
+            const claimants = new Set<string>()
+            for (const a of candidateAnswers) {
+                if (!a.response?.respondentId) continue
+                try {
+                    const parsed = JSON.parse(a.value)
+                    const matches =
+                        (typeof parsed === "string" && parsed === fileUrl) ||
+                        (typeof parsed === "object" && parsed !== null && parsed.url === fileUrl)
+                    if (matches) claimants.add(a.response.respondentId)
+                } catch { /* ignore malformed */ }
+            }
+            if (claimants.size === 1 && claimants.has(session.user.id)) {
+                isRespondent = true
+            }
+        }
+
+        if (!isStaff && !hasEditorAccess && !isRespondent) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
         }
 
         // Read and serve file

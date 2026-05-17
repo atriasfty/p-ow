@@ -74,7 +74,18 @@ export function PlayerPanel({ player, isProcessing, error, onSearch, onClear, on
                 return
             }
 
-            const signature = await window.electronAPI.generateSignature()
+            const reqBody = JSON.stringify({
+                playerId: player.id,
+                playerUsername: player.name,
+                type: punishModal.type,
+                reason: reason.trim()
+            })
+
+            const signature = await window.electronAPI.generateSignature({
+                method: 'POST',
+                path: '/api/vision/punish',
+                body: reqBody
+            })
 
             const controller = new AbortController()
             const timeoutId = setTimeout(() => controller.abort(), 15000) // 15s timeout
@@ -86,12 +97,7 @@ export function PlayerPanel({ player, isProcessing, error, onSearch, onClear, on
                     'Authorization': `Bearer ${token}`,
                     'X-Vision-Sig': signature
                 },
-                body: JSON.stringify({
-                    playerId: player.id,
-                    playerUsername: player.name,
-                    type: punishModal.type,
-                    reason: reason.trim()
-                }),
+                body: reqBody,
                 signal: controller.signal
             })
 

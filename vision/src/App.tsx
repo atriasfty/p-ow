@@ -133,12 +133,17 @@ function App() {
                 return
             }
 
-            // Generate HMAC signature
-            const signature = await window.electronAPI.generateSignature()
-
             const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'https://pow.ciankelly.xyz'
 
-            const res = await fetch(`${API_BASE}/api/vision/player?username=${encodeURIComponent(username)}`, {
+            // Generate HMAC signature bound to this exact request
+            const playerPath = `/api/vision/player`
+            const signature = await window.electronAPI.generateSignature({
+                method: 'GET',
+                path: playerPath,
+                body: ''
+            })
+
+            const res = await fetch(`${API_BASE}${playerPath}?username=${encodeURIComponent(username)}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'X-Vision-Sig': signature
