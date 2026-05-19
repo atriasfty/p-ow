@@ -60,12 +60,18 @@ export async function PATCH(req: Request) {
 
         // discordGuildId changes are restricted to the server owner or superadmin.
         // Any other admin changing this would redirect role-sync to an attacker-controlled
-        // Discord guild, granting them permanent admin access.
+        // Discord guild, granting them permanent admin access. The form posts every
+        // field on every save, so only enforce the gate when the value would actually
+        // change — otherwise a normal admin hitting "Save" trips it for unchanged data.
         if (discordGuildId !== undefined) {
-            const isOwner = server?.subscriberUserId === session.user.id
-            const isSuperAdmin = session.user.id === SUPER_ADMIN_ID
-            if (!isOwner && !isSuperAdmin) {
-                return NextResponse.json({ error: "Only the server owner can change the Discord guild ID" }, { status: 403 })
+            const normalizedNew = discordGuildId || null
+            const normalizedCurrent = server?.discordGuildId ?? null
+            if (normalizedNew !== normalizedCurrent) {
+                const isOwner = server?.subscriberUserId === session.user.id
+                const isSuperAdmin = session.user.id === SUPER_ADMIN_ID
+                if (!isOwner && !isSuperAdmin) {
+                    return NextResponse.json({ error: "Only the server owner can change the Discord guild ID" }, { status: 403 })
+                }
             }
         }
 
@@ -73,11 +79,18 @@ export async function PATCH(req: Request) {
         let finalBotEnabled = undefined
 
         if (customBotToken !== undefined || customBotEnabled !== undefined) {
-            if (server?.subscriptionPlan === 'pow-max') {
-                if (customBotToken !== undefined) finalBotToken = customBotToken || null
-                if (customBotEnabled !== undefined) finalBotEnabled = customBotEnabled
-            } else {
-                return NextResponse.json({ error: "White Label Bot requires POW Max subscription" }, { status: 403 })
+            const normalizedNewToken = customBotToken === undefined ? undefined : (customBotToken || null)
+            const normalizedNewEnabled = customBotEnabled === undefined ? undefined : !!customBotEnabled
+            const tokenChanging = normalizedNewToken !== undefined && normalizedNewToken !== (server?.customBotToken ?? null)
+            const enabledChanging = normalizedNewEnabled !== undefined && normalizedNewEnabled !== (server?.customBotEnabled ?? false)
+
+            if (tokenChanging || enabledChanging) {
+                if (server?.subscriptionPlan === 'pow-max') {
+                    if (tokenChanging) finalBotToken = normalizedNewToken
+                    if (enabledChanging) finalBotEnabled = normalizedNewEnabled
+                } else {
+                    return NextResponse.json({ error: "White Label Bot requires POW Max subscription" }, { status: 403 })
+                }
             }
         }
 
