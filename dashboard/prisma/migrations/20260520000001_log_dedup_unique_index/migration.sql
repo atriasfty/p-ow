@@ -2,17 +2,21 @@
 -- Enforces dedup at the DB level to match the bot's manual dedup logic.
 --
 -- PostgreSQL requires double-quotes around camelCase identifiers.
--- Unquoted names are folded to lowercase and won't match Prisma-generated columns.
-
--- Step 1: Remove duplicate rows, keeping the one with the lowest id per group.
+--
+-- Step 1: Remove duplicate rows using a window function.
+-- ROW_NUMBER() OVER (PARTITION BY ...) is a single sequential pass — far cheaper
+-- than NOT IN (SELECT MIN ... GROUP BY) which does a correlated scan per row.
+WITH ranked AS (
+  SELECT id,
+         ROW_NUMBER() OVER (
+           PARTITION BY "serverId", "type", "prcTimestamp"
+           ORDER BY id
+         ) AS rn
+  FROM "Log"
+  WHERE "prcTimestamp" IS NOT NULL
+)
 DELETE FROM "Log"
-WHERE "prcTimestamp" IS NOT NULL
-  AND id NOT IN (
-    SELECT MIN(id)
-    FROM "Log"
-    WHERE "prcTimestamp" IS NOT NULL
-    GROUP BY "serverId", "type", "prcTimestamp"
-  );
+WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
 
 -- Step 2: Drop the old non-unique index if it exists.
 DROP INDEX IF EXISTS "Log_serverId_type_prcTimestamp_idx";
