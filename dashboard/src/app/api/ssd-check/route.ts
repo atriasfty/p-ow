@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getSession } from '@/lib/auth-clerk'
+import { isServerMember } from '@/lib/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -96,6 +97,11 @@ export async function POST(req: Request) {
 
         if (!serverId) {
             return NextResponse.json({ error: 'Missing serverId' }, { status: 400 })
+        }
+
+        // Verify the caller belongs to this server before writing a dismiss record
+        if (!(await isServerMember(session.user, serverId))) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
         }
 
         // Store dismiss flag per-user instead of deleting the event

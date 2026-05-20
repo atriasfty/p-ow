@@ -1,5 +1,26 @@
 import { ButtonInteraction, ModalSubmitInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, TextChannel } from "discord.js"
 import { prisma } from "../client"
+import { getBotServerSettings } from "../lib/server-settings"
+
+/**
+ * Returns the clicker's Member record for the given server if they are a
+ * server admin or have a role with admin-tier permissions, otherwise null.
+ * The previous implementation allowed *any* Discord user who could see the
+ * embed to click Accept/Deny, triggering DB writes and role grants.
+ */
+async function getReviewerMember(discordId: string, serverId: string) {
+    return prisma.member.findFirst({
+        where: { serverId, discordId },
+        include: { role: true }
+    })
+}
+
+function canReview(member: { isAdmin: boolean } | null) {
+    if (!member) return false
+    // The bot's Role model lacks a canAccessAdmin column (schema drift vs the
+    // dashboard), so we conservatively only accept explicit isAdmin = true.
+    return member.isAdmin === true
+}
 
 // ---- Entry points ----
 
@@ -31,6 +52,37 @@ export async function handleModalSubmitInteraction(interaction: ModalSubmitInter
 // ---- Form application ----
 
 async function handleFormApplicationButton(interaction: ButtonInteraction, accepted: boolean, responseId: string) {
+    // Permission check — any Discord user who can see this embed can click
+    // the button. We must confirm they are a server admin before even showing
+    // the modal (the modal submit handler re-checks before writing).
+    try {
+        const responseRows = await prisma.$queryRaw<{ formId: string }[]>`
+            SELECT formId FROM FormResponse WHERE id = ${responseId} LIMIT 1
+        `
+        const formId = responseRows[0]?.formId
+        if (!formId) {
+            await interaction.reply({ content: "Application response not found.", ephemeral: true })
+            return
+        }
+        const formRows = await prisma.$queryRaw<{ serverId: string }[]>`
+            SELECT serverId FROM Form WHERE id = ${formId} LIMIT 1
+        `
+        const serverId = formRows[0]?.serverId
+        if (!serverId) {
+            await interaction.reply({ content: "Form not found.", ephemeral: true })
+            return
+        }
+        const reviewer = await getReviewerMember(interaction.user.id, serverId)
+        if (!canReview(reviewer)) {
+            await interaction.reply({ content: "You are not authorised to review applications on this server.", ephemeral: true })
+            return
+        }
+    } catch (e) {
+        console.error("[FORM-BUTTON] Permission check failed:", e)
+        await interaction.reply({ content: "Could not verify your permissions.", ephemeral: true })
+        return
+    }
+
     // Encode the original message location in the modal custom_id so the modal
     // submit handler can edit it to remove the buttons after a decision.
     const modalCustomId = `${accepted ? "form_accept_modal" : "form_deny_modal"}:${responseId}:${interaction.channelId}:${interaction.message.id}`
@@ -86,6 +138,14 @@ async function handleFormApplicationModal(
         const formRow = formRows[0]
         if (!formRow) {
             await interaction.editReply({ content: "Form not found." })
+            return
+        }
+
+        // Re-check permissions inside the modal submit — the button handler
+        // checked too, but a long-lived modal could outlast a permission change.
+        const reviewer = await getReviewerMember(interaction.user.id, formRow.serverId)
+        if (!canReview(reviewer)) {
+            await interaction.editReply({ content: "You are not authorised to review applications on this server." })
             return
         }
 
@@ -178,6 +238,36 @@ async function handleFormApplicationModal(
 
 async function handleLoaAction(interaction: ButtonInteraction, approved: boolean, loaId: string) {
     try {
+        // Look up the LOA before mutating so we can permission-check the
+        // clicker. Previously this handler would update the row, grant a
+        // Discord role, and DM the requester for ANY user who could see the
+        // embed — no permission check.
+        const existing = await prisma.leaveOfAbsence.findUnique({
+            where: { id: loaId },
+            include: { server: true }
+        })
+        if (!existing) {
+            await interaction.reply({ content: "LOA not found.", ephemeral: true })
+            return
+        }
+
+        const reviewer = await getReviewerMember(interaction.user.id, existing.serverId)
+        if (!canReview(reviewer)) {
+            await interaction.reply({
+                content: "You are not authorised to approve/decline LOAs on this server.",
+                ephemeral: true
+            })
+            return
+        }
+
+        if (existing.status === "approved" || existing.status === "declined") {
+            await interaction.reply({
+                content: "This LOA has already been reviewed.",
+                ephemeral: true
+            })
+            return
+        }
+
         await interaction.deferUpdate()
 
         const status = approved ? "approved" : "declined"
@@ -206,31 +296,7 @@ async function handleLoaAction(interaction: ButtonInteraction, approved: boolean
             components: []
         })
 
-        if (approved && loa.server.onLoaRoleId) {
-            const member = await prisma.member.findFirst({
-                where: {
-                    serverId: loa.serverId,
-                    OR: [
-                        { userId: loa.userId },
-                        { discordId: loa.userId }
-                    ]
-                }
-            })
-
-            const discordId = member?.discordId || (loa.userId.startsWith("user_") ? null : loa.userId)
-
-            if (discordId) {
-                const guild = await interaction.client.guilds.fetch(loa.server.discordGuildId!).catch(() => null)
-                const guildMember = await guild?.members.fetch(discordId).catch(() => null)
-
-                if (guildMember && loa.server.onLoaRoleId) {
-                    await guildMember.roles.add(loa.server.onLoaRoleId).catch(() => { })
-                }
-            }
-        }
-
-        // loa.userId is a Clerk ID (e.g. "user_xxx"), not a Discord ID.
-        // We must resolve the Discord ID via the member table before DMing.
+        // Resolve the requester's Discord ID once for both role + DM use.
         const loaMember = await prisma.member.findFirst({
             where: {
                 serverId: loa.serverId,
@@ -240,23 +306,46 @@ async function handleLoaAction(interaction: ButtonInteraction, approved: boolean
                 ]
             }
         })
-        const discordUserIdForDm = loaMember?.discordId || (loa.userId.match(/^\d+$/) ? loa.userId : null)
-        if (discordUserIdForDm) {
-            const user = await interaction.client.users.fetch(discordUserIdForDm).catch(() => null)
-            if (user) {
-                await user.send({
-                    embeds: [{
-                        title: `LOA Request ${approved ? "Approved" : "Declined"}`,
-                        description: `Your Leave of Absence request for **${loa.server.customName || loa.server.name}** has been ${status}.`,
-                        color: approved ? 0x10b981 : 0xef4444,
-                        fields: [
-                            { name: "Reason", value: loa.reason },
-                            { name: "Start Date", value: loa.startDate.toLocaleDateString(), inline: true },
-                            { name: "End Date", value: loa.endDate.toLocaleDateString(), inline: true }
-                        ]
-                    }]
-                }).catch(() => { })
-            }
+        const requesterDiscordId =
+            loaMember?.discordId ||
+            (loa.userId.match(/^\d+$/) ? loa.userId : null)
+
+        // Route the role grant through the bot queue so it retries on Discord
+        // rate limits and runs even if THIS interaction handler crashes.
+        if (approved && loa.server.onLoaRoleId && requesterDiscordId) {
+            await prisma.botQueue.create({
+                data: {
+                    serverId: loa.serverId,
+                    type: "ROLE_ADD",
+                    targetId: requesterDiscordId,
+                    content: loa.server.onLoaRoleId
+                }
+            })
+        }
+
+        // Respect the per-server loaApprovalDmNotify setting and queue the DM
+        // (so it retries) rather than direct-sending.
+        const botSettings = await getBotServerSettings(loa.serverId)
+        if (botSettings.loaApprovalDmNotify && requesterDiscordId) {
+            await prisma.botQueue.create({
+                data: {
+                    serverId: loa.serverId,
+                    type: "DM",
+                    targetId: requesterDiscordId,
+                    content: JSON.stringify({
+                        embeds: [{
+                            title: `LOA Request ${approved ? "Approved" : "Declined"}`,
+                            description: `Your Leave of Absence request for **${loa.server.customName || loa.server.name}** has been ${status}.`,
+                            color: approved ? 0x10b981 : 0xef4444,
+                            fields: [
+                                { name: "Reason", value: loa.reason },
+                                { name: "Start Date", value: loa.startDate.toLocaleDateString(), inline: true },
+                                { name: "End Date", value: loa.endDate.toLocaleDateString(), inline: true }
+                            ]
+                        }]
+                    })
+                }
+            })
         }
     } catch (e) {
         console.error("[LOA-BUTTON] Error:", e)

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { checkSecurity } from "@/lib/security"
 
 // Mistral API Key
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY
@@ -11,6 +12,22 @@ export async function OPTIONS(req: Request) {
 
 export async function POST(req: Request) {
     try {
+        // Rate-limit and IP-ban check — this route calls Mistral on every request,
+        // so an unthrottled authenticated user can drain the API key budget.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
+        // Reject oversized bodies before reading the full payload. A base64 game
+        // screenshot is typically <1 MB; 5 MB is generous but prevents runaway billing.
+        const MAX_BODY = 5 * 1024 * 1024
+        const contentLength = parseInt(req.headers.get("content-length") ?? "0", 10)
+        if (contentLength > MAX_BODY) {
+            return NextResponse.json(
+                { error: "Request body too large" },
+                { status: 413, headers: getVisionCorsHeaders(req) }
+            )
+        }
+
         // Validate required environment variables
         if (!process.env.VISION_JWT_SECRET) {
             console.error("[Vision Identify] VISION_JWT_SECRET is not set!")
@@ -73,6 +90,11 @@ export async function POST(req: Request) {
 
         if (!image) {
             return NextResponse.json({ error: "No image provided" }, { status: 400, headers: getVisionCorsHeaders(req) })
+        }
+
+        // Reject anything that isn't a base64 data URL to prevent SSRF via Mistral
+        if (typeof image !== "string" || !image.startsWith("data:image/")) {
+            return NextResponse.json({ error: "Invalid image format: must be a data:image/ URL" }, { status: 400, headers: getVisionCorsHeaders(req) })
         }
 
         // 4. Call Pixtral AI

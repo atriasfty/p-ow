@@ -25,7 +25,11 @@ interface UserData {
 
 export function PunishmentList({ serverId, initialPunishments }: { serverId: string, initialPunishments: Punishment[] }) {
     const [punishments, setPunishments] = useState(initialPunishments)
-    const [userCache, setUserCache] = useState<Map<string, UserData>>(new Map())
+    // The ref is the authoritative store for the cache. State drives re-renders.
+    // Separating them lets the fetch effect read current cache without making itself
+    // a dependency (which would cause an infinite fetch loop).
+    const userCacheRef = useRef<Map<string, UserData>>(new Map())
+    const [userCache, setUserCache] = useState<Map<string, UserData>>(userCacheRef.current)
     const [openMenu, setOpenMenu] = useState<string | null>(null)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editReason, setEditReason] = useState("")
@@ -110,11 +114,14 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
         return () => container.removeEventListener("scroll", handleScroll)
     }, [loadMore, hasMore, loadingMore])
 
-    // Fetch user data for all punishments via server API
+    // Fetch user data for all punishments via server API.
+    // We read from `userCacheRef` (not the state) so this effect doesn't need
+    // `userCache` in its dependency array — adding it would cause an infinite
+    // loop every time new entries are inserted.
     useEffect(() => {
         const fetchUserData = async () => {
             const userIds = [...new Set(punishments.map(p => p.userId))]
-            const uncachedIds = userIds.filter(id => !userCache.has(id))
+            const uncachedIds = userIds.filter(id => !userCacheRef.current.has(id))
 
             if (uncachedIds.length === 0) return
 
@@ -127,13 +134,11 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
 
                 if (res.ok) {
                     const data = await res.json()
-                    setUserCache(prev => {
-                        const newCache = new Map(prev)
-                        for (const [id, userData] of Object.entries(data)) {
-                            newCache.set(id, userData as UserData)
-                        }
-                        return newCache
-                    })
+                    for (const [id, userData] of Object.entries(data)) {
+                        userCacheRef.current.set(id, userData as UserData)
+                    }
+                    // Shallow-copy the Map to trigger a re-render
+                    setUserCache(new Map(userCacheRef.current))
                 }
             } catch (e) {
                 console.warn("Failed to fetch user data:", e)

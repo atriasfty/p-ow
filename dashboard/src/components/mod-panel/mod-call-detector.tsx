@@ -4,6 +4,15 @@ import { useEffect, useRef, useState } from "react"
 import { useServerEventsContext } from "@/components/providers/server-events-provider"
 import { ModCallPanel } from "./mod-call-panel"
 
+// Module-level callback so other components (CallsModal) can open the panel
+// without mutating the function object — avoids React StrictMode double-set issues.
+let _openPanelCallback: ((callId: string) => void) | null = null
+
+/** Call from anywhere (e.g. CallsModal) to open the mod-call panel for a given call. */
+export function openModCallPanel(callId: string) {
+    _openPanelCallback?.(callId)
+}
+
 interface ModCallDetectorProps {
     serverId: string
     userRobloxId?: string | null
@@ -58,10 +67,11 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
         return () => clearInterval(interval)
     }, [])
 
-    // Expose a static setter so CallsModal can open the panel manually.
+    // Register this instance's setter with the module-level callback.
+    // Only one ModCallDetector is rendered at a time, so last-write wins.
     useEffect(() => {
-        ModCallDetector.openPanel = (callId: string) => setActivePanelCallId(callId)
-        return () => { ModCallDetector.openPanel = () => { } }
+        _openPanelCallback = (callId: string) => setActivePanelCallId(callId)
+        return () => { _openPanelCallback = null }
     }, [])
 
     // Auto-detect when this user has been assigned to a mod call.
@@ -116,5 +126,3 @@ export function ModCallDetector({ serverId, userRobloxId }: ModCallDetectorProps
     )
 }
 
-// Static method so other components (CallsModal) can trigger the panel
-ModCallDetector.openPanel = (_callId: string) => { }

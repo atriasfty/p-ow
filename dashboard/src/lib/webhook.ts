@@ -54,7 +54,9 @@ function isPrivateIp(ip: string): boolean {
             lower === "::1" ||
             lower.startsWith("fe80:") ||
             lower.startsWith("fc") ||
-            lower.startsWith("fd")
+            lower.startsWith("fd") ||
+            lower.startsWith("64:ff9b:") || // NAT64 well-known prefix (RFC 6052) — translates to IPv4
+            lower.startsWith("2002:")        // 6to4 (RFC 3056) — embeds IPv4 in first 32 bits
         )
     }
 
@@ -66,8 +68,10 @@ function isPrivateIp(ip: string): boolean {
  * Resolves a hostname and returns the first public IP, or null if none/blocked.
  * The caller pins the connection to this exact IP via the http/https `lookup`
  * option so DNS cannot rebind between validation and fetch.
+ *
+ * Exported for reuse in other SSRF-sensitive call sites (e.g. automation-engine).
  */
-async function resolvePublicIp(hostname: string): Promise<{ address: string, family: 4 | 6 } | null> {
+export async function resolvePublicIp(hostname: string): Promise<{ address: string, family: 4 | 6 } | null> {
     if (hostname === "localhost" || hostname === "0.0.0.0") return null
     if (net.isIP(hostname)) {
         if (isPrivateIp(hostname)) return null
@@ -146,6 +150,14 @@ export async function fireWebhook(serverId: string, event: WebhookEvent, embed: 
         }
         if (parsed.protocol !== "https:") {
             console.error(`[WEBHOOK] Non-https webhookUrl blocked for ${serverId}`)
+            return
+        }
+
+        // Only allow the default TLS port. Arbitrary ports let server admins probe
+        // internal services (e.g. Redis on :6379) via a public-looking hostname.
+        const port = parsed.port ? parseInt(parsed.port, 10) : 443
+        if (port !== 443) {
+            console.error(`[WEBHOOK] Blocked non-443 port for ${serverId}`)
             return
         }
 

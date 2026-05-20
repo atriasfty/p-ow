@@ -72,7 +72,7 @@ export function LiveEditorProvider({
 
             ydoc = new Y.Doc()
 
-            const syncUrl = process.env.NEXT_PUBLIC_SYNC_URL || "wss://powsync.ciankelly.xyz"
+            const syncUrl = process.env.NEXT_PUBLIC_SYNC_URL || "wss://pow.atriasafety.org/sync"
             wsProvider = new WebsocketProvider(
                 syncUrl,
                 room,

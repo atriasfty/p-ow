@@ -392,9 +392,9 @@ ipcMain.handle('generate-signature', async (_event, request?: { method?: string;
 
 // Open URL in system default browser - with security allowlist
 const ALLOWED_ORIGINS = [
-    'https://pow.ciankelly.xyz',
+    'https://pow.atriasafety.org',
     'http://localhost:3000', // Local dev dashboard
-    'https://github.com/ciankelly' // Project links
+    'https://staging.atriasafety.org' // Staging dashboard
 ]
 
 ipcMain.handle('open-external', async (_event, urlString: string) => {

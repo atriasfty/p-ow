@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db"
 
-// The superadmin ID - only this user can grant admin access
-export const SUPER_ADMIN_ID = "user_36ogKIU3qHTwhGT3mrVtvUrTgbW"
+// Single source of truth — both this file and middleware.ts read the same env var
+// with the same fallback so credential rotation via SUPER_ADMIN_ID env var takes
+// effect everywhere simultaneously.
+export const SUPER_ADMIN_ID = process.env.SUPER_ADMIN_ID ?? "user_36ogKIU3qHTwhGT3mrVtvUrTgbW"
 
 export interface SessionUser {
     id: string

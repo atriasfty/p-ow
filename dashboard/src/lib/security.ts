@@ -19,16 +19,26 @@ export async function checkSecurity(req: Request): Promise<NextResponse | null> 
     const banReason = await getGlobalConfig("BAN_REASON")
 
     // IP detection: trust cf-connecting-ip (Cloudflare sets this; nginx must strip it from
-    // direct connections). Fall back to the LAST XFF entry (appended by our own proxy,
-    // not the client). Never trust XFF[0] — it is client-controlled.
+    // direct connections). Fall back to XFF, skipping TRUSTED_PROXY_COUNT trailing entries
+    // (each proxy appends the IP it received from). Default = 1 (direct nginx). Set
+    // TRUSTED_PROXY_COUNT=2 if the topology is CF → nginx → app so the CF edge IP is
+    // skipped and the real client IP is used. Never trust XFF[0] — it is client-controlled.
     const cfIp = req.headers.get("cf-connecting-ip")
     const forwarded = req.headers.get("x-forwarded-for")
     const realIp = req.headers.get("x-real-ip")
 
+    const proxyCount = Math.max(1, parseInt(process.env.TRUSTED_PROXY_COUNT ?? "1", 10))
+
     let ip = "unknown"
-    if (cfIp) ip = cfIp
-    else if (forwarded) ip = forwarded.split(",").at(-1)?.trim() ?? "unknown"
-    else if (realIp) ip = realIp
+    if (cfIp) {
+        ip = cfIp
+    } else if (forwarded) {
+        const parts = forwarded.split(",")
+        const idx = Math.max(0, parts.length - proxyCount)
+        ip = parts[idx]?.trim() ?? "unknown"
+    } else if (realIp) {
+        ip = realIp
+    }
 
     console.log(`[SECURITY] Checking request from IP: ${ip}`)
 
@@ -77,10 +87,16 @@ export async function checkSecurity(req: Request): Promise<NextResponse | null> 
 }
 
 /**
- * Clean up expired counters periodically to prevent memory leaks
+ * Clean up expired counters periodically to prevent memory leaks.
+ *
+ * The previous guard was inverted: `ipCounters` is assigned three lines above
+ * via the `??=` operator before this check runs, so `!globalForSecurity.ipCounters`
+ * was always false and the cleanup never registered. We gate on a separate
+ * `ipCountersCleanup` flag pinned to globalThis instead.
  */
-if (!globalForSecurity.ipCounters) {
-    setInterval(() => {
+const globalForCleanup = globalThis as unknown as { ipCountersCleanup?: NodeJS.Timeout }
+if (!globalForCleanup.ipCountersCleanup) {
+    globalForCleanup.ipCountersCleanup = setInterval(() => {
         const now = Date.now()
         for (const [ip, tracker] of ipCounters.entries()) {
             if (tracker.resetAt < now) {

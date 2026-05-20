@@ -1,11 +1,11 @@
 "use client"
 
 
-import React, { useEffect, useState } from "react"
+import React, { useMemo, useState } from "react"
 import { X, User, Map as MapIcon, Loader2, ZoomIn, ZoomOut, Search } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { ParsedPlayer } from "./player-list"
+import { useServerEventsContext } from "@/components/providers/server-events-provider"
 
 interface MapModalProps {
     serverId: string
@@ -18,34 +18,19 @@ const MAP_IMAGE = "/maps/fall_postals.png"
 const MAP_RES = 3121
 
 export function MapModal({ serverId, onClose }: MapModalProps) {
-    const [players, setPlayers] = useState<ParsedPlayer[]>([])
-    const [loading, setLoading] = useState(true)
     const [zoom, setZoom] = useState(1)
     const [searchTerm, setSearchTerm] = useState("")
     const router = useRouter()
     const [hoveredPlayerId, setHoveredPlayerId] = useState<string | null>(null)
 
-    // Polling logic - only when open
-    useEffect(() => {
-        const fetchPlayers = async () => {
-            try {
-                const res = await fetch(`/api/players?serverId=${serverId}`)
-                if (res.ok) {
-                    const data = await res.json()
-                    // Filter players with location only for map
-                    setPlayers(data.filter((p: ParsedPlayer) => p.location))
-                }
-            } catch (e) {
-                console.error("Map player fetch error:", e)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchPlayers()
-        const interval = setInterval(fetchPlayers, 5000)
-        return () => clearInterval(interval)
-    }, [serverId])
+    // Subscribe to the SSE player stream — no polling needed, updates arrive
+    // whenever the log-syncer pushes a new player batch (~4 s cadence).
+    const { players: ssePlayers, hasInitialData } = useServerEventsContext()
+    const loading = !hasInitialData
+    const players = useMemo(
+        () => ssePlayers.filter(p => p.location),
+        [ssePlayers]
+    )
 
     const getTeamColor = (team?: string) => {
         if (!team) return "bg-zinc-400"

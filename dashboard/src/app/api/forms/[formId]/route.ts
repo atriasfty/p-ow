@@ -55,16 +55,43 @@ export async function GET(
 
         // For public forms, anyone can view (for filling)
         // For draft/closed forms, need edit access
+        const session = await getSession()
+        let canEdit = false
+        if (session) {
+            canEdit = await canEditForm(session.user.id, formId)
+        }
+
         if (form.status !== "published") {
-            const session = await getSession()
             if (!session) {
                 return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
             }
-
-            const canEdit = await canEditForm(session.user.id, formId)
             if (!canEdit) {
                 return NextResponse.json({ error: "Access denied" }, { status: 403 })
             }
+        }
+
+        // Strip internal/operational fields from the response unless the caller
+        // can edit the form. Previously the public fill flow received the
+        // server's role IDs, channel IDs, editor share token, etc.
+        if (!canEdit) {
+            const safe = { ...(form as any) }
+            delete safe.serverId
+            delete safe.recruitmentChannelId
+            delete safe.congratsChannelId
+            delete safe.notifyChannelId
+            delete safe.acceptedRoleId
+            delete safe.requiredRoleIds
+            delete safe.editorShareId
+            delete safe.editorShareToken
+            if (safe.server) {
+                safe.server = {
+                    id: safe.server.id,
+                    name: safe.server.name,
+                    customName: safe.server.customName ?? null,
+                    bannerUrl: safe.server.bannerUrl ?? null
+                }
+            }
+            return NextResponse.json(safe)
         }
 
         return NextResponse.json(form)

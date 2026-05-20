@@ -95,12 +95,23 @@ async function processQueue(client: Client, prisma: PrismaClient) {
             } else if (item.type === "DM") {
                 const user = await client.users.fetch(item.targetId).catch(() => null)
                 if (user) {
-                    await user.send(item.content)
+                    // Accept either a plain string or JSON-encoded
+                    // { content?, embeds? } payload (used for LOA/form replies).
+                    // Hard-cap raw string length at 2000 (Discord's max for content)
+                    // so any oversize value can't crash the bot.
+                    let payload: any = item.content?.slice(0, 2000) ?? ""
+                    try {
+                        if (item.content.startsWith("{") && item.content.endsWith("}")) {
+                            const parsed = JSON.parse(item.content)
+                            if (parsed.embeds || parsed.content) payload = parsed
+                        }
+                    } catch { /* keep string payload */ }
+                    await user.send(payload)
                     successfulIds.push(item.id)
                 } else {
                     throw new Error("User not found")
                 }
-            } else if (item.type === "ROLE_ADD") {
+            } else if (item.type === "ROLE_ADD" || item.type === "ROLE_REMOVE") {
                 // item.serverId is the database CUID, we need the Discord Guild ID
                 const server = await prisma.server.findUnique({ where: { id: item.serverId } })
                 if (!server || !server.discordGuildId) throw new Error("Server or Discord Guild ID not found")
@@ -111,7 +122,11 @@ async function processQueue(client: Client, prisma: PrismaClient) {
                 const member = await guild.members.fetch(item.targetId).catch(() => null)
                 if (!member) throw new Error("Member not found in guild")
 
-                await member.roles.add(item.content)
+                if (item.type === "ROLE_REMOVE") {
+                    await member.roles.remove(item.content)
+                } else {
+                    await member.roles.add(item.content)
+                }
                 successfulIds.push(item.id)
             } else if (item.type === "SYNC_COMMANDS") {
                 const { deployCommands } = await import("../deploy-commands")

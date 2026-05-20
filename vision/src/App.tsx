@@ -133,17 +133,18 @@ function App() {
                 return
             }
 
-            const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'https://pow.ciankelly.xyz'
+            const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'https://pow.atriasafety.org'
 
-            // Generate HMAC signature bound to this exact request
-            const playerPath = `/api/vision/player`
+            // Include the query string in the signed path so the signature covers
+            // the specific username being looked up, not just the endpoint.
+            const playerPath = `/api/vision/player?username=${encodeURIComponent(username)}`
             const signature = await window.electronAPI.generateSignature({
                 method: 'GET',
                 path: playerPath,
                 body: ''
             })
 
-            const res = await fetch(`${API_BASE}${playerPath}?username=${encodeURIComponent(username)}`, {
+            const res = await fetch(`${API_BASE}${playerPath}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'X-Vision-Sig': signature

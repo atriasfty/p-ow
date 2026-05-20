@@ -31,14 +31,50 @@ export async function handleIngameCommand(interaction: ChatInputCommandInteracti
         return interaction.editReply({ content: `Your role (${member.role.name}) does not have the 'Can Use Toolbox' permission enabled.` })
     }
 
-    // Restricted commands check
-    const restrictedPrefixes = [":mod", ":unmod", ":admin", ":unadmin"]
+    // Strict command gate. The previous block-list ([":mod", ":unmod",
+    // ":admin", ":unadmin"]) let canUseToolbox staff run :kick / :ban /
+    // :shutdown / :restart / :tp / :setrank — bypassing the formal punishment
+    // system and the server-owner safeguards entirely. We now require explicit
+    // permission per command class and reject anything we don't recognise.
     const lowerCommand = cmd.toLowerCase().trim()
-    const isRestricted = restrictedPrefixes.some(p => lowerCommand.startsWith(p))
+    const firstToken = lowerCommand.split(/\s+/)[0]
 
-    if (isRestricted && !member.role.canUseAdminCommands) {
+    if (!firstToken.startsWith(":")) {
         return interaction.editReply({
-            content: "You do not have permission to use admin commands (:mod, :admin, etc.)"
+            content: "Only commands starting with ':' are allowed via this tool."
+        })
+    }
+
+    // Commands that only require canUseToolbox. Everything else needs
+    // canUseAdminCommands explicitly.
+    const TOOLBOX_OK = new Set([
+        ":pm", ":m", ":h", ":msg", ":announce", ":log", ":time", ":weather"
+    ])
+    // Punishment commands. Routed through the dashboard's formal /punishments
+    // API so they get audit-logged. Block them here.
+    const PUNISH_BLOCKED = new Set([":kick", ":ban", ":unban", ":warn"])
+    // Operational / destructive — must be admin.
+    const ADMIN_ONLY = new Set([
+        ":mod", ":unmod", ":admin", ":unadmin",
+        ":shutdown", ":restart", ":reset",
+        ":tp", ":teleport", ":bring", ":to",
+        ":setrank", ":rank",
+        ":kill", ":respawn", ":heal",
+        ":god", ":ungod",
+        ":givecash", ":refund",
+        ":unjail", ":jail"
+    ])
+
+    if (PUNISH_BLOCKED.has(firstToken)) {
+        return interaction.editReply({
+            content: `\`${firstToken}\` is a punishment command — use the dashboard Player Panel so it is logged and reversible.`
+        })
+    }
+
+    const needsAdmin = ADMIN_ONLY.has(firstToken) || !TOOLBOX_OK.has(firstToken)
+    if (needsAdmin && !member.role.canUseAdminCommands) {
+        return interaction.editReply({
+            content: `Your role (${member.role.name}) does not have permission to run \`${firstToken}\` via this tool. Ask a server owner if you need elevated commands.`
         })
     }
 

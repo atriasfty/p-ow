@@ -69,7 +69,7 @@ export function useOcr() {
             }
 
             // Use environment variable or fallback to production
-            const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'https://pow.ciankelly.xyz'
+            const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'https://pow.atriasafety.org'
 
             const identifyBody = JSON.stringify({ image: optimizedImage })
 

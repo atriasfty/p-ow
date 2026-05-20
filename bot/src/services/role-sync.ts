@@ -1,6 +1,8 @@
 import { Client, DiscordAPIError, TextChannel } from "discord.js"
 import { PrismaClient } from "@prisma/client"
 import { getGlobalConfig } from "../lib/config"
+import { getBotServerSettings } from "../lib/server-settings"
+import { getWeekStart } from "../lib/time-windows"
 
 export function startAutoRoleSync(client: Client, prisma: PrismaClient) {
     console.log("Starting auto role sync service (dynamic interval)")
@@ -80,12 +82,10 @@ async function syncAllServerRoles(client: Client, prisma: PrismaClient) {
                 where: { serverId: server.id }
             })
 
-            // Calculate current week start (Monday)
-            const day = now.getDay()
-            const diff = now.getDate() - day + (day === 0 ? -6 : 1)
-            const weekStart = new Date(now)
-            weekStart.setDate(diff)
-            weekStart.setHours(0, 0, 0, 0)
+            // Calculate current week start using this server's configured timezone
+            // and week-start day (replaces the old UTC-naive setHours approach).
+            const srv = await getBotServerSettings(server.id)
+            const weekStart = getWeekStart(srv.quotaWeekStartDay, srv.quotaTimezone)
 
             // Calculate weekly duty time for all members
             const shiftAggregates = await prisma.shift.groupBy({

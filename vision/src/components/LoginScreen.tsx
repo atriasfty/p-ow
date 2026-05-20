@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import logo from '../assets/logo.png'
 
-const API_BASE = 'https://pow.ciankelly.xyz'
+const API_BASE = 'https://pow.atriasafety.org'
 
 interface LoginScreenProps {
     onLoginSuccess: (user: any) => void

@@ -19,6 +19,7 @@ export interface BotServerSettings {
     loaMaxDurationDays: number      // 0 = unlimited
     loaMinNoticeDays: number        // 0 = no minimum notice
     loaMaxPendingPerMember: number  // 0 = unlimited
+    loaApprovalDmNotify: boolean    // DM the requester when their LOA is approved/declined
 }
 
 const BOT_DEFAULTS: BotServerSettings = {
@@ -35,7 +36,8 @@ const BOT_DEFAULTS: BotServerSettings = {
     quotaTimezone: 'UTC',
     loaMaxDurationDays: 0,
     loaMinNoticeDays: 0,
-    loaMaxPendingPerMember: 0
+    loaMaxPendingPerMember: 0,
+    loaApprovalDmNotify: false
 }
 
 // 60-second in-memory cache

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
 import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { checkSecurity } from "@/lib/security"
 
 export async function OPTIONS(req: Request) {
     return NextResponse.json({}, { headers: getVisionCorsHeaders(req) })
@@ -11,6 +12,11 @@ export async function OPTIONS(req: Request) {
 
 export async function POST(req: Request) {
     try {
+        // Rate-limit before doing any auth work — this route writes to the DB and
+        // issues live PRC moderation commands, so replay/flood attacks must be stopped early.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
         // Validate required environment variable
         if (!process.env.VISION_JWT_SECRET) {
             console.error("[Vision Punish] VISION_JWT_SECRET is not set!")

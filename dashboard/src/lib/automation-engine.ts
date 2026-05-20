@@ -2,11 +2,8 @@ import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { getServerConfig } from "@/lib/server-config"
 import { getServerOverride } from "./config"
-import dns from "dns"
-import { promisify } from "util"
-import { fireWebhook } from "./webhook"
-
-const lookup = promisify(dns.lookup)
+import * as https from "https"
+import { fireWebhook, resolvePublicIp } from "./webhook"
 
 // Define expanded triggers
 export type TriggerType =
@@ -171,25 +168,6 @@ export class AutomationEngine {
         }
     }
 
-    private static isPrivateIp(hostname: string): boolean {
-        // Strip IPv6 brackets so "[::1]" matches "::1", "[::ffff:...]" matches the inner value
-        const host = hostname.replace(/^\[|\]$/g, "").toLowerCase()
-        if (host === "localhost" || host === "::1" || host.endsWith(".local") || host === "0.0.0.0" || host === "::" || host === "[::]") return true
-
-        // Check for common private IP patterns (IPv4)
-        // 127.0.0.1/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
-        const privateIpv4Regex = /^(127\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.|192\.168\.|169\.254\.)/
-        if (privateIpv4Regex.test(host)) return true
-
-        // Basic check for IPv6 private/link-local (fc00::/7, fe80::/10)
-        if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe8")) return true
-
-        // Also block mapping IPv4 in IPv6 (e.g. ::ffff:127.0.0.1)
-        if (host.startsWith("::ffff:") && privateIpv4Regex.test(host.substring(7))) return true
-
-        return false
-    }
-
     private static sanitizeCommandArg(text: string): string {
         // PRC commands use spaces as delimiters, so wrap in quotes and escape internal quotes
         // Strip command chaining delimiters to prevent command injection
@@ -304,26 +282,51 @@ export class AutomationEngine {
             case "HTTP_REQUEST":
                 try {
                     const url = new URL(target)
-                    // Check initial hostname
-                    if (this.isPrivateIp(url.hostname)) {
-                        console.warn(`[AUTOMATION] Blocked SSRF attempt to private hostname: ${url.hostname}`)
+                    // Only allow HTTPS — plaintext HTTP would expose payloads in transit
+                    if (url.protocol !== "https:") {
+                        console.warn(`[AUTOMATION] Blocked non-HTTPS HTTP_REQUEST: ${url.protocol}`)
                         break
                     }
 
-                    // Resolve DNS and check actual IP to prevent DNS rebinding
-                    const { address } = await lookup(url.hostname).catch(() => ({ address: "0.0.0.0" }))
-                    if (this.isPrivateIp(address) || address === "0.0.0.0" || address === "::") {
-                        console.warn(`[AUTOMATION] Blocked SSRF attempt: ${url.hostname} resolves to private IP ${address}`)
+                    // Single DNS resolution via the shared SSRF helper (comprehensive
+                    // private/loopback/CGNAT/link-local/IPv6 checks, no rebinding).
+                    const resolved = await resolvePublicIp(url.hostname)
+                    if (!resolved) {
+                        console.warn(`[AUTOMATION] Blocked SSRF attempt: ${url.hostname} resolved to private/unroutable IP`)
                         break
                     }
 
-                    await fetch(target, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: content
+                    // Pin the TCP connection to the validated IP so DNS cannot rebind
+                    // between the check above and the actual connection.
+                    await new Promise<void>((resolve, reject) => {
+                        const payload = content
+                        const opts: https.RequestOptions = {
+                            method: "POST",
+                            host: url.hostname,
+                            port: url.port || 443,
+                            path: `${url.pathname}${url.search}`,
+                            servername: url.hostname,
+                            headers: {
+                                "Content-Type": "application/json",
+                                "Content-Length": Buffer.byteLength(payload).toString(),
+                                Host: url.host
+                            },
+                            lookup: (_h: string, _o: any, cb: any) => cb(null, resolved.address, resolved.family),
+                            timeout: 5000
+                        }
+                        const req = https.request(opts, res => {
+                            let bytes = 0
+                            res.on("data", chunk => { bytes += chunk.length; if (bytes > 64 * 1024) req.destroy() })
+                            res.on("end", resolve)
+                            res.on("error", reject)
+                        })
+                        req.on("timeout", () => req.destroy(new Error("timeout")))
+                        req.on("error", reject)
+                        req.write(payload)
+                        req.end()
                     })
                 } catch (e) {
-                    console.error("[AUTOMATION] Webhook action failed:", e)
+                    console.error("[AUTOMATION] HTTP_REQUEST action failed:", e)
                 }
                 break
             case "DELAY":

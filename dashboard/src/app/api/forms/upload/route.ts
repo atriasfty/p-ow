@@ -6,6 +6,30 @@ import { writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { randomBytes } from "crypto"
 
+// Validate the first bytes of the file against known magic numbers.
+// The browser-supplied file.type is attacker-controlled; magic bytes are not.
+// Audio/video formats have complex container headers — we trust ext+MIME for those.
+function validateMagicBytes(buf: Buffer, ext: string): boolean {
+    if (buf.length < 4) return false
+    switch (ext) {
+        case ".jpg":
+        case ".jpeg":
+            return buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF
+        case ".png":
+            return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47
+        case ".gif":
+            return buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38
+        case ".webp":
+            return buf.length >= 12 &&
+                buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+                buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+        case ".pdf":
+            return buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46
+        default:
+            return true
+    }
+}
+
 // POST /api/forms/upload - Handle file uploads
 export async function POST(request: NextRequest) {
     try {
@@ -69,6 +93,11 @@ export async function POST(request: NextRequest) {
 
         // Save file
         const buffer = Buffer.from(await file.arrayBuffer())
+
+        if (!validateMagicBytes(buffer, ext)) {
+            return NextResponse.json({ error: "File content does not match the declared type" }, { status: 400 })
+        }
+
         const filePath = path.join(uploadsDir, filename)
         await writeFile(filePath, buffer)
 

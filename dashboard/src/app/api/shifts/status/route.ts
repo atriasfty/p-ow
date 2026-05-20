@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth-clerk"
+import { isServerMember } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 
@@ -11,6 +12,12 @@ export async function GET(req: Request) {
 
     if (!serverId) {
         return NextResponse.json({ error: "Missing serverId" }, { status: 400 })
+    }
+
+    // Only members of this server may probe shift state. Otherwise any logged-in
+    // user could enumerate who is on duty on any server by ID.
+    if (!(await isServerMember(session.user as any, serverId))) {
+        return new NextResponse("Forbidden", { status: 403 })
     }
 
     // Look for shifts by Discord ID, Clerk ID, OR Roblox ID

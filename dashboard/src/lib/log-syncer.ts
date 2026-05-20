@@ -6,6 +6,7 @@ import { RaidDetectorService, Detection } from "@/lib/raid-detector"
 import { findMemberByRobloxId } from "@/lib/clerk-lookup"
 import { eventBus } from "@/lib/event-bus"
 import { getServerSettings } from "@/lib/server-settings"
+import { getWeekStart } from "@/lib/time-windows"
 // import { Prisma } from "@prisma/client"
 
 async function getAutomationEngine() {
@@ -94,33 +95,7 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             return
         }
 
-        // Cooldown check
-        if (s.shiftCooldownMinutes > 0) {
-            const lastShift = await prisma.shift.findFirst({
-                where: { userId: member.userId, serverId, endTime: { not: null } },
-                orderBy: { endTime: 'desc' }
-            })
-            if (lastShift?.endTime) {
-                const cooldownMs = s.shiftCooldownMinutes * 60 * 1000
-                const timeSinceEnd = Date.now() - lastShift.endTime.getTime()
-                if (timeSinceEnd < cooldownMs) {
-                    const remainingM = Math.ceil((cooldownMs - timeSinceEnd) / 60000)
-                    await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cooldown active — wait ${remainingM} more minute(s).`).catch(() => { })
-                    return
-                }
-            }
-        }
-
-        // Max on duty check
-        if (s.shiftMaxOnDuty > 0) {
-            const onDutyCount = await prisma.shift.count({ where: { serverId, endTime: null } })
-            if (onDutyCount >= s.shiftMaxOnDuty) {
-                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Max staff on duty (${s.shiftMaxOnDuty}) already reached.`).catch(() => { })
-                return
-            }
-        }
-
-        // LOA block check
+        // LOA block check — read-only, OK outside the transaction.
         if (s.shiftLoaBlocks) {
             const activeLoa = await prisma.leaveOfAbsence.findFirst({
                 where: { serverId, userId: member.userId, status: 'approved', startDate: { lte: new Date() }, endDate: { gte: new Date() } }
@@ -138,18 +113,62 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             }
         }
 
+        // Atomic start: cooldown, max-on-duty, and "already active" are all
+        // checked inside the transaction so two concurrent :log shift start
+        // commands from the same player or the same server can't both pass
+        // the guards. Throw a string code we then map back to a PM.
+        let startError: string | null = null
+        let shiftId: string | null = null
         try {
-            const shiftId = await prisma.$transaction(async (tx: any) => {
+            shiftId = await prisma.$transaction(async (tx: any) => {
                 const existing = await tx.shift.findFirst({
                     where: { userId: member.userId, serverId, endTime: null }
                 })
-                if (existing) throw new Error("Shift already active")
+                if (existing) throw new Error("ALREADY_ACTIVE")
+
+                if (s.shiftCooldownMinutes > 0) {
+                    const lastShift = await tx.shift.findFirst({
+                        where: { userId: member.userId, serverId, endTime: { not: null } },
+                        orderBy: { endTime: 'desc' }
+                    })
+                    if (lastShift?.endTime) {
+                        const cooldownMs = s.shiftCooldownMinutes * 60 * 1000
+                        const timeSinceEnd = Date.now() - lastShift.endTime.getTime()
+                        if (timeSinceEnd < cooldownMs) {
+                            const remainingM = Math.ceil((cooldownMs - timeSinceEnd) / 60000)
+                            throw new Error(`COOLDOWN:${remainingM}`)
+                        }
+                    }
+                }
+
+                if (s.shiftMaxOnDuty > 0) {
+                    const onDutyCount = await tx.shift.count({ where: { serverId, endTime: null } })
+                    if (onDutyCount >= s.shiftMaxOnDuty) {
+                        throw new Error(`MAX_ON_DUTY:${s.shiftMaxOnDuty}`)
+                    }
+                }
 
                 const shift = await tx.shift.create({
                     data: { userId: member.userId, serverId, startTime: new Date() }
                 })
                 return shift.id
             })
+        } catch (e: any) {
+            startError = e?.message ?? "UNKNOWN"
+        }
+
+        if (startError) {
+            if (startError.startsWith("COOLDOWN:")) {
+                const remainingM = startError.split(":")[1]
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Cooldown active — wait ${remainingM} more minute(s).`).catch(() => { })
+            } else if (startError.startsWith("MAX_ON_DUTY:")) {
+                const cap = startError.split(":")[1]
+                await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} Max staff on duty (${cap}) already reached.`).catch(() => { })
+            }
+            return
+        }
+
+        try {
 
             const newShift = await prisma.shift.findUnique({ where: { id: shiftId } })
 
@@ -173,6 +192,9 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         }
 
     } else if (subcommand === "end") {
+        // Atomic end with a conditional update on endTime: null so two
+        // concurrent :log shift end commands can't both write endTime/duration
+        // (the second one would overwrite the first with a wrong duration).
         const activeShift = await prisma.shift.findFirst({
             where: { userId: member.userId, serverId, endTime: null }
         })
@@ -186,10 +208,14 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         const duration = Math.floor((now.getTime() - activeShift.startTime.getTime()) / 1000)
         console.log(`[SHIFT-END] In-game command by ${playerName} (robloxId: ${playerId}) ended shift ${activeShift.id} on server ${serverId}`)
 
-        await prisma.shift.update({
-            where: { id: activeShift.id },
+        const endResult = await prisma.shift.updateMany({
+            where: { id: activeShift.id, endTime: null },
             data: { endTime: now, duration }
         })
+        if (endResult.count === 0) {
+            // Lost the race — another worker already ended this shift.
+            return
+        }
 
         const engine = await getAutomationEngine()
         engine.trigger("SHIFT_END", {
@@ -282,33 +308,10 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
     }
 }
 
-/** Get the start of the current quota week based on configured week start day and timezone. */
-function getWeekStart(weekStartDay: number, timezone: string): Date {
-    try {
-        const now = new Date()
-        // Get the current day of week in the configured timezone
-        const formatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short', year: 'numeric', month: '2-digit', day: '2-digit' })
-        const parts = formatter.formatToParts(now)
-        const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-        const weekdayStr = parts.find(p => p.type === 'weekday')?.value || 'Mon'
-        const currentDayOfWeek = weekdayMap[weekdayStr] ?? now.getDay()
-
-        const diff = (currentDayOfWeek - weekStartDay + 7) % 7
-        const startDate = new Date(now)
-        startDate.setDate(now.getDate() - diff)
-        startDate.setHours(0, 0, 0, 0)
-        return startDate
-    } catch {
-        // Fallback: use Monday UTC
-        const now = new Date()
-        const currentDay = now.getDay()
-        const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1)
-        const weekStart = new Date(now)
-        weekStart.setDate(diff)
-        weekStart.setHours(0, 0, 0, 0)
-        return weekStart
-    }
-}
+// Week-boundary logic now lives in lib/time-windows.ts (imported at top of
+// file). Previous local implementation snapped to host process midnight (UTC
+// on the VPS) rather than the server's configured quotaTimezone, mis-bounding
+// the quota week by up to 12 hours.
 
 async function handleShutdownCommand(log: any, serverId: string) {
     const s = await getServerSettings(serverId)

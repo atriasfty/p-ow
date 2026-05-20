@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { verifyPermissionOrError, verifyCsrf } from "@/lib/auth-permissions"
 import { eventBus } from "@/lib/event-bus"
+import { logAudit } from "@/lib/audit"
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     if (!verifyCsrf(req)) return new NextResponse("CSRF verification failed", { status: 403 })
@@ -23,6 +24,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         await prisma.punishment.delete({ where: { id } })
         // Notify SSE clients of deletion
         eventBus.emit(punishment.serverId, 'punishments', { action: 'deleted', punishment: { id } })
+        await logAudit(
+            punishment.serverId,
+            "PUNISHMENT_DELETED",
+            `Deleted ${punishment.type} punishment (id: ${id}) for userId: ${punishment.userId}`,
+            "DASHBOARD",
+            session.user.id
+        ).catch(() => {})
         return NextResponse.json({ success: true })
     } catch (e) {
         console.error("Delete punishment error:", e)
@@ -64,6 +72,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         const updated = await prisma.punishment.update({ where: { id }, data: updateData })
         // Notify SSE clients of update
         eventBus.emit(punishment.serverId, 'punishments', { action: 'updated', punishment: updated })
+        const changes = Object.keys(updateData).join(", ")
+        await logAudit(
+            punishment.serverId,
+            "PUNISHMENT_UPDATED",
+            `Updated ${punishment.type} punishment (id: ${id}): changed ${changes}`,
+            "DASHBOARD",
+            session.user.id
+        ).catch(() => {})
         return NextResponse.json(updated)
     } catch (e) {
         console.error("Update punishment error:", e)

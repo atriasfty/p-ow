@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth-clerk"
+import { isServerMember } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { checkSecurity } from "@/lib/security"
@@ -26,6 +27,11 @@ export async function GET(req: Request) {
 
     if (!serverId) return new NextResponse("Missing serverId", { status: 400 })
     if (!username && !userId) return new NextResponse("Missing username or userId", { status: 400 })
+
+    // Tenant isolation: only members of this server may probe its player list.
+    if (!(await isServerMember(session.user as any, serverId))) {
+        return new NextResponse("Forbidden", { status: 403 })
+    }
 
     // --- SECURITY CHECK ---
     const securityBlock = await checkSecurity(req)

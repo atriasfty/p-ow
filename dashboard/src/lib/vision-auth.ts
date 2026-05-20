@@ -48,13 +48,24 @@ export async function verifyVisionDevice(
     pruneNonces()
     if (seenNonces.has(nonce)) return false
 
+    // Claim the nonce immediately — before any async work — so concurrent requests
+    // carrying the same nonce are rejected at the has() check rather than racing
+    // through the DB lookup. Release only on device-not-found (not an attack).
+    seenNonces.set(nonce, Date.now() + REPLAY_WINDOW_MS)
+
     const device = await prisma.visionDevice.findUnique({ where: { id: deviceId } })
-    if (!device || device.revokedAt || device.userId !== expectedUserId) return false
+    if (!device || device.revokedAt || device.userId !== expectedUserId) {
+        seenNonces.delete(nonce)
+        return false
+    }
 
     const url = new URL(req.url)
     const method = req.method.toUpperCase()
+    // Include the full path + query string so a captured GET sig for
+    // /api/vision/player?username=alice cannot be replayed for ?username=bob.
+    const pathWithQuery = url.pathname + url.search
     const bodyHash = rawBody ? crypto.createHash("sha256").update(rawBody).digest("hex") : ""
-    const payload = `${timestamp}:${deviceId}:${nonce}:${method}:${url.pathname}:${bodyHash}`
+    const payload = `${timestamp}:${deviceId}:${nonce}:${method}:${pathWithQuery}:${bodyHash}`
 
     const expected = crypto
         .createHmac("sha256", device.deviceSecret)
@@ -66,8 +77,8 @@ export async function verifyVisionDevice(
     if (sigBuf.length !== expBuf.length || sigBuf.length === 0) return false
     if (!crypto.timingSafeEqual(sigBuf, expBuf)) return false
 
-    // Record nonce so it cannot be reused within the window
-    seenNonces.set(nonce, Date.now() + REPLAY_WINDOW_MS)
+    // Nonce is already recorded; keep it claimed regardless of signature outcome
+    // to prevent brute-force of HMAC values using the same nonce.
 
     // Fire-and-forget lastUsedAt update
     prisma.visionDevice.update({
@@ -82,13 +93,18 @@ export function getVisionCorsHeaders(req: Request) {
     const origin = req.headers.get("origin") || ""
 
     const allowedOrigins = [
-        "null", // Electron file:// protocol
+        "null", // Electron file:// protocol sends origin: null
         "http://localhost:3000",
         "http://localhost:5173",
         process.env.NEXT_PUBLIC_APP_URL
     ].filter(Boolean) as string[]
 
-    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
+    // For unrecognised origins, reflect back the configured app URL so the browser's
+    // CORS check fails (the response origin won't match the request origin).
+    // Never fall back to "null" — that would grant CORS to arbitrary origins.
+    const allowOrigin = allowedOrigins.includes(origin)
+        ? origin
+        : (process.env.NEXT_PUBLIC_APP_URL ?? "https://pow.atriasafety.org")
 
     return {
         "Access-Control-Allow-Origin": allowOrigin,

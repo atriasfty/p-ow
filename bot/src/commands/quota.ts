@@ -1,73 +1,8 @@
 import { ChatInputCommandInteraction, EmbedBuilder, MessageFlags } from "discord.js"
 import { prisma } from "../client"
 import { getBotServerSettings } from "../lib/server-settings"
-
-/**
- * Compute the start of the current period using server settings.
- * Replicates the logic from milestones.ts so the quota command respects the
- * same week-start-day / timezone / period-type configuration.
- */
-function getPeriodStart(weekStartDay: number, timezone: string): Date {
-    const now = new Date()
-
-    try {
-        const fmt = new Intl.DateTimeFormat('en-US', {
-            timeZone: timezone,
-            weekday: 'short',
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric'
-        })
-        const parts = fmt.formatToParts(now)
-        const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-        const weekdayStr = parts.find(p => p.type === 'weekday')?.value ?? 'Mon'
-        const currentDayOfWeek = weekdayMap[weekdayStr] ?? now.getDay()
-        const diff = (currentDayOfWeek - weekStartDay + 7) % 7
-
-        const year = parseInt(parts.find(p => p.type === 'year')?.value ?? '2000')
-        const month = parseInt(parts.find(p => p.type === 'month')?.value ?? '1')
-        const day = parseInt(parts.find(p => p.type === 'day')?.value ?? '1')
-
-        const startUtc = new Date(Date.UTC(year, month - 1, day - diff))
-        return getMidnightUTC(startUtc.getUTCFullYear(), startUtc.getUTCMonth() + 1, startUtc.getUTCDate(), timezone)
-    } catch {
-        // Fallback: Monday UTC midnight
-        const day = now.getUTCDay()
-        const diff = (day === 0 ? -6 : 1) - day
-        return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff))
-    }
-}
-
-function getMidnightUTC(year: number, month: number, day: number, timezone: string): Date {
-    const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
-
-    const fmt = new Intl.DateTimeFormat('en-US', {
-        timeZone: timezone,
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-        second: 'numeric',
-        hour12: false
-    })
-    const parts = fmt.formatToParts(noonUTC)
-
-    let h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '12')
-    const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0')
-    const s = parseInt(parts.find(p => p.type === 'second')?.value ?? '0')
-    if (h === 24) h = 0
-
-    const localDay = parseInt(parts.find(p => p.type === 'day')?.value ?? String(day))
-    const localMonth = parseInt(parts.find(p => p.type === 'month')?.value ?? String(month))
-    const localYear = parseInt(parts.find(p => p.type === 'year')?.value ?? String(year))
-
-    const localDateMs = Date.UTC(localYear, localMonth - 1, localDay)
-    const targetDateMs = Date.UTC(year, month - 1, day)
-    const dayDiffMs = localDateMs - targetDateMs
-
-    return new Date(noonUTC.getTime() - (h * 3600 + m * 60 + s) * 1000 - dayDiffMs)
-}
+import { getWeekStart as getPeriodStart } from "../lib/time-windows"
+import { resolveServer } from "../lib/server-resolve"
 
 export async function handleQuotaCommand(interaction: ChatInputCommandInteraction) {
     const subcommand = interaction.options.getSubcommand()
@@ -88,39 +23,51 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
 
         const clerkUserIds = Array.from(new Set(members.map((m: any) => m.userId)))
 
-        // Load settings for the first server (used for week boundary — covers the common case
-        // where all a user's servers share the same quota settings)
-        const firstServerId = members[0].server.id
-        const s = await getBotServerSettings(firstServerId)
-        const weekStart = getPeriodStart(s.quotaWeekStartDay, s.quotaTimezone)
-
-        // Get Global Time across all possible user IDs
-        const shifts = await prisma.shift.findMany({
-            where: {
-                userId: { in: clerkUserIds },
-                startTime: { gte: weekStart },
-                endTime: { not: null }
+        // Load settings and compute weekStart per server — different servers may have
+        // different configured week-start days or timezones, so we must not assume
+        // the first server's settings apply to all.
+        const serverSettings = new Map<string, Date>()
+        for (const m of members) {
+            if (!serverSettings.has(m.server.id)) {
+                const srv = await getBotServerSettings(m.server.id)
+                serverSettings.set(m.server.id, getPeriodStart(srv.quotaWeekStartDay, srv.quotaTimezone))
             }
-        })
+        }
 
-        // Active shifts: include ALL active shifts (regardless of start time) so long
-        // shifts that crossed the week boundary are still counted from weekStart onwards
-        const activeShifts = await prisma.shift.findMany({
-            where: {
-                userId: { in: clerkUserIds },
-                endTime: null
-            }
-        })
-
-        // Calc total seconds from completed shifts
-        let totalSeconds = shifts.reduce((acc: number, s: any) => acc + (s.duration || 0), 0)
-
-        // Add active shifts current duration, counting only time within the current period
+        // Aggregate time per-server so each server's week boundary is respected.
+        // Shifts are always tied to a serverId, so there is no double-counting.
         const currentTimestamp = Date.now()
-        activeShifts.forEach((s: any) => {
-            const effectiveStart = Math.max(weekStart.getTime(), s.startTime.getTime())
-            totalSeconds += Math.floor((currentTimestamp - effectiveStart) / 1000)
-        })
+        const serverSecondsMap = new Map<string, number>()
+        let totalSeconds = 0
+
+        for (const [serverId, weekStart] of serverSettings) {
+            // Completed shifts scoped to this server
+            const shifts = await prisma.shift.findMany({
+                where: {
+                    serverId,
+                    userId: { in: clerkUserIds },
+                    startTime: { gte: weekStart },
+                    endTime: { not: null }
+                }
+            })
+            let secs = shifts.reduce((acc: number, sh: any) => acc + (sh.duration || 0), 0)
+
+            // Active shifts: count only time within the current period
+            const activeShifts = await prisma.shift.findMany({
+                where: {
+                    serverId,
+                    userId: { in: clerkUserIds },
+                    endTime: null
+                }
+            })
+            activeShifts.forEach((sh: any) => {
+                const effectiveStart = Math.max(weekStart.getTime(), sh.startTime.getTime())
+                secs += Math.floor((currentTimestamp - effectiveStart) / 1000)
+            })
+
+            serverSecondsMap.set(serverId, secs)
+            totalSeconds += secs
+        }
 
         const totalMinutes = Math.floor(totalSeconds / 60)
 
@@ -130,23 +77,25 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             .setColor(0x3b82f6)
 
         members.forEach((m: any) => {
-                const req = m.role?.quotaMinutes || 0
-                if (req === 0) return // Skip if no quota
+            const req = m.role?.quotaMinutes || 0
+            if (req === 0) return // Skip if no quota
 
-                const met = totalMinutes >= req
-                const pct = Math.round((totalMinutes / req) * 100)
-                const reqH = Math.floor(req / 60)
-                const reqM = req % 60
-                const status = met
-                    ? `✅ ${pct}% (${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m / ${reqH}h ${reqM}m)`
-                    : `❌ ${pct}% (${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m / ${reqH}h ${reqM}m)`
+            // Use this server's scoped time for its own quota check
+            const serverMins = Math.floor((serverSecondsMap.get(m.server.id) || 0) / 60)
+            const met = serverMins >= req
+            const pct = Math.round((serverMins / req) * 100)
+            const reqH = Math.floor(req / 60)
+            const reqM = req % 60
+            const status = met
+                ? `✅ ${pct}% (${Math.floor(serverMins / 60)}h ${serverMins % 60}m / ${reqH}h ${reqM}m)`
+                : `❌ ${pct}% (${Math.floor(serverMins / 60)}h ${serverMins % 60}m / ${reqH}h ${reqM}m)`
 
-                embed.addFields({
-                    name: m.server.customName || m.server.name,
-                    value: status,
-                    inline: true
-                })
+            embed.addFields({
+                name: m.server.customName || m.server.name,
+                value: status,
+                inline: true
             })
+        })
 
         await interaction.editReply({ embeds: [embed] })
 
@@ -154,36 +103,32 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
         const discordId = interaction.user.id
         await interaction.deferReply({ ephemeral: true })
 
-        // Check global view quota permission
-        const authMembers = await prisma.member.findMany({
-            where: { discordId },
+        // Resolve the POW server for the guild this command was invoked in.
+        // This is the critical scope boundary — every query below must be tied to
+        // this serverId so we never leak data across tenants.
+        const serverId = await resolveServer(interaction)
+        if (!serverId) {
+            return interaction.editReply({ content: "This command must be run inside a registered Discord server." })
+        }
+
+        // Check permission within this server only
+        const invokerMember = await prisma.member.findFirst({
+            where: { discordId, serverId },
             include: { role: true }
         })
 
-        const canView = authMembers.some((m: any) => m.isAdmin || (m.role && m.role.canViewQuota))
+        const canView = invokerMember && (invokerMember.isAdmin || invokerMember.role?.canViewQuota)
         if (!canView) {
-            return interaction.editReply({ content: "You do not have permission to view the global quota leaderboard." })
+            return interaction.editReply({ content: "You do not have permission to view the quota leaderboard." })
         }
 
-        // Load settings from the invoker's first server for period boundaries
-        const settingsServerId = authMembers[0]?.serverId
-        const s = settingsServerId ? await getBotServerSettings(settingsServerId) : null
-        const weekStart = s
-            ? getPeriodStart(s.quotaWeekStartDay, s.quotaTimezone)
-            : (() => {
-                // Fallback: Monday UTC midnight
-                const now = new Date()
-                const day = now.getUTCDay()
-                const diff = (day === 0 ? -6 : 1) - day
-                return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff))
-            })()
+        // Use this server's configured week boundaries
+        const s = await getBotServerSettings(serverId)
+        const weekStart = getPeriodStart(s.quotaWeekStartDay, s.quotaTimezone)
 
-        // Scope leaderboard to servers the invoking user belongs to
-        const authServerIds = authMembers.map((m: any) => m.serverId)
-
-        // 1. Get all members across the invoker's servers (include discordId for mentions)
+        // 1. Get all members for this server only
         const members = await prisma.member.findMany({
-            where: { serverId: { in: authServerIds } },
+            where: { serverId },
             include: { role: true, server: true }
         })
 
@@ -191,23 +136,14 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
             return interaction.editReply({ content: "No members found." })
         }
 
-        // Deduplicate members by userId (same person may be in multiple servers)
-        const uniqueMembers = new Map<string, any>()
-        for (const m of members) {
-            // Keep the member with the highest quota requirement
-            const existing = uniqueMembers.get(m.userId)
-            if (!existing || (m.role?.quotaMinutes || 0) > (existing.role?.quotaMinutes || 0)) {
-                uniqueMembers.set(m.userId, m)
-            }
-        }
-
-        const memberList = Array.from(uniqueMembers.values())
+        const memberList = members
         const memberIds = memberList.map((m: any) => m.userId)
 
-        // 2. Get Aggregated Global Time for these users
+        // 2. Get aggregated time for these users, scoped to this server
         const aggregations = await prisma.shift.groupBy({
             by: ['userId'],
             where: {
+                serverId,
                 userId: { in: memberIds },
                 startTime: { gte: weekStart },
                 endTime: { not: null }
@@ -223,7 +159,7 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
 
         // Add currently active shift time (only the portion within the current period)
         const activeShifts = await prisma.shift.findMany({
-            where: { userId: { in: memberIds }, endTime: null },
+            where: { serverId, userId: { in: memberIds }, endTime: null },
             select: { userId: true, startTime: true }
         })
         const currentTimestamp = Date.now()
@@ -334,10 +270,10 @@ export async function handleQuotaCommand(interaction: ChatInputCommandInteractio
         if (desc === "") desc = "No members found."
 
         const embed = new EmbedBuilder()
-            .setTitle(`Global Quota Leaderboard`)
+            .setTitle(`Quota Leaderboard`)
             .setDescription(desc)
             .setColor(0xf59e0b) // Amber
-            .setFooter({ text: `${memberList.length} unique members • Week of ${weekStart.toLocaleDateString()}` })
+            .setFooter({ text: `${memberList.length} members • Week of ${weekStart.toLocaleDateString()}` })
 
         await interaction.editReply({ embeds: [embed] })
     }

@@ -16,12 +16,17 @@ interface StaffMember {
 export function StaffOnDutyAvatars({ serverId, excludeUserId }: { serverId: string, excludeUserId?: string }) {
     const [staff, setStaff] = useState<StaffMember[]>([])
     const [loading, setLoading] = useState(true)
-    const { staffOnDutyIds } = useServerEventsContext()
+    const { staffOnDutyIds, hasInitialData } = useServerEventsContext()
 
-    // When we get updated IDs from SSE, fetch the full staff details
+    // When we get updated IDs from SSE, fetch the full staff details.
+    // Guard on `hasInitialData` so we don't clear the list during the brief
+    // window before the SSE snapshot arrives (or while it reconnects).
     useEffect(() => {
-        if (staffOnDutyIds.length === 0 && !loading) {
+        if (!hasInitialData) return
+
+        if (staffOnDutyIds.length === 0) {
             setStaff([])
+            setLoading(false)
             return
         }
 
@@ -44,7 +49,7 @@ export function StaffOnDutyAvatars({ serverId, excludeUserId }: { serverId: stri
         }
 
         fetchStaff()
-    }, [staffOnDutyIds, serverId, excludeUserId])
+    }, [staffOnDutyIds, hasInitialData, serverId, excludeUserId])
 
     if (loading && staff.length === 0) return null
 

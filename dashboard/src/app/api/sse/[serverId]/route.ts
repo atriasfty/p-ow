@@ -43,11 +43,27 @@ export async function GET(
 
     const stream = new ReadableStream({
         async start(controller) {
+            let closed = false
+            // Pre-declare so cleanup() is safe to call at any point, even before
+            // the subscription and heartbeat are wired up below.
+            let unsubscribe: () => void = () => {}
+            let heartbeat: ReturnType<typeof setInterval> | undefined
+
+            const cleanup = () => {
+                if (closed) return
+                closed = true
+                clearInterval(heartbeat)
+                unsubscribe()
+                try { controller.close() } catch { /* already closed */ }
+            }
+
             const enqueue = (event: string, data: unknown) => {
+                if (closed) return
                 try {
                     controller.enqueue(encoder.encode(sseMessage(event, data)))
                 } catch {
-                    // Client disconnected
+                    // Client disconnected — trigger cleanup once
+                    cleanup()
                 }
             }
 
@@ -156,26 +172,17 @@ export async function GET(
             }
 
             // ---- Subscribe to live events ----
-            const unsubscribe = eventBus.subscribe(serverId, (type, data) => {
+            unsubscribe = eventBus.subscribe(serverId, (type, data) => {
                 enqueue(type, data)
             })
 
             // ---- Heartbeat — named event so the client can detect stream staleness ----
-            const heartbeat = setInterval(() => {
-                try {
-                    controller.enqueue(encoder.encode(sseMessage("heartbeat", null)))
-                } catch {
-                    clearInterval(heartbeat)
-                    unsubscribe()
-                }
+            heartbeat = setInterval(() => {
+                enqueue("heartbeat", null)
             }, 8000)
 
             // ---- Cleanup on client disconnect ----
-            req.signal.addEventListener("abort", () => {
-                clearInterval(heartbeat)
-                unsubscribe()
-                try { controller.close() } catch { /* already closed */ }
-            })
+            req.signal.addEventListener("abort", cleanup)
         }
     })
 

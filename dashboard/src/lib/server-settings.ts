@@ -294,6 +294,25 @@ export async function saveServerSettings(
         merged.dataRetentionDays = Math.min(merged.dataRetentionDays, planCeiling)
     }
 
+    // Sanitise PRC-command-interpolated string fields. These are admin-editable
+    // and were previously inserted verbatim into `:pm`/announcement commands by
+    // log-syncer.ts, letting a hostile (or compromised) admin smuggle in
+    // additional commands like ":ban all".
+    const sanitisePrc = (s: string) =>
+        String(s).replace(/[\r\n`'"\\;|&]/g, "").slice(0, 100)
+    if (typeof merged.shiftPmBranding === 'string') {
+        merged.shiftPmBranding = sanitisePrc(merged.shiftPmBranding)
+    }
+    if (typeof merged.announcementCommandPrefix === 'string') {
+        merged.announcementCommandPrefix = sanitisePrc(merged.announcementCommandPrefix)
+    }
+    if (typeof merged.inGameCommandPrefix === 'string') {
+        merged.inGameCommandPrefix = sanitisePrc(merged.inGameCommandPrefix)
+    }
+    if (typeof merged.staffRequestPmBranding === 'string') {
+        merged.staffRequestPmBranding = sanitisePrc(merged.staffRequestPmBranding)
+    }
+
     await prisma.server.update({
         where: { id: serverId },
         data: { settings: JSON.stringify(merged) }
