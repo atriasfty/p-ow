@@ -184,19 +184,10 @@ function getEndpointBreakdown(serviceEvents: PostHogEvent[], service: string) {
 }
 
 export async function GET(req: Request) {
-    // Check for IP bypass (Tailscale/VPN)
-    const forwardedFor = req.headers.get("x-forwarded-for")
-    const remoteAddr = req.headers.get("remote-addr")
-    const ip = forwardedFor ? forwardedFor.split(",").at(-1)!.trim() : remoteAddr
-
-    const isAllowedIp = ip === "92.60.38.109"
-
-    // If not on allowed IP, require authentication
-    if (!isAllowedIp) {
-        const session = await getSession()
-        if (!session) return new NextResponse("Unauthorized", { status: 401 })
-        if (!isSuperAdmin(session.user as any)) return new NextResponse("Forbidden", { status: 403 })
-    }
+    // Require standard authentication
+    const session = await getSession()
+    if (!session) return new NextResponse("Unauthorized", { status: 401 })
+    if (!isSuperAdmin(session.user as any)) return new NextResponse("Forbidden", { status: 403 })
 
     const { searchParams } = new URL(req.url)
     const hours = parseInt(searchParams.get("hours") || "6")
