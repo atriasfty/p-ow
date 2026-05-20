@@ -118,7 +118,7 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
         // commands from the same player or the same server can't both pass
         // the guards. Throw a string code we then map back to a PM.
         let startError: string | null = null
-        let shiftId: string | null = null
+        let shiftId: string | undefined = undefined
         try {
             shiftId = await prisma.$transaction(async (tx: any) => {
                 const existing = await tx.shift.findFirst({
