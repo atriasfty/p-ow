@@ -45,10 +45,14 @@ export async function GET(req: Request) {
             // Get Discord/Roblox usernames from Clerk (excluding emails/PII)
             const clerk = await clerkClient()
             const userIds: string[] = members.map((m: any) => m.userId)
-            // Fetch in batches if necessary, but assume small enough for standard Clerk call
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
+            const clerkUserBatches = await Promise.all(
+                Array.from({ length: Math.ceil(userIds.length / 100) }, (_, i) =>
+                    clerk.users.getUserList({ userId: userIds.slice(i * 100, (i + 1) * 100), limit: 100 })
+                )
+            )
+            const allClerkUsers = clerkUserBatches.flatMap(b => b.data)
 
-            const userMap = new Map(clerkUsers.data.map((u: any) => {
+            const userMap = new Map(allClerkUsers.map((u: any) => {
                 const robloxAccount = u.externalAccounts.find((a: any) =>
                     a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                 )
@@ -75,9 +79,14 @@ export async function GET(req: Request) {
 
             const clerk = await clerkClient()
             const userIds: string[] = Array.from(new Set(shifts.map((s: any) => s.userId)))
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
+            const clerkUserBatches = await Promise.all(
+                Array.from({ length: Math.ceil(userIds.length / 100) }, (_, i) =>
+                    clerk.users.getUserList({ userId: userIds.slice(i * 100, (i + 1) * 100), limit: 100 })
+                )
+            )
+            const allClerkUsers = clerkUserBatches.flatMap(b => b.data)
 
-            const userMap = new Map(clerkUsers.data.map((u: any) => {
+            const userMap = new Map(allClerkUsers.map((u: any) => {
                 const robloxAccount = u.externalAccounts.find((a: any) =>
                     a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                 )
@@ -128,8 +137,14 @@ export async function GET(req: Request) {
             ].filter(id => id && !identityMap.has(id))))
 
             if (missingIds.length > 0) {
-                const clerkUsers = await clerk.users.getUserList({ userId: missingIds, limit: 100 })
-                clerkUsers.data.forEach((u: any) => {
+                const clerkUserBatches = await Promise.all(
+                    Array.from({ length: Math.ceil(missingIds.length / 100) }, (_, i) =>
+                        clerk.users.getUserList({ userId: missingIds.slice(i * 100, (i + 1) * 100), limit: 100 })
+                    )
+                )
+                const allClerkUsers = clerkUserBatches.flatMap(b => b.data)
+
+                allClerkUsers.forEach((u: any) => {
                     const robloxAccount = u.externalAccounts.find((a: any) =>
                         a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                     )
