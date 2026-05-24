@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility Standards for Modals & Custom Comboboxes
+**Learning:** Found multiple instances of icon-only close buttons in modals (like `MapModal`, `SuperServerEditModal`, `ModCallPanel`) missing semantic ARIA labels, missing `title` tooltips, and lacking explicit keyboard focus outlines. We also noticed zoom controls in maps and similar interactive elements missing standard accessibility attributes.
+**Action:** When creating or modifying modal dialogs and icon-only buttons, I must ensure they include `aria-label="Close"`, `title="Close"`, and explicit focus styling like `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500` (or `red-500` depending on context).
