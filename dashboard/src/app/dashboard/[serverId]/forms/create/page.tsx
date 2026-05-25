@@ -234,7 +234,9 @@ export default function CreateFormPage({
                             {sections.length > 1 && (
                                 <button
                                     onClick={() => deleteSection(section.id)}
-                                    className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                                    className="p-2 text-zinc-500 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                                    aria-label="Delete section"
+                                    title="Delete section"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
@@ -382,7 +384,9 @@ function QuestionEditor({
                     </button>
                     <button
                         onClick={onDelete}
-                        className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                        className="p-2 text-zinc-500 hover:text-red-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        aria-label="Delete question"
+                        title="Delete question"
                     >
                         <Trash2 className="h-4 w-4" />
                     </button>
@@ -405,7 +409,9 @@ function QuestionEditor({
                             />
                             <button
                                 onClick={() => removeOption(i)}
-                                className="text-zinc-600 hover:text-red-400"
+                                className="text-zinc-600 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                                aria-label="Delete option"
+                                title="Delete option"
                             >
                                 <Trash2 className="h-3 w-3" />
                             </button>
