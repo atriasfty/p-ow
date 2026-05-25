@@ -3,9 +3,12 @@ import { NextResponse } from "next/server"
 import { getFromCache, setToCache } from "@/lib/roblox-cache"
 import { checkSecurity } from "@/lib/security"
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Batch fetch user data from Roblox
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

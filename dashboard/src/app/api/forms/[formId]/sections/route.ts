@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 
@@ -26,6 +27,10 @@ export async function POST(
     { params }: { params: Promise<{ formId: string }> }
 ) {
     try {
+        if (!verifyCsrf(request)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
         const session = await getSession()
         if (!session) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -70,6 +75,10 @@ export async function PUT(
     { params }: { params: Promise<{ formId: string }> }
 ) {
     try {
+        if (!verifyCsrf(request)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
         const session = await getSession()
         if (!session) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -135,6 +144,10 @@ export async function DELETE(
     { params }: { params: Promise<{ formId: string }> }
 ) {
     try {
+        if (!verifyCsrf(request)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
         const session = await getSession()
         if (!session) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
