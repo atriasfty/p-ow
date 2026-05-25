@@ -4,6 +4,12 @@ import { resolveServer } from "../lib/server-resolve"
 import { PrcClient } from "../lib/prc"
 import { findMemberByDiscordId, getRobloxUsername, getClerkUserByDiscordId } from "../lib/clerk"
 
+// Rate limiter for /staffrequest. The command is intentionally open to all
+// guild members (players ask for help) but lacks any throttle, so a single
+// user can spam in-game PMs to all staff and ping the staff role in Discord.
+const STAFFREQ_COOLDOWN_MS = 5 * 60 * 1000
+const lastStaffRequest = new Map<string, number>()
+
 export async function handleStaffRequestCommand(interaction: ChatInputCommandInteraction) {
     const serverId = await resolveServer(interaction)
     if (!serverId) return interaction.editReply({ content: "❌ You must specify a server or run this within a registered Guild." })
@@ -12,6 +18,15 @@ export async function handleStaffRequestCommand(interaction: ChatInputCommandInt
 
     // Defer immediately
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] })
+
+    const rlKey = `${serverId}:${discordId}`
+    const lastAt = lastStaffRequest.get(rlKey) ?? 0
+    const nowMs = Date.now()
+    if (nowMs - lastAt < STAFFREQ_COOLDOWN_MS) {
+        const waitSec = Math.ceil((STAFFREQ_COOLDOWN_MS - (nowMs - lastAt)) / 1000)
+        return interaction.editReply({ content: `⏳ You can request staff again in ${waitSec}s.` })
+    }
+    lastStaffRequest.set(rlKey, nowMs)
 
     try {
         // Get server first to verify it exists
