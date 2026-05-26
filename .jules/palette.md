@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing ARIA Labels on Icon-only Action Buttons
+**Learning:** Icon-only action buttons (like zoom controls and dismiss modal buttons) frequently lack `aria-label` attributes across different modal components in the `mod-panel` directory, making them inaccessible to screen readers.
+**Action:** Add explicit `aria-label` attributes to icon-only buttons such as Zoom In, Zoom Out, and Close Modal across components (specifically in `map-modal.tsx`). Ensure keyboard accessibility by adding `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400` styling if it's missing on these custom interactive elements.
