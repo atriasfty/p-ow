@@ -6,6 +6,7 @@ import {
     adminGrantUserPlan
 } from "@/lib/subscription"
 import { isSuperAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 
 // Get all servers with their subscription status
 export async function GET() {
@@ -47,6 +48,10 @@ export async function GET() {
 
 // Grant/revoke subscription
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 })
+    }
+
     try {
         const { userId } = await auth()
         if (!userId || !isSuperAdmin({ id: userId } as any)) {
