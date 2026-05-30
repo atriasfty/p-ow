@@ -61,8 +61,13 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
                         <h2 className="text-xl font-bold text-white">Edit Server</h2>
                         <p className="text-xs text-zinc-500 font-mono mt-1">{server.id}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                        <X className="h-5 w-5 text-zinc-500" />
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                        aria-label="Close modal"
+                        title="Close modal"
+                    >
+                        <X className="h-5 w-5 text-zinc-500" aria-hidden="true" />
                     </button>
                 </div>
 
