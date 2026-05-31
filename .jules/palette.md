@@ -1,0 +1,3 @@
+## 2024-05-31 - Improve Dialog Accessibility
+**Learning:** Custom dialogs/modals often lack proper accessibility attributes on interactive elements. The close button needs an aria-label and title, while all buttons in the dialog need explicit focus styles for keyboard navigation, particularly with a ring-offset to make the focus ring visible against dark modal backgrounds.
+**Action:** Add `aria-label`, `title`, and `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900` to icon-only close buttons in modals. Add explicit `focus-visible` styling to primary action buttons like Confirm/Cancel.
