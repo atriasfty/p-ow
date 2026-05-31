@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { clerkClient } from "@clerk/nextjs/server"
 import { checkSecurity } from "@/lib/security"
 import { verifyPermissionOrError } from "@/lib/auth-permissions"
+import { getClerkUsersInBatches } from "@/lib/clerk-lookup"
 
 export async function GET(req: Request) {
     const session = await getSession()
@@ -66,7 +67,7 @@ export async function GET(req: Request) {
         const client = await clerkClient()
         let users: any[] = []
         try {
-            const userList = await client.users.getUserList({ userId: clerkIds })
+            const userList = await getClerkUsersInBatches(client, clerkIds)
             users = userList.data
         } catch (e) {
             console.error("Clerk fetch error", e)

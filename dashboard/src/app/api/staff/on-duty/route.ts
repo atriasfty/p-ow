@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { isServerMember } from "@/lib/admin"
+import { getClerkUsersInBatches } from "@/lib/clerk-lookup"
 
 export async function GET(req: Request) {
     const session = await getSession()
@@ -40,9 +41,7 @@ export async function GET(req: Request) {
         const userIds = activeShifts.map((s: any) => s.userId)
 
         // Clerk getUserList can take an array of userIds
-        const clerkUsers = await clerk.users.getUserList({
-            userId: userIds
-        })
+        const clerkUsers = await getClerkUsersInBatches(clerk, userIds)
 
         // 3. Map active shifts to Clerk users (ensures we show everyone we can find)
         const staffOnDuty = activeShifts.map((shift: any) => {

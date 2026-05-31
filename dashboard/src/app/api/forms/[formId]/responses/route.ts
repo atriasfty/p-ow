@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
 import { verifyCsrf } from "@/lib/auth-permissions"
+import { getClerkUsersInBatches } from "@/lib/clerk-lookup"
 
 // Helper to check form access
 async function canViewResponses(user: { id: string, discordId?: string }, formId: string): Promise<boolean> {
@@ -85,7 +86,7 @@ export async function GET(
 
         // Fetch user details from Clerk
         const users = respondentIds.length > 0
-            ? await (await clerkClient()).users.getUserList({ userId: respondentIds, limit: 100 })
+            ? await getClerkUsersInBatches(await clerkClient(), respondentIds)
             : { data: [] }
 
         // Map users to Roblox username

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db"
 import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { createClerkClient } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
+import { getClerkUsersInBatches } from "@/lib/clerk-lookup"
 
 export async function GET(req: Request) {
     const auth = await validatePublicApiKey()
@@ -23,7 +24,7 @@ const server = await resolveServer(auth.apiKey)
 
         const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY })
         const userIds = activeShifts.map((s: any) => s.userId)
-        const clerkUsers = await clerk.users.getUserList({ userId: userIds })
+        const clerkUsers = await getClerkUsersInBatches(clerk, userIds)
 
         const staffOnDuty = activeShifts.map((shift: any) => {
             const user = clerkUsers.data.find((u: any) => u.id === shift.userId)
