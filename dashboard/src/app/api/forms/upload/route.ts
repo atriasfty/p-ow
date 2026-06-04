@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { getServerOverride } from "@/lib/config"
 import { writeFile, mkdir } from "fs/promises"
@@ -33,8 +34,12 @@ function validateMagicBytes(buf: Buffer, ext: string): boolean {
 // POST /api/forms/upload - Handle file uploads
 export async function POST(request: NextRequest) {
     try {
+        if (!verifyCsrf(request)) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+        }
+
         const session = await getSession()
-        
+
         const formData = await request.formData()
         const file = formData.get("file") as File | null
         const formId = formData.get("formId") as string | null

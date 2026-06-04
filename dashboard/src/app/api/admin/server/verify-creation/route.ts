@@ -1,10 +1,13 @@
 import { getSession } from "@/lib/auth-clerk"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { clerkClient } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { PrcClient } from "@/lib/prc"
 import { prisma } from "@/lib/db"
 
 export async function POST(req: Request) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

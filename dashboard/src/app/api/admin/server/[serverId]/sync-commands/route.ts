@@ -2,6 +2,7 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
 import { isServerAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
 import { logAudit } from "@/lib/audit"
 
@@ -9,6 +10,8 @@ export async function POST(
     req: Request,
     { params }: { params: Promise<{ serverId: string }> }
 ) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 

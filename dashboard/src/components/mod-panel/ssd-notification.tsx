@@ -19,7 +19,7 @@ export function SsdNotification({ serverId }: { serverId: string }) {
         try {
             await fetch('/api/ssd-check', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-pow-request': '1' },
                 body: JSON.stringify({ serverId, eventTimestamp: ssdEvent?.timestamp })
             })
         } catch { /* Silently fail */ }

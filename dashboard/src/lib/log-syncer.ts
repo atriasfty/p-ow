@@ -443,6 +443,24 @@ async function handleLogCommand(log: any, serverId: string, client: PrcClient, s
 
     console.log(`[LOG-CMD-DEBUG] AUTH-OK type="${typeArg}" target="${targetQuery}" reason="${reason}" memberId=${moderatorMember.id}`)
 
+    // Per-type role permission gate. The slash command + toolbox routes enforce
+    // these via getUserPermissions; the in-game chat path previously did not,
+    // letting any registered staff (even a Trainee with only canShift) issue
+    // a Warn/Kick/Ban/Bolo by typing the chat command.
+    const isAdminMember = (moderatorMember as any).isAdmin === true
+    const role = moderatorMember.role
+    const allowed =
+        isAdminMember ||
+        (typeArg === "warn" && !!role?.canIssueWarnings) ||
+        (typeArg === "kick" && !!role?.canKick) ||
+        (typeArg === "ban" && !!role?.canBan) ||
+        (typeArg === "bolo" && !!role?.canBanBolo)
+    if (!allowed) {
+        console.log(`[LOG-CMD-DEBUG] PERM-FAIL type="${typeArg}" memberId=${moderatorMember.id} role=${role?.name ?? "none"}`)
+        await client.executeCommand(`:pm ${playerName} ${s.shiftPmBranding} You do not have permission to issue ${punishmentType}.`).catch(() => { })
+        return
+    }
+
     try {
         let matches = cachedPlayers.filter((p: any) => parsePrcPlayer(p.Player).name.toLowerCase().includes(targetQuery))
         let target: { name: string; id: string } | null = null

@@ -28,6 +28,15 @@ export async function POST(
             return new NextResponse("Missing Signature or Timestamp", { status: 401 })
         }
 
+        // Reject stale/future-dated payloads to prevent replay of a captured
+        // (validly signed) webhook. PRC timestamps are seconds since epoch;
+        // allow a 5-minute window for clock skew.
+        const tsSeconds = Number(timestamp)
+        const nowSeconds = Math.floor(Date.now() / 1000)
+        if (!Number.isFinite(tsSeconds) || Math.abs(nowSeconds - tsSeconds) > 300) {
+            return new NextResponse("Stale or invalid timestamp", { status: 401 })
+        }
+
         // Verify Signature
         try {
             const publicKey = crypto.createPublicKey({

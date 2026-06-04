@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth-clerk"
 import { isServerAdmin } from "@/lib/admin"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { findMemberByRobloxId } from "@/lib/clerk-lookup"
 import { getServerSettings } from "@/lib/server-settings"
@@ -39,8 +40,6 @@ export async function GET(req: NextRequest) {
     // Calculate week start using configured week start day and timezone
     const weekStart = getWeekStart(s.quotaWeekStartDay, s.quotaTimezone)
 
-    console.log(`[ADMIN-SHIFTS] Looking for shifts with userIds: ${possibleUserIds.join(", ")} in server ${serverId}`)
-
     // Get shifts for any of these user IDs within the current week, for this server
     const shifts = await prisma.shift.findMany({
         where: {
@@ -60,8 +59,6 @@ export async function GET(req: NextRequest) {
         }
     })
 
-    console.log(`[ADMIN-SHIFTS] Found ${shifts.length} shifts, activeShift: ${activeShift ? "yes" : "no"}`)
-
     return NextResponse.json({
         shifts,
         activeShift,
@@ -71,6 +68,8 @@ export async function GET(req: NextRequest) {
 
 // POST - End a user's active shift
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
@@ -133,6 +132,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE - Delete a specific shift
 export async function DELETE(req: NextRequest) {
+    if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
+
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
