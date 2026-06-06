@@ -12,18 +12,18 @@ export function CookieConsentBanner() {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-[#333] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div role="alertdialog" aria-modal="true" aria-labelledby="cookie-title" aria-describedby="cookie-desc" className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-[#333] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 <div className="p-8">
                     {/* Header */}
                     <div className="flex items-center gap-4 mb-6">
                         <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-500">
                             <Cookie className="h-6 w-6" />
                         </div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">Cookie Preferences</h3>
+                        <h3 id="cookie-title" className="text-xl font-bold text-white tracking-tight">Cookie Preferences</h3>
                     </div>
 
                     {/* Description */}
-                    <p className="text-zinc-400 text-sm leading-relaxed">
+                    <p id="cookie-desc" className="text-zinc-400 text-sm leading-relaxed">
                         We use cookies to improve your experience and analyze how our dashboard is used.
                         Analytics data helps us make Project Overwatch better for everyone.
                     </p>
@@ -50,13 +50,13 @@ export function CookieConsentBanner() {
                     <div className="mt-8 flex flex-col sm:flex-row gap-3">
                         <button
                             onClick={declineCookies}
-                            className="flex-1 px-5 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-[#333] transition-all font-semibold text-sm border border-transparent hover:border-white/5"
+                            className="flex-1 px-5 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-[#333] transition-all font-semibold text-sm border border-transparent hover:border-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a]"
                         >
                             Decline
                         </button>
                         <button
                             onClick={acceptCookies}
-                            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all transform active:scale-[0.98] bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/20"
+                            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all transform active:scale-[0.98] bg-indigo-500 hover:bg-indigo-600 text-white shadow-indigo-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a]"
                         >
                             Accept
                         </button>
