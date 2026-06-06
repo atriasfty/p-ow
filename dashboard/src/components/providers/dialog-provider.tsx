@@ -65,11 +65,11 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     const iconMap: Record<Variant, React.ReactNode> = {
-        default: <Info className="h-5 w-5 text-indigo-400" />,
-        success: <CheckCircle className="h-5 w-5 text-emerald-400" />,
-        error: <AlertTriangle className="h-5 w-5 text-red-400" />,
-        warning: <AlertTriangle className="h-5 w-5 text-amber-400" />,
-        destructive: <AlertTriangle className="h-5 w-5 text-red-400" />
+        default: <Info className="h-5 w-5 text-indigo-400" aria-hidden="true" />,
+        success: <CheckCircle className="h-5 w-5 text-emerald-400" aria-hidden="true" />,
+        error: <AlertTriangle className="h-5 w-5 text-red-400" aria-hidden="true" />,
+        warning: <AlertTriangle className="h-5 w-5 text-amber-400" aria-hidden="true" />,
+        destructive: <AlertTriangle className="h-5 w-5 text-red-400" aria-hidden="true" />
     }
 
     const confirmColorMap: Record<Variant, string> = {
@@ -104,14 +104,20 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
 
                     {/* Modal */}
                     <div
+                        role={dialog.type === "confirm" ? "alertdialog" : "dialog"}
+                        aria-labelledby="dialog-title"
+                        aria-describedby="dialog-message"
+                        aria-modal="true"
                         className={`relative bg-zinc-900 border ${borderColorMap[dialog.variant]} rounded-2xl max-w-md w-full p-6 shadow-2xl transition-all duration-150 ${isClosing ? "scale-95 opacity-0" : "scale-100 opacity-100"}`}
                     >
                         {/* Close Button */}
                         <button
                             onClick={() => close(false)}
-                            className="absolute top-4 right-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors"
+                            className="absolute top-4 right-4 p-1 rounded-lg text-zinc-500 hover:text-white hover:bg-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                            aria-label="Close dialog"
+                            title="Close"
                         >
-                            <X className="h-4 w-4" />
+                            <X className="h-4 w-4" aria-hidden="true" />
                         </button>
 
                         {/* Header */}
@@ -119,11 +125,11 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                             <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
                                 {iconMap[dialog.variant]}
                             </div>
-                            <h3 className="text-lg font-bold text-white pr-6">{dialog.title}</h3>
+                            <h3 id="dialog-title" className="text-lg font-bold text-white pr-6">{dialog.title}</h3>
                         </div>
 
                         {/* Message */}
-                        <p className="text-sm text-zinc-400 leading-relaxed mb-6 pl-[52px]">
+                        <p id="dialog-message" className="text-sm text-zinc-400 leading-relaxed mb-6 pl-[52px]">
                             {dialog.message}
                         </p>
 
@@ -132,14 +138,14 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                             {dialog.type === "confirm" && (
                                 <button
                                     onClick={() => close(false)}
-                                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-white/10 transition-colors"
+                                    className="px-4 py-2.5 rounded-xl text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-white/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
                                 >
                                     {dialog.cancelLabel}
                                 </button>
                             )}
                             <button
                                 onClick={() => close(true)}
-                                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${confirmColorMap[dialog.variant]}`}
+                                className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 ${confirmColorMap[dialog.variant]}`}
                                 autoFocus
                             >
                                 {dialog.type === "confirm" ? dialog.confirmLabel : "OK"}
