@@ -59,15 +59,18 @@ export function MapModal({ serverId, onClose }: MapModalProps) {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
                 className="w-full h-full max-w-7xl bg-[#0a0a0a] rounded-3xl border border-white/5 overflow-hidden flex flex-col shadow-2xl relative"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="map-modal-title"
             >
                 {/* Header */}
                 <div className="p-4 lg:p-6 border-b border-white/5 flex items-center justify-between bg-[#0a0a0a]/80 backdrop-blur-xl sticky top-0 z-20">
                     <div className="flex items-center gap-4">
                         <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                            <MapIcon className="h-5 w-5 text-indigo-400" />
+                            <MapIcon className="h-5 w-5 text-indigo-400" aria-hidden="true" />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">Live Player Map</h2>
+                            <h2 id="map-modal-title" className="text-xl font-bold text-white tracking-tight">Live Player Map</h2>
                             <p className="text-xs text-zinc-500 flex items-center gap-2">
                                 <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 {players.length} Players Tracked
@@ -78,13 +81,15 @@ export function MapModal({ serverId, onClose }: MapModalProps) {
                     <div className="flex items-center gap-3">
                         {/* Search */}
                         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#111] border border-white/5 rounded-xl text-zinc-400 focus-within:border-indigo-500/50 transition-all">
-                            <Search className="h-4 w-4" />
+                            <Search className="h-4 w-4" aria-hidden="true" />
+                            <label htmlFor="map-search" className="sr-only">Search player or postal code</label>
                             <input
+                                id="map-search"
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search player/postal..."
-                                className="bg-transparent border-none focus:ring-0 text-xs text-white placeholder-zinc-600 w-48"
+                                className="bg-transparent border-none focus:ring-0 text-xs text-white placeholder-zinc-600 w-48 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                             />
                         </div>
 
@@ -92,24 +97,30 @@ export function MapModal({ serverId, onClose }: MapModalProps) {
                         <div className="flex items-center gap-1 bg-[#111] p-1 rounded-xl border border-white/5">
                             <button
                                 onClick={() => setZoom(Math.max(1, zoom - 0.5))}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover"
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
+                                aria-label="Zoom out"
+                                title="Zoom out"
                             >
-                                <ZoomOut className="h-4 w-4" />
+                                <ZoomOut className="h-4 w-4" aria-hidden="true" />
                             </button>
-                            <span className="text-[10px] font-mono w-10 text-center text-zinc-500">{Math.round(zoom * 100)}%</span>
+                            <span className="text-[10px] font-mono w-10 text-center text-zinc-500" aria-label={`Zoom level ${Math.round(zoom * 100)}%`}>{Math.round(zoom * 100)}%</span>
                             <button
                                 onClick={() => setZoom(Math.min(4, zoom + 0.5))}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover"
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
+                                aria-label="Zoom in"
+                                title="Zoom in"
                             >
-                                <ZoomIn className="h-4 w-4" />
+                                <ZoomIn className="h-4 w-4" aria-hidden="true" />
                             </button>
                         </div>
 
                         <button
                             onClick={onClose}
-                            className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-400 hover:text-red-400 transition-all active:scale-95"
+                            className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-400 hover:text-red-400 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+                            aria-label="Close modal"
+                            title="Close modal"
                         >
-                            <X className="h-6 w-6" />
+                            <X className="h-6 w-6" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
