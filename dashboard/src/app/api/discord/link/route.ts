@@ -35,8 +35,8 @@ export async function POST(req: Request) {
                 serverId,
                 OR: [
                     { userId: clerkId },
-                    { userId: robloxId || "" },
-                    { discordId: discordId }
+                    { discordId: discordId },
+                    ...(robloxId ? [{ userId: robloxId }] : [])
                 ]
             }
         })
