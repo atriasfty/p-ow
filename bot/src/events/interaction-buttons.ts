@@ -154,10 +154,10 @@ async function handleFormApplicationModal(
         await prisma.$executeRaw`UPDATE FormResponse SET status = ${newStatus} WHERE id = ${responseId}`
 
         // Look up the member for their display name and Discord ID
-        const member = await prisma.member.findFirst({
-            where: { userId: responseRow.respondentId ?? "", serverId: formRow.serverId },
+        const member = responseRow.respondentId ? await prisma.member.findFirst({
+            where: { userId: responseRow.respondentId, serverId: formRow.serverId },
             select: { discordId: true, robloxUsername: true }
-        })
+        }) : null
 
         const displayName = member?.robloxUsername ?? responseRow.respondentId ?? "Unknown"
         const discordMention = member?.discordId ? `<@${member.discordId}>` : displayName
