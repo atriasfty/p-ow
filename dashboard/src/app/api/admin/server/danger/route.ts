@@ -22,7 +22,7 @@ export async function PATCH(req: Request) {
         }
 
         if (action === "CHANGE_API_KEY") {
-            if (!value) return NextResponse.json({ error: "API Key is required" }, { status: 400 })
+            if (!value || typeof value !== "string") return NextResponse.json({ error: "API Key is required and must be a string" }, { status: 400 })
             
             await prisma.server.update({
                 where: { id: serverId },
@@ -32,7 +32,7 @@ export async function PATCH(req: Request) {
         }
 
         if (action === "TRANSFER_OWNERSHIP") {
-            if (!value) return NextResponse.json({ error: "Target User ID is required" }, { status: 400 })
+            if (!value || typeof value !== "string") return NextResponse.json({ error: "Target User ID is required and must be a string" }, { status: 400 })
             
             // Verify target user is a member of this server
             const isMember = await prisma.member.findFirst({
