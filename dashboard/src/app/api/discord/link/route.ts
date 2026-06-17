@@ -30,14 +30,15 @@ export async function POST(req: Request) {
         // 2. By Roblox ID (some older code might use this)
         // 3. By Discord ID (already linked)
 
-        let existingMember = await prisma.member.findFirst({
+        const orConditions: any[] = [{ userId: clerkId }, { discordId: discordId }]
+        if (robloxId) {
+            orConditions.push({ userId: robloxId })
+        }
+
+        const existingMember = await prisma.member.findFirst({
             where: {
                 serverId,
-                OR: [
-                    { userId: clerkId },
-                    { userId: robloxId || "" },
-                    { discordId: discordId }
-                ]
+                OR: orConditions
             }
         })
 
