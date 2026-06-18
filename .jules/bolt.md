@@ -1,0 +1,3 @@
+## 2026-04-25 - Batched Temporal N+1 Queries
+**Learning:** Resolving N+1 DB calls over temporal fallback data within mappings (like locating player positions near the time of an event) can be fully batched by extracting the min/max timestamps of the target events and making a single `findMany` query with tightly bounded `gte` and `lte` conditions.
+**Action:** When replacing N+1 sequential temporal queries, explicitly compute the timeline bounds of the target items, fetch a pre-bounded array into memory, and use `Array.prototype.find` or `filter` synchronously to map the related records without overloading Prisma/the database.
