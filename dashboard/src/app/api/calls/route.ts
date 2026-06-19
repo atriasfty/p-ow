@@ -32,48 +32,68 @@ export async function GET(req: Request) {
         ])
 
         // Fallback location logic: if positionDescriptor is missing, try to find a recent location for that player
-        const processedModCalls = await Promise.all(modCalls.map(async (call) => {
-            if (call.positionDescriptor) return call
-            const recentLoc = await prisma.playerLocation.findFirst({
-                where: {
-                    serverId,
-                    userId: call.callerId,
-                    // Try to find a location within 1 minute of the call
-                    createdAt: {
-                        lte: new Date((call.timestamp || 0) * 1000 + 30000), // +30s
-                    }
-                },
-                orderBy: { createdAt: "desc" }
-            })
-            if (recentLoc && (recentLoc.postalCode || recentLoc.streetName)) {
-                return {
-                    ...call,
-                    positionDescriptor: `${recentLoc.postalCode ? 'Postal ' + recentLoc.postalCode : ''}${recentLoc.postalCode && recentLoc.streetName ? ', ' : ''}${recentLoc.streetName || ''}`
-                }
-            }
-            return call
-        }))
+        // ⚡ Bolt: Eliminate N+1 queries by pre-fetching all relevant locations in a single bounded query
+        const allCalls = [...modCalls, ...emergencyCalls];
+        const callsNeedingLocation = allCalls.filter((c) => !c.positionDescriptor);
 
-        const processedEmerCalls = await Promise.all(emergencyCalls.map(async (call) => {
-            if (call.positionDescriptor) return call
-            const recentLoc = await prisma.playerLocation.findFirst({
+        let recentLocationsMap = new Map<string, any>();
+
+        if (callsNeedingLocation.length > 0) {
+            // Find tight bounds for the time window to avoid fetching the entire history
+            const minTimestamp = Math.min(...callsNeedingLocation.map(c => c.timestamp || 0));
+            const maxTimestamp = Math.max(...callsNeedingLocation.map(c => c.timestamp || 0));
+
+            // Allow locations up to 1 minute before or 30s after the call
+            const fromDate = new Date(minTimestamp * 1000 - 60000);
+            const toDate = new Date(maxTimestamp * 1000 + 30000);
+
+            const uniqueCallerIds = [...new Set(callsNeedingLocation.map((c) => c.callerId))];
+
+            const recentLocations = await prisma.playerLocation.findMany({
                 where: {
                     serverId,
-                    userId: call.callerId,
+                    userId: { in: uniqueCallerIds },
                     createdAt: {
-                        lte: new Date((call.timestamp || 0) * 1000 + 30000),
+                        gte: fromDate,
+                        lte: toDate
                     }
                 },
                 orderBy: { createdAt: "desc" }
-            })
+            });
+
+            // Group locations by user
+            const locationsByUser = new Map<string, any[]>();
+            for (const loc of recentLocations) {
+                if (!locationsByUser.has(loc.userId)) {
+                    locationsByUser.set(loc.userId, []);
+                }
+                locationsByUser.get(loc.userId)!.push(loc);
+            }
+
+            recentLocationsMap = locationsByUser;
+        }
+
+        const attachLocation = (call: any) => {
+            if (call.positionDescriptor) return call;
+
+            const userLocs = recentLocationsMap.get(call.callerId) || [];
+            // Find the most recent location before or up to 30s after the call
+            const callTime = new Date((call.timestamp || 0) * 1000 + 30000);
+
+            // userLocs are already sorted descending by createdAt from the findMany query
+            const recentLoc = userLocs.find((loc: any) => loc.createdAt <= callTime);
+
             if (recentLoc && (recentLoc.postalCode || recentLoc.streetName)) {
                 return {
                     ...call,
                     positionDescriptor: `${recentLoc.postalCode ? 'Postal ' + recentLoc.postalCode : ''}${recentLoc.postalCode && recentLoc.streetName ? ', ' : ''}${recentLoc.streetName || ''}`
-                }
+                };
             }
-            return call
-        }))
+            return call;
+        };
+
+        const processedModCalls = modCalls.map(attachLocation);
+        const processedEmerCalls = emergencyCalls.map(attachLocation);
 
         return NextResponse.json({
             modCalls: processedModCalls,
