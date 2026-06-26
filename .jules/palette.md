@@ -1,0 +1,3 @@
+## 2024-06-26 - Accessible Modal Patterns
+**Learning:** Custom dialog and modal containers lack semantic roles, accessible labels, and comprehensive focus management for all internal actions. While some primary buttons have focus styling, secondary actions like Cancel or close buttons often lack proper focus-visible states with dark offsets against the modal background.
+**Action:** Always include `role="dialog"` or `role="alertdialog"`, `aria-modal="true"`, and `aria-labelledby`/`describedby` on modal wrappers. Apply strict `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900` to all interactive elements within the modal for consistent keyboard navigation.
