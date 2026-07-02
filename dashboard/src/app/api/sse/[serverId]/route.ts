@@ -44,9 +44,6 @@ export async function GET(
     const stream = new ReadableStream({
         async start(controller) {
             let closed = false
-            // Pre-declare so cleanup() is safe to call at any point, even before
-            // the subscription and heartbeat are wired up below.
-            let unsubscribe: () => void = () => {}
             let heartbeat: ReturnType<typeof setInterval> | undefined
 
             const cleanup = () => {
@@ -66,6 +63,23 @@ export async function GET(
                     cleanup()
                 }
             }
+
+            // ---- Subscribe to live events FIRST, buffering until the snapshot is
+            // sent ----
+            // Snapshot building below runs several sequential DB queries, which takes
+            // long enough for log-syncer to emit an event in the meantime. Subscribing
+            // only after the snapshot queries finish would silently drop that event —
+            // it's not in the snapshot (already queried) and not yet caught by a live
+            // subscription. Subscribing up front and buffering closes that gap.
+            let snapshotDone = false
+            const buffered: { type: string; data: unknown }[] = []
+            let unsubscribe: () => void = eventBus.subscribe(serverId, (type, data) => {
+                if (snapshotDone) {
+                    enqueue(type, data)
+                } else {
+                    buffered.push({ type, data })
+                }
+            })
 
             // ---- Send initial snapshot ----
             try {
@@ -171,10 +185,11 @@ export async function GET(
                 console.error("[SSE] Snapshot error:", e)
             }
 
-            // ---- Subscribe to live events ----
-            unsubscribe = eventBus.subscribe(serverId, (type, data) => {
-                enqueue(type, data)
-            })
+            // ---- Flush any live events that arrived while the snapshot was being
+            // built, then switch to forwarding events directly ----
+            snapshotDone = true
+            for (const b of buffered) enqueue(b.type, b.data)
+            buffered.length = 0
 
             // ---- Heartbeat — named event so the client can detect stream staleness ----
             heartbeat = setInterval(() => {

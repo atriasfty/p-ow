@@ -49,9 +49,15 @@ export async function GET(req: Request) {
         return NextResponse.json(cached.data)
     }
 
-    // Optimization 4: Size-limited cache management
+    // Optimization 4: Size-limited cache management — evict the oldest entries
+    // (Map preserves insertion order) rather than clearing everything, so one
+    // busy tenant pushing the shared cache past its limit doesn't wipe every
+    // other tenant's cached data at once.
     if (logsCache.size > MAX_CACHE_SIZE) {
-        logsCache.clear()
+        const targetSize = Math.floor(MAX_CACHE_SIZE * 0.8)
+        const excess = logsCache.size - targetSize
+        const oldestKeys = Array.from(logsCache.keys()).slice(0, excess)
+        for (const k of oldestKeys) logsCache.delete(k)
     }
 
     const server = await getServerConfig(serverId)

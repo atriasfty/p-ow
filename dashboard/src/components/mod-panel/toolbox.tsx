@@ -60,6 +60,7 @@ export function Toolbox({
     const [toolboxAutomations, setToolboxAutomations] = useState<ToolboxAutomation[]>([])
     const [runningId, setRunningId] = useState<string | null>(null)
     const [successId, setSuccessId] = useState<string | null>(null)
+    const [errorId, setErrorId] = useState<string | null>(null)
 
     useEffect(() => {
         if (!permissions.canUseToolbox) return
@@ -73,14 +74,22 @@ export function Toolbox({
         if (runningId) return
         setRunningId(id)
         try {
-            await apiFetch(`/api/automations/${id}/run`, {
+            const res = await apiFetch(`/api/automations/${id}/run`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ serverId })
             })
-            setSuccessId(id)
-            setTimeout(() => setSuccessId(null), 2000)
-        } catch {}
+            if (res.ok) {
+                setSuccessId(id)
+                setTimeout(() => setSuccessId(null), 2000)
+            } else {
+                setErrorId(id)
+                setTimeout(() => setErrorId(null), 2000)
+            }
+        } catch {
+            setErrorId(id)
+            setTimeout(() => setErrorId(null), 2000)
+        }
         finally { setRunningId(null) }
     }
 
@@ -319,6 +328,8 @@ export function Toolbox({
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : successId === auto.id ? (
                                     <Check className="h-4 w-4" />
+                                ) : errorId === auto.id ? (
+                                    <X className="h-4 w-4" />
                                 ) : null}
                                 <span>{auto.name}</span>
                             </button>
@@ -430,7 +441,10 @@ export function Toolbox({
                                     </div>
                                 </div>
                                 <button
-                                    onClick={() => setLoaOpen(false)}
+                                    onClick={() => {
+                                        setLoaOpen(false)
+                                        setLoaMessage("")
+                                    }}
                                     aria-label="Close LOA Request"
                                     className="p-2 hover:bg-white/10 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                 >
@@ -581,7 +595,10 @@ export function Toolbox({
                                 </div>
                             </div>
                             <button
-                                onClick={() => setStaffRequestOpen(false)}
+                                onClick={() => {
+                                    setStaffRequestOpen(false)
+                                    setStaffRequestMessage(null)
+                                }}
                                 aria-label="Close Staff Request"
                                 className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                             >

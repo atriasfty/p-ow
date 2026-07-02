@@ -858,7 +858,7 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                         const isShutdown = s.shutdownCommandPatterns.some(p => cmd === p.toLowerCase() || cmd.startsWith(p.toLowerCase() + " "))
                         if (isShutdown) await handleShutdownCommand(log, serverId)
 
-                        newCommandLogsForDetection.push({ ...log, playerName: log.PlayerName, playerId: log.PlayerId, command: log.Command })
+                        newCommandLogsForDetection.push({ ...log, playerName: log.PlayerName, playerId: log.PlayerId, command: log.Command, prcTimestamp: log.Timestamp || log.timestamp })
                         AutomationEngine.trigger("COMMAND_USED", { ...context, details: { command: log.Command } }).catch(() => { })
                     } else if (type === "kill") {
                         AutomationEngine.trigger("PLAYER_KILL", { ...context, target: { name: log.VictimName, id: log.VictimId } }).catch(() => { })

@@ -75,7 +75,7 @@ export function PlayerSearch({ serverId, onlinePlayers = [] }: { serverId: strin
     const handleSelect = (name: string) => {
         setQuery(name)
         setOpen(false)
-        router.push(`/dashboard/${serverId}/user/${name}`)
+        router.push(`/dashboard/${serverId}/user/${encodeURIComponent(name)}`)
     }
 
     return (

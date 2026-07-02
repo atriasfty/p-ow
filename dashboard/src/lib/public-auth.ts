@@ -1,4 +1,5 @@
 import { prisma } from "./db"
+import { Prisma } from "@prisma/client"
 import { headers } from "next/headers"
 
 export interface PublicAuthResult {
@@ -60,15 +61,6 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
     // --- RATE LIMITING & QUOTAS ---
     const now = new Date()
 
-    // 1. Frequency Check (rateLimit in seconds)
-    if (apiKey.lastUsed) {
-        const secondsSinceLast = (now.getTime() - new Date(apiKey.lastUsed).getTime()) / 1000
-        if (secondsSinceLast < apiKey.rateLimit) {
-            return { valid: false, error: `Rate limit exceeded. Wait ${Math.ceil(apiKey.rateLimit - secondsSinceLast)}s.`, status: 429 }
-        }
-    }
-
-    // 2. Daily Quota Check (Based on Server Plan)
     const plan = apiKey.server?.subscriptionPlan || (apiKey.serverId ? "free" : "pow-max")
     const limits: Record<string, number> = {
         "free": 250,
@@ -79,49 +71,78 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
 
     // Enforce GLOBALLY per server instead of per-key
     const configKey = apiKey.serverId ? `SERVER_QUOTA_${apiKey.serverId}` : `GLOBAL_QUOTA_${apiKey.id}`
-    const quotaConfig = await prisma.config.findUnique({ where: { key: configKey } })
 
-    let usageCount = 0
-    let resetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-
-    if (quotaConfig) {
-        try {
-            const data = JSON.parse(quotaConfig.value)
-            if (now < new Date(data.resetAt)) {
-                usageCount = data.usageCount
-                resetAt = new Date(data.resetAt)
+    // Both the frequency check and the daily quota are check-then-write against
+    // shared rows, so they must run inside one Serializable transaction — otherwise
+    // concurrent requests can all read the same "not yet over limit" state and all
+    // slip through before any of their writes land, silently bypassing the limit.
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Frequency Check (rateLimit in seconds) — re-read lastUsed inside the
+            // transaction so we're checking against the freshest committed value.
+            const freshKey = await tx.apiKey.findUnique({ where: { id: apiKey.id }, select: { lastUsed: true } })
+            if (freshKey?.lastUsed) {
+                const secondsSinceLast = (now.getTime() - new Date(freshKey.lastUsed).getTime()) / 1000
+                if (secondsSinceLast < apiKey.rateLimit) {
+                    return { valid: false, error: `Rate limit exceeded. Wait ${Math.ceil(apiKey.rateLimit - secondsSinceLast)}s.`, status: 429 } as const
+                }
             }
-        } catch (e) { }
-    }
 
-    if (usageCount >= maxDaily) {
-        return {
-            valid: false,
-            error: `Daily server quota exceeded (${usageCount}/${maxDaily}). Upgrade your server plan for higher limits.`,
-            status: 429,
-            rateLimitRemaining: 0,
-            rateLimitReset: Math.floor(resetAt.getTime() / 1000)
+            // 2. Daily Quota Check (Based on Server Plan)
+            const quotaConfig = await tx.config.findUnique({ where: { key: configKey } })
+
+            let usageCount = 0
+            let resetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+
+            if (quotaConfig) {
+                try {
+                    const data = JSON.parse(quotaConfig.value)
+                    if (now < new Date(data.resetAt)) {
+                        usageCount = data.usageCount
+                        resetAt = new Date(data.resetAt)
+                    }
+                } catch (e) { }
+            }
+
+            if (usageCount >= maxDaily) {
+                return {
+                    valid: false,
+                    error: `Daily server quota exceeded (${usageCount}/${maxDaily}). Upgrade your server plan for higher limits.`,
+                    status: 429,
+                    rateLimitRemaining: 0,
+                    rateLimitReset: Math.floor(resetAt.getTime() / 1000)
+                } as const
+            }
+
+            // Update global state tracking
+            await tx.config.upsert({
+                where: { key: configKey },
+                update: { value: JSON.stringify({ usageCount: usageCount + 1, resetAt }) },
+                create: { key: configKey, value: JSON.stringify({ usageCount: usageCount + 1, resetAt }) }
+            })
+
+            // Keep individual key frequency tracker active
+            await tx.apiKey.update({
+                where: { id: apiKey.id },
+                data: { lastUsed: now }
+            })
+
+            return {
+                valid: true,
+                apiKey,
+                rateLimitRemaining: maxDaily >= 1_000_000_000 ? 999999 : maxDaily - (usageCount + 1),
+                rateLimitReset: Math.floor(resetAt.getTime() / 1000)
+            } as const
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+
+        return result
+    } catch (e: any) {
+        if (e.code === "P2034") {
+            // Serialization conflict with a concurrent request — safe default is to
+            // reject this one rather than risk double-counting or a bypass.
+            return { valid: false, error: "Too many concurrent requests, please retry.", status: 429 }
         }
-    }
-
-    // Update global state tracking
-    await prisma.config.upsert({
-        where: { key: configKey },
-        update: { value: JSON.stringify({ usageCount: usageCount + 1, resetAt }) },
-        create: { key: configKey, value: JSON.stringify({ usageCount: usageCount + 1, resetAt }) }
-    }).catch(() => { })
-
-    // Keep individual key frequency tracker active
-    await prisma.apiKey.update({
-        where: { id: apiKey.id },
-        data: { lastUsed: now }
-    }).catch(() => { })
-
-    return {
-        valid: true,
-        apiKey,
-        rateLimitRemaining: maxDaily >= 1_000_000_000 ? 999999 : maxDaily - (usageCount + 1),
-        rateLimitReset: Math.floor(resetAt.getTime() / 1000)
+        throw e
     }
 }
 

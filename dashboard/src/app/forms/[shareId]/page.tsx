@@ -121,10 +121,24 @@ export default function PublicFormPage({
         setLoading(false)
     }
 
-    const shouldShowQuestion = (question: Question): boolean => {
+    // Recursive: a question whose showIf depends on an ancestor question that is
+    // itself currently hidden must also be treated as hidden. Without this, changing
+    // an earlier answer can hide a middle question while a later question further
+    // down the chain stays visible/required because it only checks the middle
+    // question's (now stale, no-longer-cleared) answer directly.
+    const shouldShowQuestion = (question: Question, visited: Set<string> = new Set()): boolean => {
+        if (visited.has(question.id)) return true // circular reference guard
+        visited.add(question.id)
+
         if (!question.conditions?.showIf) return true
 
         const { questionId, operator, value } = question.conditions.showIf
+
+        const parentQuestion = form?.sections.flatMap(s => s.questions).find(q => q.id === questionId)
+        if (parentQuestion && !shouldShowQuestion(parentQuestion, visited)) {
+            return false
+        }
+
         const answer = answers[questionId]
 
         if (answer === undefined || answer === null) return false
@@ -332,7 +346,7 @@ export default function PublicFormPage({
                             )}
                         </div>
 
-                        {section.questions.filter(shouldShowQuestion).map((question) => (
+                        {section.questions.filter((q) => shouldShowQuestion(q)).map((question) => (
                             <QuestionInput
                                 key={question.id}
                                 question={question}

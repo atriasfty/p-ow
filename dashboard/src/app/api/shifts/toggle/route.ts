@@ -1,5 +1,6 @@
 import { getSession } from "@/lib/auth-clerk"
 import { prisma } from "@/lib/db"
+import { Prisma } from "@prisma/client"
 import { AutomationEngine } from "@/lib/automation-engine"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { getServerSettings } from "@/lib/server-settings"
@@ -70,24 +71,40 @@ export async function POST(req: Request) {
             }
         }
 
-        // Ensure user doesn't already have an active shift on this server
-        const existing = await prisma.shift.findFirst({
-            where: {
-                userId: session.user.id,
-                serverId,
-                endTime: null
-            }
-        })
+        // Ensure user doesn't already have an active shift on this server.
+        // Serializable isolation closes the race where two concurrent "start shift"
+        // requests both read "no active shift" before either create() commits —
+        // Postgres will abort one of the two transactions with a serialization
+        // failure (P2034) instead of silently allowing two open shifts.
+        let shift
+        try {
+            shift = await prisma.$transaction(async (tx) => {
+                const existing = await tx.shift.findFirst({
+                    where: {
+                        userId: session.user.id,
+                        serverId,
+                        endTime: null
+                    }
+                })
 
-        if (existing) return NextResponse.json({ error: "Shift already active" }, { status: 400 })
+                if (existing) {
+                    throw new Error("Shift already active")
+                }
 
-        const shift = await prisma.shift.create({
-            data: {
-                userId: session.user.id,
-                serverId,
-                startTime: new Date()
+                return await tx.shift.create({
+                    data: {
+                        userId: session.user.id,
+                        serverId,
+                        startTime: new Date()
+                    }
+                })
+            }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+        } catch (e: any) {
+            if (e.message === "Shift already active" || e.code === "P2034") {
+                return NextResponse.json({ error: "Shift already active" }, { status: 400 })
             }
-        })
+            throw e
+        }
 
         // Trigger Automation
         await AutomationEngine.trigger("SHIFT_START", {

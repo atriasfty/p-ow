@@ -645,7 +645,7 @@ export function ServerSettingsForm({
                                         <input
                                             type="number"
                                             value={staffRequestRateLimit}
-                                            onChange={(e) => setStaffRequestRateLimit(parseInt(e.target.value))}
+                                            onChange={(e) => setStaffRequestRateLimit(parseInt(e.target.value) || 0)}
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500"
                                         />
                                         <p className="text-xs text-zinc-600 mt-2">Cooldown period between in-game staff requests per player.</p>

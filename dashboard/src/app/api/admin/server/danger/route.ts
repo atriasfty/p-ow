@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
 import { isServerOwner, isSuperAdmin } from "@/lib/admin"
+import { logAudit } from "@/lib/audit"
 import { NextResponse } from "next/server"
 
 export async function PATCH(req: Request) {
@@ -28,6 +29,7 @@ export async function PATCH(req: Request) {
                 where: { id: serverId },
                 data: { apiUrl: value } // Stored in 'api_key' column via @map
             })
+            await logAudit(serverId, "API_KEY_CHANGED", "Server API key was changed", "DASHBOARD", session.user.id)
             return NextResponse.json({ success: true, message: "API Key updated successfully" })
         }
 
@@ -47,6 +49,7 @@ export async function PATCH(req: Request) {
                 where: { id: serverId },
                 data: { subscriberUserId: value }
             })
+            await logAudit(serverId, "OWNERSHIP_TRANSFERRED", `Ownership transferred to userId ${value}`, "DASHBOARD", session.user.id)
             return NextResponse.json({ success: true, message: "Ownership transferred successfully" })
         }
 
@@ -75,10 +78,14 @@ export async function DELETE(req: Request) {
             return new NextResponse("Forbidden: Only the server owner can delete this server", { status: 403 })
         }
 
+        const serverToDelete = await prisma.server.findUnique({ where: { id: serverId }, select: { name: true } })
+
         // Cascade delete is handled by Prisma (onDelete: Cascade)
         await prisma.server.delete({
             where: { id: serverId }
         })
+
+        await logAudit(serverId, "SERVER_DELETED", `Server "${serverToDelete?.name || serverId}" was deleted`, "DASHBOARD", session.user.id)
 
         return NextResponse.json({ success: true, message: "Server deleted successfully" })
     } catch (e: any) {

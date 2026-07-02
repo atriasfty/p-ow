@@ -235,6 +235,14 @@ export function useServerEvents(serverId: string): ServerEventsState {
         })
     }, [serverId])
 
+    // Reset all server-scoped state whenever serverId changes — otherwise stale
+    // data from the previous server (logs, punishments, calls, shift status) keeps
+    // showing, and some fields are appended to rather than replaced, so it would
+    // actively mix with the new server's data instead of just lingering.
+    useEffect(() => {
+        setState(DEFAULT_STATE)
+    }, [serverId])
+
     useEffect(() => {
         mountedRef.current = true
         connect()

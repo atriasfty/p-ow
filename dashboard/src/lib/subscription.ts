@@ -156,6 +156,19 @@ export async function linkSubscriptionToServer(
     // Check if user is superadmin
     const isSuper = isSuperAdmin({ id: userId } as any)
 
+    // A user may only link their subscription to a server they actually belong to —
+    // otherwise any account with an active plan could hijack an arbitrary server's
+    // subscription by guessing/observing its serverId.
+    if (!isSuper) {
+        const membership = await prisma.member.findFirst({
+            where: { serverId, OR: [{ userId }, { discordId: userId }] },
+            select: { id: true }
+        })
+        if (!membership) {
+            return { success: false, error: "You are not a member of that server" }
+        }
+    }
+
     // First, unlink any previously linked server for this user ONLY if they are not a superadmin
     if (!isSuper) {
         await prisma.server.updateMany({

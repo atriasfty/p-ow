@@ -46,6 +46,22 @@ export async function POST(req: Request) {
         })
 
         if (existingMember) {
+            // Guard against reassigning a Member row that actually belongs to a
+            // different account. The OR lookup above can match a row via its
+            // discordId/robloxId alone — if that row's userId is set to neither the
+            // current Clerk ID nor the current Roblox ID, it's someone else's row and
+            // must not be silently overwritten with this session's identifiers.
+            const rowBelongsToDifferentUser =
+                !!existingMember.userId &&
+                existingMember.userId !== clerkId &&
+                existingMember.userId !== robloxId
+            if (rowBelongsToDifferentUser) {
+                return NextResponse.json(
+                    { error: "This server membership is already linked to a different account" },
+                    { status: 409 }
+                )
+            }
+
             // Backfill discordId and robloxId if missing
             const needsUpdate = existingMember.discordId !== discordId || (!existingMember.robloxId && robloxId)
             if (needsUpdate) {

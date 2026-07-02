@@ -140,8 +140,21 @@ export async function POST(
             return NextResponse.json({ error: "answers object is required" }, { status: 400 })
         }
 
-        // Helper to check if a question should be shown based on conditions
-        const shouldShowQuestion = (question: any, currentAnswers: Record<string, any>): boolean => {
+        // Validate that all question IDs belong to this form
+        const allQuestions = form.sections.flatMap((s: any) => s.questions)
+        const validQuestionIds = new Set(allQuestions.map((q: any) => q.id))
+        const questionById = new Map(allQuestions.map((q: any) => [q.id, q]))
+
+        // Helper to check if a question should be shown based on conditions.
+        // Recursive: a question whose showIf depends on an ancestor question that is
+        // itself currently hidden must also be treated as hidden — otherwise a stale
+        // answer left over on a hidden parent (e.g. the user changed an earlier answer
+        // after already filling in a now-orphaned conditional chain) can make a
+        // should-be-hidden question get force-validated as required.
+        const shouldShowQuestion = (question: any, currentAnswers: Record<string, any>, visited: Set<string> = new Set()): boolean => {
+            if (visited.has(question.id)) return true // circular reference guard
+            visited.add(question.id)
+
             let conditions: any = {}
             try {
                 conditions = typeof question.conditions === 'string' ? JSON.parse(question.conditions) : question.conditions
@@ -150,6 +163,12 @@ export async function POST(
             if (!conditions?.showIf) return true
 
             const { questionId, operator, value } = conditions.showIf
+
+            const parentQuestion = questionById.get(questionId)
+            if (parentQuestion && !shouldShowQuestion(parentQuestion, currentAnswers, visited)) {
+                return false
+            }
+
             const answer = currentAnswers[questionId]
 
             if (answer === undefined || answer === null) return false
@@ -169,10 +188,6 @@ export async function POST(
                     return true
             }
         }
-
-        // Validate that all question IDs belong to this form
-        const allQuestions = form.sections.flatMap((s: any) => s.questions)
-        const validQuestionIds = new Set(allQuestions.map((q: any) => q.id))
 
         for (const qId of Object.keys(answers)) {
             if (!validQuestionIds.has(qId)) {
