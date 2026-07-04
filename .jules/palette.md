@@ -1,0 +1,3 @@
+## 2024-07-04 - ARIA Labels and Focus Styles on Modals
+**Learning:** Icon-only buttons for critical functionality like zoom controls and close buttons in custom modals (like `MapModal` and `ModCallPanel`) lacked `aria-label` attributes and explicit keyboard focus indicators (`focus-visible:ring-2`), making them inaccessible for screen readers and keyboard navigation. This is a common pattern for custom modals that must be addressed.
+**Action:** Always add descriptive `aria-label` and `title` attributes, along with explicit `focus-visible:outline-none focus-visible:ring-2` styling, to icon-only interactive elements to ensure accessibility standards are met across the custom UI components.
