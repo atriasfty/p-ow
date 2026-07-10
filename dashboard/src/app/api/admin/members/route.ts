@@ -32,19 +32,13 @@ export async function GET(req: Request) {
 
         const userIds = members.map(m => m.userId)
 
-        // Fetch the single most-recent shift per user via groupBy + subsequent lookup
-        const maxStartTimes = await prisma.shift.groupBy({
-            by: ['userId'],
-            where: { serverId, userId: { in: userIds } },
-            _max: { startTime: true }
-        })
+        // ⚡ Bolt: Fetch the single most-recent shift per user using distinct + orderBy
+        // 🎯 Why: Avoids expensive groupBy followed by findMany with large dynamic OR array
+        // 📊 Impact: Reduces query complexity and execution time, eliminates potential massive OR clause limits
         const latestShifts = await prisma.shift.findMany({
-            where: {
-                serverId,
-                OR: maxStartTimes
-                    .filter((r: any) => r._max.startTime !== null)
-                    .map((r: any) => ({ userId: r.userId, startTime: r._max.startTime! }))
-            },
+            where: { serverId, userId: { in: userIds } },
+            distinct: ['userId'],
+            orderBy: [{ userId: 'asc' }, { startTime: 'desc' }],
             select: { userId: true, startTime: true, endTime: true }
         })
 
