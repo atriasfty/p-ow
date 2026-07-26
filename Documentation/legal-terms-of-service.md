@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last Updated: March 29, 2026**
+**Last Updated: July 29, 2026**
 
 ### 1. Acceptance of Terms
 
@@ -81,3 +81,18 @@ We may modify these Terms at any time. Continued use of the Service after change
 ### 13. Contact
 
 For legal inquiries, please contact the Project Overwatch team via our official Discord support server or email legal@atriasafety.org.
+
+
+
+### 14. Safety Statuses
+
+Where enabled, the panel may display a safety status for a member's Roblox account. These statuses originate from Rotector, an independent third party. Atria does not perform, verify, or endorse the classification, and gives no warranty as to its accuracy or completeness.
+
+* Not a sole basis for action. You agree not to suspend, ban, restrict, or otherwise act against any member on the basis of a safety status alone. A status may inform your decision. It may not be your decision.
+* No redistribution. You agree not to disclose, publish, screenshot, forward, or otherwise share a safety status outside the panel. This includes sharing it with the member concerned and with other communities.
+* Access control. You agree to restrict panel access to staff with an operational need, and you acknowledge that views of safety statuses are logged.
+* Recorded reasons. Where you take action against a member, the reason you record must state what you observed or determined. It may not attribute the action to Rotector or to Atria.
+* Your appeal process. You agree to provide a route by which a member may contest an action taken against them, and to make that route known to your members.
+* Published information. You confirm you have read the information published at the [transparency page](https://docs.atriasafety.org/legal/atria-x-rotector-how-we-treat-their-information.), and you agree to make that address available to any member who asks why they have been actioned.
+* Roles. You are the controller in respect of your own moderation decisions and records. Atria is the controller in respect of the retrieval, caching, and display of safety statuses.
+* Suspension. Atria may suspend or withdraw this feature, for an individual community or entirely, without notice, including where these terms are breached or where the arrangement with Rotector changes.
