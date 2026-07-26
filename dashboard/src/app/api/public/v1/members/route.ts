@@ -8,12 +8,19 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url)
 
+    // Pagination — bound the response so a large roster can't return an unbounded payload.
+    const take = Math.min(Math.max(parseInt(searchParams.get("limit") || "100") || 100, 1), 200)
+    const skip = Math.max(parseInt(searchParams.get("offset") || "0") || 0, 0)
+
     const server = await resolveServer(auth.apiKey)
     if (!server) return withRateLimit(NextResponse.json({ error: "Server not found" }, { status: 404 }), auth)
 
     try {
         const members = await prisma.member.findMany({
             where: { serverId: server.id },
+            take,
+            skip,
+            orderBy: { createdAt: "asc" },
             include: {
                 role: {
                     select: {

@@ -1,6 +1,7 @@
 import { prisma } from "./db"
 import { Prisma } from "@prisma/client"
 import { headers } from "next/headers"
+import crypto from "crypto"
 
 export interface PublicAuthResult {
     valid: boolean
@@ -25,10 +26,22 @@ export async function validatePublicApiKey(): Promise<PublicAuthResult> {
 
     const key = authHeader.replace("Bearer ", "").trim()
 
-    const apiKey = await prisma.apiKey.findUnique({
-        where: { key },
+    // Look keys up by SHA-256 hash — plaintext is no longer required (or, for new
+    // keys, even stored). Existing rows were backfilled with keyHash by migration.
+    const keyHash = crypto.createHash("sha256").update(key).digest("hex")
+    let apiKey = await prisma.apiKey.findUnique({
+        where: { keyHash },
         include: { server: { select: { subscriptionPlan: true } } }
     })
+
+    // Legacy fallback: a key created by a not-yet-retired old release during a
+    // blue-green deploy may exist as plaintext only, without a hash yet.
+    if (!apiKey) {
+        apiKey = await prisma.apiKey.findUnique({
+            where: { key },
+            include: { server: { select: { subscriptionPlan: true } } }
+        })
+    }
 
     if (!apiKey || !apiKey.enabled) {
         return { valid: false, error: "Invalid or disabled API key", status: 401 }

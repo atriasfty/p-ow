@@ -137,7 +137,10 @@ model Log {
   @@index([playerId])
   @@index([killerId])
   @@index([victimId])
-  @@unique([serverId, type, prcTimestamp]) // Enforces dedup at DB level (NULL prcTimestamp rows are always distinct)
+  // DB-level dedup key must match the app-level fingerprint in log-syncer.ts
+  // (type + timestamp + player + killer + victim). A coarser key collides when
+  // two different players act in the same second, aborting the whole insert.
+  @@unique([serverId, type, prcTimestamp, playerId, killerId, victimId])
 }
 
 model Punishment {
@@ -298,7 +301,9 @@ model UserAiUsage {
 model ApiKey {
   id          String   @id @default(cuid())
   name        String   // Name of the tool/integration
-  key         String   @unique // Secret key
+  key         String?  @unique // Legacy plaintext secret — null for keys created after the hashing rollout
+  keyHash     String?  @unique // SHA-256 hex of the secret key; lookups match on this, never on plaintext
+  keyPrefix   String?  // First chars of the key (e.g. "pow_1a2b3c4d") for display masking only
   enabled     Boolean  @default(true)
   createdAt   DateTime @default(now())
   lastUsed    DateTime?
@@ -568,4 +573,26 @@ model VisionDevice {
   revokedAt    DateTime?
 
   @@index([userId])
+}
+
+// Rotector third-party safety-signal cache. Bare flagType integer only —
+// never category/reasons/confidence/evidence (see rotector-integration-compliance.md).
+// flagType 8 (redacted) is never stored: the row is deleted on sight instead.
+model RotectorFlag {
+  robloxId    String   @id
+  flagType    Int
+  retrievedAt DateTime @default(now())
+}
+
+// Access log for every disclosure of a Rotector flag to a moderator, retained
+// separately from RotectorFlag itself.
+model RotectorFlagView {
+  id          String   @id @default(cuid())
+  serverId    String
+  actorUserId String
+  robloxId    String
+  viewedAt    DateTime @default(now())
+
+  @@index([serverId])
+  @@index([robloxId])
 }

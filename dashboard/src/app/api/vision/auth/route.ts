@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { SignJWT, jwtVerify } from "jose"
 import { getVisionCorsHeaders } from "@/lib/vision-auth"
 import { canAccessVision } from "@/lib/subscription"
+import { checkSecurity } from "@/lib/security"
 
 // Handle preflight requests
 export async function OPTIONS(req: Request) {
@@ -12,6 +13,11 @@ export async function OPTIONS(req: Request) {
 // Generate a token for Vision app
 export async function GET(req: Request) {
     try {
+        // Rate-limit / IP-ban check before any JWT work. This is a pre-auth
+        // endpoint (unauthenticated callers can reach POST), so throttle it.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
         // Validate required environment variable
         if (!process.env.VISION_JWT_SECRET) {
             console.error("[Vision Auth] VISION_JWT_SECRET is not set!")
@@ -68,6 +74,11 @@ export async function GET(req: Request) {
 // Verify a Vision token
 export async function POST(req: Request) {
     try {
+        // Rate-limit / IP-ban check before any JWT work. This is a pre-auth
+        // endpoint (unauthenticated callers can reach POST), so throttle it.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
         // Validate required environment variable
         if (!process.env.VISION_JWT_SECRET) {
             console.error("[Vision Auth] VISION_JWT_SECRET is not set!")

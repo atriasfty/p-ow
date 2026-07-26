@@ -2,8 +2,9 @@
 
 
 import { useEffect, useState } from "react"
-import { User, Loader2, Shield, Star, Truck } from "lucide-react"
+import { User, Loader2, Shield, Star, Truck, AlertTriangle } from "lucide-react"
 import Link from "next/link"
+import { apiFetch } from "@/lib/api-fetch"
 
 export interface ParsedPlayer {
     name: string
@@ -27,6 +28,7 @@ export function PlayerList({ serverId, players: externalPlayers }: { serverId: s
     const [loading, setLoading] = useState(!externalPlayers)
     const [error, setError] = useState("")
     const [showAll, setShowAll] = useState(false)
+    const [flaggedIds, setFlaggedIds] = useState<Set<string>>(new Set())
 
     // Update internal state when external players change
     useEffect(() => {
@@ -62,6 +64,35 @@ export function PlayerList({ serverId, players: externalPlayers }: { serverId: s
         const interval = setInterval(fetchPlayers, 10000)
         return () => clearInterval(interval)
     }, [serverId, externalPlayers])
+
+    // Batched Rotector flag check for everyone currently in the roster. Cached
+    // 24h server-side, so this just needs to run occasionally, not on every
+    // players poll tick.
+    useEffect(() => {
+        const ids = [...new Set(players.map(p => p.id).filter(Boolean))]
+        if (ids.length === 0) return
+
+        let cancelled = false
+
+        const fetchFlags = async () => {
+            try {
+                const res = await apiFetch("/api/rotector/status", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ serverId, robloxIds: ids })
+                })
+                if (res.ok && !cancelled) {
+                    const data: Record<string, boolean> = await res.json()
+                    setFlaggedIds(new Set(Object.entries(data).filter(([, v]) => v).map(([id]) => id)))
+                }
+            } catch { }
+        }
+
+        fetchFlags()
+        const flagInterval = setInterval(fetchFlags, 5 * 60 * 1000)
+        return () => { cancelled = true; clearInterval(flagInterval) }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [serverId, players.map(p => p.id).join(",")])
 
     const getTeamIcon = (team?: string) => {
         if (!team) return null
@@ -118,6 +149,16 @@ export function PlayerList({ serverId, players: externalPlayers }: { serverId: s
                         {getTeamIcon(player.team) && (
                             <div className="absolute -bottom-1 -right-1 bg-[#222] rounded-full p-0.5 border border-[#333] z-10">
                                 {getTeamIcon(player.team)}
+                            </div>
+                        )}
+
+                        {/* Rotector Flag Badge — confirmed flags only, see rotector.ts */}
+                        {flaggedIds.has(player.id) && (
+                            <div
+                                className="absolute -top-1 -right-1 bg-[#222] rounded-full p-0.5 border border-[#333] z-10"
+                                title="Flagged by Rotector"
+                            >
+                                <AlertTriangle className="h-3 w-3 text-red-400 fill-red-400/20" />
                             </div>
                         )}
                     </div>

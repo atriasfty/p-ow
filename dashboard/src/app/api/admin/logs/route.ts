@@ -11,7 +11,8 @@ export async function GET(req: Request) {
     const serverId = searchParams.get("serverId")
     const playerId = searchParams.get("playerId")
     const type = searchParams.get("type")
-    const limit = parseInt(searchParams.get("limit") || "100")
+    // Clamp to a sane range so a caller can't request an unbounded/NaN/negative take.
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "100") || 100, 1), 500)
 
     if (!serverId) return NextResponse.json({ error: "Missing serverId" }, { status: 400 })
 

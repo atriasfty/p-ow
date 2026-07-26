@@ -14,10 +14,51 @@ if (!SYNC_SECRET) {
   process.exit(1)
 }
 
+// --- Alerting (Discord webhook, fire-and-forget) ---
+const ALERT_WEBHOOK_URL = process.env.ALERT_DISCORD_WEBHOOK_URL
+
+function sendAlert(title, message, severity = 'critical') {
+  if (!ALERT_WEBHOOK_URL) return // no webhook configured — nothing to do
+  const colors = { info: 0x3b82f6, warning: 0xf59e0b, critical: 0xef4444 }
+  fetch(ALERT_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      embeds: [{
+        title: `${severity === 'critical' ? '🔴' : severity === 'warning' ? '🟡' : '🔵'} ${title}`,
+        description: String(message).slice(0, 3900),
+        color: colors[severity] || colors.critical,
+        footer: { text: `pow-sync · ${process.env.APP_ENV || process.env.NODE_ENV || 'unknown'}` },
+        timestamp: new Date().toISOString(),
+      }],
+    }),
+  }).catch(() => { })
+}
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err)
+  sendAlert('Sync server uncaught exception — process exiting', err.stack || err.message)
+  // Attaching this listener means Node won't auto-exit; the process is now in
+  // an undefined state, so exit and let PM2 restart us.
+  setTimeout(() => process.exit(1), 1500)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason)
+  sendAlert('Sync server unhandled rejection', (reason && reason.stack) || String(reason))
+})
+
+let activeConnections = 0
+
 const server = http.createServer((request, response) => {
   if (request.url === '/health') {
     response.writeHead(200, { 'Content-Type': 'application/json' })
-    response.end(JSON.stringify({ ok: true, service: 'pow-sync' }))
+    response.end(JSON.stringify({
+      ok: true,
+      service: 'pow-sync',
+      connections: activeConnections,
+      uptimeSec: Math.round(process.uptime()),
+      rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+    }))
     return
   }
   response.writeHead(200, { 'Content-Type': 'text/plain' })
@@ -82,6 +123,9 @@ wss.on('connection', (conn, req) => {
     conn.close(4003, 'Forbidden: doc mismatch')
     return
   }
+
+  activeConnections++
+  conn.on('close', () => { activeConnections = Math.max(0, activeConnections - 1) })
 
   ywsUtils.setupWSConnection(conn, req)
 })

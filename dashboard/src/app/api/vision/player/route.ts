@@ -4,6 +4,7 @@ import { clerkClient } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/db"
 import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
 import { isFeatureEnabled } from "@/lib/feature-flags"
+import { checkSecurity } from "@/lib/security"
 
 // Check if user has Pro User subscription via Clerk metadata
 async function checkProUserSubscription(userId: string): Promise<boolean> {
@@ -24,6 +25,11 @@ export async function OPTIONS(req: Request) {
 // Lookup player by username
 export async function GET(req: Request) {
     try {
+        // Rate-limit / IP-ban check — this route fans out to external Roblox
+        // user + thumbnail APIs per call, so throttle to bound abuse/cost.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
         // Validate required environment variable
         if (!process.env.VISION_JWT_SECRET) {
             console.error("[Vision Player] VISION_JWT_SECRET is not set!")

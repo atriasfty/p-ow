@@ -65,6 +65,26 @@ export APP_ENV="$TARGET_ENV"
 export PORT="$PORT"
 export SYNC_PORT="$SYNC_PORT"
 
+# Bot health port — explicit per env. The old shared default (41732)
+# collided with the staging sync port on the same VPS.
+if [ "$TARGET_ENV" == "prod" ]; then
+    BOT_HEALTH_PORT="41734"
+else
+    BOT_HEALTH_PORT="41735"
+fi
+export BOT_HEALTH_PORT
+
+# Discord webhook for deploy/health alerts (must be set in the environment)
+ALERT_WEBHOOK="${ALERT_DISCORD_WEBHOOK_URL:-}"
+
+send_deploy_alert() {
+    # $1 = title, $2 = description, $3 = decimal color
+    [ -z "${ALERT_WEBHOOK}" ] && return 0 # no webhook configured — skip
+    curl -s -X POST -H "Content-Type: application/json" \
+        -d "{\"embeds\":[{\"title\":\"$1\",\"description\":\"$2\",\"color\":$3,\"footer\":{\"text\":\"deploy.sh · ${TARGET_ENV}\"}}]}" \
+        "${ALERT_WEBHOOK}" > /dev/null 2>&1 || true
+}
+
 echo -e "${BLUE}==================================================${NC}"
 echo -e "${BLUE} MISTER NETANYAHU PLEASE LET THIS DEPLOYMENT WORK ${NC}"
 echo -e "${BLUE} TARGETING ENVIRONMENT: ${YELLOW}${TARGET_ENV^^}${BLUE} (${BRANCH}) ${NC}"
@@ -159,7 +179,8 @@ if [ ! -f "${SHARED_ENV_FILE}" ]; then
     read -p "PostHog Project API Key: " POSTHOG_KEY
     read -p "PostHog Personal API Key - from PostHog Settings -> Personal API Keys: " POSTHOG_PERSONAL_KEY
     read -p "PostHog Project ID - number from PostHog URL e.g. 12345: " POSTHOG_PROJECT_ID
-    
+    read -p "Alert Discord Webhook URL (operational alerts — leave blank to disable): " ALERT_DISCORD_WEBHOOK
+
     # Generate automatic internal secrets
     INTERNAL_SYNC_SECRET_GEN="$(openssl rand -base64 32)"
     SYNC_WS_SECRET_GEN="$(openssl rand -base64 32)"
@@ -219,6 +240,9 @@ POSTHOG_PROJECT_ID="${POSTHOG_PROJECT_ID}"
 
 # Legal
 NEXT_PUBLIC_LEGAL_URL="https://lacrp.ciankelly.xyz/project-overwatch-legal-documents"
+
+# Operational Alerting
+ALERT_DISCORD_WEBHOOK_URL="${ALERT_DISCORD_WEBHOOK}"
 EOL
     echo -e "${GREEN}New environment file created and saved in '${SHARED_DIR}/'.${NC}"
 else
@@ -280,6 +304,12 @@ else
     if ! grep -q "DISCORD_PUNISHMENT_WEBHOOK=" "${SHARED_ENV_FILE}"; then
         read -p "Missing Discord Punishment Webhook URL [${TARGET_ENV^^}]: " VAL
         echo "DISCORD_PUNISHMENT_WEBHOOK=\"$VAL\"" >> "${SHARED_ENV_FILE}"
+    fi
+    # Operational alert webhook — prompt only if absent entirely (blank is a valid
+    # "alerts disabled" choice, so don't re-prompt once the key exists).
+    if ! grep -q "ALERT_DISCORD_WEBHOOK_URL=" "${SHARED_ENV_FILE}"; then
+        read -p "Alert Discord Webhook URL (operational alerts — leave blank to disable): " VAL
+        echo "ALERT_DISCORD_WEBHOOK_URL=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
     
     # Clerk Auth - CRITICAL: Always verify these are present
@@ -456,6 +486,13 @@ fi
 
 echo -e "${GREEN}[OK] All Clerk keys verified in deployed files.${NC}"
 
+# Pick up the alert webhook from the shared env file for THIS run's deploy
+# alerts (ALERT_WEBHOOK was resolved from the environment before the env file
+# existed). Env value already in the environment still takes precedence.
+if [ -z "${ALERT_WEBHOOK}" ] && [ -f "${SHARED_ENV_FILE}" ]; then
+    ALERT_WEBHOOK="$(grep -E '^ALERT_DISCORD_WEBHOOK_URL=' "${SHARED_ENV_FILE}" | tail -1 | cut -d= -f2- | sed 's/^"//; s/"$//')"
+fi
+
 # --- 4. Install Dependencies ---
 echo -e "${YELLOW}[4/8] Installing dependencies - this may take a moment...${NC}"
 
@@ -565,6 +602,49 @@ fi
 # process names and the correct current-${TARGET_ENV} symlink path.
 pm2 start ecosystem.config.js
 pm2 save
+
+# Ensure PM2 log rotation is configured (unrotated logs previously grew unbounded)
+if ! pm2 ls | grep -q "pm2-logrotate"; then
+    echo "Installing pm2-logrotate..."
+    pm2 install pm2-logrotate || true
+fi
+pm2 set pm2-logrotate:max_size 20M > /dev/null 2>&1 || true
+pm2 set pm2-logrotate:retain 14 > /dev/null 2>&1 || true
+pm2 set pm2-logrotate:compress true > /dev/null 2>&1 || true
+
+# --- Health gate: verify the new release actually came up ---
+# A deploy that crash-loops used to look identical to a successful one.
+echo -e "${YELLOW}Verifying service health...${NC}"
+
+wait_for_health() {
+    # $1 = name, $2 = url, $3 = max attempts (2s apart)
+    local name="$1" url="$2" attempts="${3:-30}"
+    for i in $(seq 1 "$attempts"); do
+        if curl -sf --max-time 3 "$url" > /dev/null 2>&1; then
+            echo -e "  ${GREEN}✓ ${name} healthy${NC} (${url})"
+            return 0
+        fi
+        sleep 2
+    done
+    echo -e "  ${RED}✗ ${name} FAILED health check${NC} (${url})"
+    return 1
+}
+
+HEALTH_FAILED=""
+wait_for_health "dashboard" "http://localhost:${PORT}/api/health" 45 || HEALTH_FAILED="${HEALTH_FAILED} dashboard"
+wait_for_health "sync"      "http://localhost:${SYNC_PORT}/health" 15 || HEALTH_FAILED="${HEALTH_FAILED} sync"
+wait_for_health "bot"       "http://localhost:${BOT_HEALTH_PORT}/health" 30 || HEALTH_FAILED="${HEALTH_FAILED} bot"
+
+if [ -n "${HEALTH_FAILED}" ]; then
+    echo -e "${RED}==================================================${NC}"
+    echo -e "${RED} DEPLOYMENT FAILED HEALTH CHECK:${HEALTH_FAILED}${NC}"
+    echo -e "${RED} Check 'pm2 logs' — consider rolling back (see bottom of this script).${NC}"
+    echo -e "${RED}==================================================${NC}"
+    send_deploy_alert "🔴 Deploy to ${TARGET_ENV} FAILED health check" "Unhealthy services:${HEALTH_FAILED}\nRelease: ${NEW_RELEASE_DIR}\nCheck pm2 logs and consider rolling back." 15680580
+    exit 1
+fi
+
+send_deploy_alert "🟢 Deployed to ${TARGET_ENV}" "Release ${NEW_RELEASE_DIR} is live and all services passed health checks." 4443211
 echo -e "${GREEN}Applications reloaded successfully! Your new version is LIVE.${NC}"
 
 # --- 8. Cleanup ---

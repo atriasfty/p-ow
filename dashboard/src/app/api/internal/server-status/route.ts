@@ -8,7 +8,7 @@ const INTERNAL_SECRET = process.env.INTERNAL_SYNC_SECRET!
 export async function GET(req: Request) {
     const authHeader = req.headers.get("x-internal-secret")
 
-    if (!authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
+    if (!INTERNAL_SECRET || !authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
         return new NextResponse("Unauthorized", { status: 401 })
     }
 

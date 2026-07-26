@@ -41,10 +41,16 @@ export async function GET(req: Request) {
         }
         const maxDaily = limits[plan] || 250
 
+        // Never return the hash or full plaintext to the client. Prefer the stored
+        // display prefix; fall back to masking legacy plaintext for un-backfilled rows.
+        const { keyHash: _omitHash, ...rest } = k as any
+        const masked = k.keyPrefix
+            ? `${k.keyPrefix}…`
+            : (k.key ? `${k.key.substring(0, 8)}...${k.key.substring(k.key.length - 4)}` : "pow_…")
         return {
-            ...k,
+            ...rest,
             dailyLimit: maxDaily, // Override DB fallback value with the dynamically bound plan limit
-            key: `${k.key.substring(0, 8)}...${k.key.substring(k.key.length - 4)}`
+            key: masked
         }
     })
 
@@ -140,19 +146,27 @@ export async function POST(req: Request) {
 
     if (!name) return new NextResponse("Name is required", { status: 400 })
 
-    // Generate a cryptographically secure key
+    // Generate a cryptographically secure key. Only the SHA-256 hash and a short
+    // display prefix are stored — the raw key is returned once below and never
+    // persisted in plaintext.
     const rawKey = crypto.randomBytes(24).toString("hex")
     const key = `pow_${rawKey}`
+    const keyHash = crypto.createHash("sha256").update(key).digest("hex")
+    const keyPrefix = key.substring(0, 12)
 
-    const apiKey = await prisma.apiKey.create({
+    const created = await prisma.apiKey.create({
         data: {
             name,
-            key,
+            keyHash,
+            keyPrefix,
             serverId: serverId || null,
             enabled: true,
             allowedIps: allowedIps || null
         }
     })
+    // Don't leak the hash to the client; return the raw key once so it can be copied.
+    const { keyHash: _omitHash, ...apiKey } = created as any
+    apiKey.key = key
 
     if (serverId) {
         await logAudit(

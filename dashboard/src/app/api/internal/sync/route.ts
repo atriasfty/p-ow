@@ -3,15 +3,21 @@ import { fetchAndSaveLogs } from "@/lib/log-syncer"
 import { trackSyncCycle } from "@/lib/metrics"
 import { getServerSettings } from "@/lib/server-settings"
 import { maybeRunDataCleanup } from "@/lib/data-cleanup"
+import { sendAlert } from "@/lib/alerting"
+import { healthState } from "@/lib/health-state"
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 
 const INTERNAL_SECRET = process.env.INTERNAL_SYNC_SECRET!
 
+// Cycles run every ~4s per server — 15 consecutive failures ≈ 1 minute of
+// continuous breakage before we page.
+const SYNC_FAILURE_ALERT_THRESHOLD = 15
+
 export async function POST(req: Request) {
     const authHeader = req.headers.get("x-internal-secret")
 
-    if (!authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
+    if (!INTERNAL_SECRET || !authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
         console.error("[SYNC 401] Unauthorized")
         return new NextResponse("Unauthorized", { status: 401 })
     }
@@ -54,12 +60,38 @@ export async function POST(req: Request) {
 
                 trackSyncCycle(server.id, Date.now() - syncStart, res.newLogsCount, "ok")
                 syncResults.push({ serverId: server.id, newLogs: res.newLogsCount })
+
+                healthState.lastSyncOkAt = Date.now()
+                const failures = healthState.consecutiveSyncFailures.get(server.id) || 0
+                if (failures >= SYNC_FAILURE_ALERT_THRESHOLD) {
+                    sendAlert({
+                        key: `sync-recovered:${server.id}`,
+                        title: "Log sync recovered",
+                        message: `Sync for **${server.name || server.id}** is working again after ${failures} consecutive failures.`,
+                        severity: "info",
+                        cooldownMs: 0,
+                    })
+                }
+                healthState.consecutiveSyncFailures.set(server.id, 0)
             } catch (e: any) {
                 trackSyncCycle(server.id, Date.now() - syncStart, 0, "error", e.message)
                 // Log but don't stop the whole sync for one server failure
                 console.error(`[SYNC] Failed for server ${server.id}:`, e.message)
+
+                const failures = (healthState.consecutiveSyncFailures.get(server.id) || 0) + 1
+                healthState.consecutiveSyncFailures.set(server.id, failures)
+                if (failures === SYNC_FAILURE_ALERT_THRESHOLD) {
+                    sendAlert({
+                        key: `sync-fail:${server.id}`,
+                        title: "Log sync failing",
+                        message: `Sync for **${server.name || server.id}** has failed ${failures} times in a row (~1 min). Mod panels for this server are stale.\n\`\`\`${String(e.message).slice(0, 500)}\`\`\``,
+                        severity: "critical",
+                        fields: { serverId: server.id },
+                    })
+                }
             }
         }
+        healthState.lastSyncAt = Date.now()
 
         return NextResponse.json({ success: true, results: syncResults })
     } catch (e: any) {

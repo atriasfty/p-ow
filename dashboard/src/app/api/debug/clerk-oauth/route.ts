@@ -5,6 +5,13 @@ import { isSuperAdmin } from "@/lib/admin";
 
 export async function GET(req: Request) {
     try {
+        // Dev-only debug tool: it returns raw Discord OAuth access tokens. Never
+        // expose that in production, even to a superadmin (browser history/logs
+        // become a token oracle for every user).
+        if (process.env.NODE_ENV === "production") {
+            return new NextResponse("Not found", { status: 404 })
+        }
+
         const session = await getSession()
         if (!session) return new NextResponse("Unauthorized", { status: 401 })
         if (!isSuperAdmin(session.user as any)) return new NextResponse("Forbidden", { status: 403 })

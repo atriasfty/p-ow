@@ -20,6 +20,7 @@ export async function POST(req: Request) {
     const authHeader = req.headers.get("x-internal-secret")
 
     if (
+        !INTERNAL_SECRET ||
         !authHeader ||
         authHeader.length !== INTERNAL_SECRET.length ||
         !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))

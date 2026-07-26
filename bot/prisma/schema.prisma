@@ -7,32 +7,66 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model VisionHandshake {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model Server {
   id          String   @id @default(cuid())
   name        String
   apiUrl      String   @map("api_key") // Storing PRC Server Key here
   bannerUrl   String?  // Custom banner image URL
   customName  String?  // Display name override
-  onDutyRoleId String? // Discord Role ID to give when on duty
   discordGuildId String? // Discord Guild ID for this server
-  autoSyncRoles Boolean @default(false) // Auto-sync roles every 10s
   suspendedRoleId  String? // Discord Role ID - blocks mod panel access
   terminatedRoleId String? // Discord Role ID - removes user from server
   staffRoleId      String? // General staff Discord role (viewer access)
   permLogChannelId String? // Discord Channel ID for Permission Logs
-  milestoneChannelId String? // Discord Channel ID for Milestone Announcements
+  staffRequestChannelId String? // Discord Channel ID for Staff Requests
+  raidAlertChannelId    String? // Discord Channel ID for Raid Alerts
+  commandLogChannelId   String? // Discord Channel ID for Command Logs
+  milestoneChannelId    String? // Discord Channel ID for Milestone Announcements
+  onDutyRoleId          String? // Discord Role ID for On Duty staff
+  autoSyncRoles         Boolean @default(false) // Whether to auto-sync roles from Discord
   createdAt   DateTime @default(now())
   
-  // Per-Server Behavior Settings
-  settings              String?  // JSON blob for ServerSettings
-
+  // POW Subscription
+  subscriberUserId  String?   // Clerk user ID of subscriber
+  subscriptionPlan  String?   // 'pow-pro' | 'pow-max' | null (free)
+  
+  // White-label Bot (Max only)
+  customBotToken    String?   // Encrypted Discord bot token
+  customBotEnabled  Boolean   @default(false)
+  
   // Custom Server Configuration Overrides
   maxUploadSize         Int?      // In bytes
   staffRequestRateLimit Int?      // In milliseconds
   
-  // Staff Features
+  // Webhook Notifications (Feature 6)
+  webhookUrl            String?   // Discord webhook URL
+  webhookEvents         String?   // JSON array of event types to notify
+  
+  // PRC v2 Inbound Webhooks
+  prcWebhookId          String?   @unique @default(cuid())
+  webhookEnabled        Boolean   @default(true)
+  webhookPublicKey      String?   @default("MCowBQYDK2VwAyEAjSICb9pp0kHizGQtdG8ySWsDChfGqi+gyFCttigBNOA=")
+  
+  // Recruitment & Staff Features
   loaChannelId           String?   // Where LOA requests go for review
   onLoaRoleId            String?   // Role applied while on LOA
+  featureLoa             Boolean   @default(true)
+  featureStaffReq        Boolean   @default(true)
+  featurePermLog         Boolean   @default(true)
+  
+  // Per-Server Behavior Settings
+  settings              String?  // JSON blob for ServerSettings
+
+  // Operational Status
+  botMissingPermissions Boolean  @default(false)
+  deletionScheduledAt   DateTime?
   
   logs            Log[]
   punishments     Punishment[]
@@ -40,8 +74,17 @@ model Server {
   roles           Role[]
   members         Member[]
   leaveOfAbsences LeaveOfAbsence[]
+  automations     Automation[]
   botQueue        BotQueue[]
+  forms           Form[]
+  apiKeys         ApiKey[]
   milestones      StaffMilestone[]
+  
+  // PRC v2 Data
+  playerLocations PlayerLocation[]
+  modCalls        ModCall[]
+  emergencyCalls  EmergencyCall[]
+  vehicleLogs     VehicleLog[]
 
   @@index([discordGuildId])
 }
@@ -90,11 +133,14 @@ model Log {
   createdAt DateTime @default(now())
   
   @@index([serverId, createdAt])
-  @@index([serverId, type, prcTimestamp])
+  @@index([serverId, type, prcTimestamp]) // Optimizes duplicate checking
   @@index([playerId])
   @@index([killerId])
   @@index([victimId])
-  @@unique([serverId, type, prcTimestamp])
+  // DB-level dedup key must match the app-level fingerprint in log-syncer.ts
+  // (type + timestamp + player + killer + victim). A coarser key collides when
+  // two different players act in the same second, aborting the whole insert.
+  @@unique([serverId, type, prcTimestamp, playerId, killerId, victimId])
 }
 
 model Punishment {
@@ -108,7 +154,7 @@ model Punishment {
   resolved    Boolean  @default(false)
   createdAt   DateTime @default(now())
 
-  @@index([serverId, userId, createdAt])
+  @@index([serverId, userId, createdAt]) // Optimizes profile loading
 }
 
 model Shift {
@@ -151,6 +197,8 @@ model Role {
   canManageBolos      Boolean @default(true)
   canRequestLoa       Boolean @default(true)
   canViewQuota        Boolean @default(true)
+  canUseAdminCommands Boolean @default(false)
+  canAccessAdmin      Boolean @default(false) // Auto-grant admin panel access to role members
   
   server       Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
   serverId     String
@@ -172,7 +220,9 @@ model Member {
   role      Role?    @relation(fields: [roleId], references: [id])
   roleId    String?
   
+  lastVerifiedAt DateTime? 
   createdAt DateTime @default(now())
+
 
   @@unique([userId, serverId])
   @@index([userId])
@@ -183,7 +233,7 @@ model Member {
 model LeaveOfAbsence {
   id          String    @id @default(cuid())
   userId      String
-  robloxUsername String?
+  robloxUsername String?  // Added for consistent display
   serverId    String
   server      Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
   startDate   DateTime
@@ -196,6 +246,24 @@ model LeaveOfAbsence {
   
   @@index([serverId, status])
   @@index([userId])
+}
+
+model Automation {
+  id        String   @id @default(cuid())
+  name      String
+  enabled   Boolean  @default(true)
+  trigger   String   // e.g., "PLAYER_JOIN", "SHIFT_START"
+  conditions String  // JSON string
+  actions    String  // JSON string
+  lastRunAt  DateTime?
+  
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId  String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([serverId])
 }
 
 model BotQueue {
@@ -217,6 +285,284 @@ model BotQueue {
   @@index([serverId, status])
 }
 
+// SECURITY & API MANAGEMENT
+model UserAiUsage {
+  id        String   @id @default(cuid())
+  userId    String   // Clerk user ID
+  day       Int
+  month     Int      // 0-11
+  year      Int
+  count     Int      @default(0)
+  
+  @@unique([userId, day, month, year])
+  @@index([userId])
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String   // Name of the tool/integration
+  key         String?  @unique // Legacy plaintext secret — null for keys created after the hashing rollout
+  keyHash     String?  @unique // SHA-256 hex of the secret key; lookups match on this, never on plaintext
+  keyPrefix   String?  // First chars of the key (e.g. "pow_1a2b3c4d") for display masking only
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  lastUsed    DateTime?
+
+  server      Server?  @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  serverId    String?
+
+  // Rate Limiting
+  rateLimit   Int      @default(5)   // Seconds between requests
+  dailyLimit  Int      @default(500) // Max requests per 24h
+  usageCount  Int      @default(0)   // Requests today
+  resetAt     DateTime @default(now()) // When usageCount resets
+  
+  // IP Allowlist (Feature 4)
+  allowedIps  String?   // Comma-separated list of allowed IPs
+
+  @@index([serverId])
+}
+
+model BannedIp {
+  id        String   @id @default(cuid())
+  ip        String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model SecurityLog {
+  id        String   @id @default(cuid())
+  event     String   // e.g. "IP_BANNED", "BLOCKED_REQUEST", "API_KEY_USED", "SETTINGS_UPDATED"
+  ip        String?  // Keep IP optional for internal dashboard actions
+  origin    String   @default("API") // "API" or "DASHBOARD"
+  serverId  String?  // Optional for global security events
+  creatorId String?  // Clerk user ID for dashboard actions
+  details   String?
+  createdAt DateTime @default(now())
+
+  @@index([serverId])
+  @@index([ip])
+  @@index([createdAt])
+}
+
+// CommandQueue model removed - sync feature deprecated
+
+// FORMS FEATURE
+model Form {
+  id          String   @id @default(cuid())
+  serverId    String
+  server      Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  // Basic Info
+  title           String
+  description     String?
+  bannerUrl       String?
+  
+  // Settings
+  status          String    @default("draft")    // draft, published, closed
+  requiresAuth    Boolean   @default(false)      // Require POW account to submit
+  isAnonymous     Boolean   @default(false)      // Hide respondent identity from admins
+  allowMultiple   Boolean   @default(true)       // Allow multiple submissions per person
+  maxResponses    Int?                           // Total response limit (null = unlimited)
+  expiresAt       DateTime?                      // Form expiration date
+  
+  // Special Types
+  isApplication   Boolean   @default(false)      // If true, trigger recruitment workflow
+  acceptedRoleId  String?                        // Discord role to grant on acceptance
+  recruitmentChannelId String?                   // Per-form recruitment review channel
+  congratsChannelId    String?                   // Per-form celebration channel
+  
+  // Discord Notifications
+  notifyChannelId String?                        // Discord channel for notifications
+  
+  // Advanced Settings
+  thankYouMessage String?                        // Custom message after submission
+  requiredRoleIds String?                        // JSON array of role IDs required to access
+  ignoredRoleIds  String?                        // JSON array of role IDs blocked from accessing
+  
+  // Sharing
+  publicShareId   String    @unique @default(cuid()) // For public share links
+  editorShareId   String    @unique @default(cuid()) // For editor access links
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String                             // Clerk user ID of creator
+  
+  sections      FormSection[]
+  responses     FormResponse[]
+  editorAccess  FormEditorAccess[]
+  
+  @@index([serverId])
+  @@index([publicShareId])
+  @@index([editorShareId])
+}
+
+model FormSection {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?
+  order       Int      @default(0)
+  
+  questions   FormQuestion[]
+  
+  @@index([formId])
+}
+
+model FormQuestion {
+  id          String      @id @default(cuid())
+  sectionId   String
+  section     FormSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
+  type        String                          // short_text, long_text, multiple_choice, checkbox, 
+                                              // dropdown, scale, date, time, file_upload
+  label       String
+  description String?
+  required    Boolean   @default(false)
+  order       Int       @default(0)
+  
+  // Options (JSON) - for choice-based questions
+  // e.g., { "options": ["Yes", "No"], "min": 1, "max": 10, "allowedTypes": ["image/*"] }
+  config      String    @default("{}")
+  
+  // Conditional Logic (JSON)
+  // e.g., { "showIf": { "questionId": "xxx", "operator": "equals", "value": "Yes" } }
+  conditions  String    @default("{}")
+  
+  answers     FormAnswer[]
+  
+  @@index([sectionId])
+}
+
+model FormResponse {
+  id          String   @id @default(cuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  
+  respondentId    String?                      // Clerk user ID (null if anonymous/no-auth)
+  respondentEmail String?                      // Optional email for non-auth forms
+  
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  status      String   @default("completed")    // draft, completed
+  
+  answers     FormAnswer[]
+  
+  @@index([formId])
+  @@index([respondentId])
+}
+
+model FormAnswer {
+  id          String       @id @default(cuid())
+  responseId  String
+  response    FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId  String
+  question    FormQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  // Store answer as JSON to handle all types uniformly
+  // e.g., "Hello" for text, ["Option A", "Option B"] for checkbox, { "fileUrl": "...", "fileName": "..." } for uploads
+  value       String
+  
+  @@index([responseId])
+  @@index([questionId])
+  @@unique([responseId, questionId]) // Ensure one answer per question per response
+}
+
+model FormEditorAccess {
+  id        String  @id @default(cuid())
+  formId    String
+  form      Form    @relation(fields: [formId], references: [id], onDelete: Cascade)
+  userId    String                              // Clerk user ID with editor access
+  
+  grantedAt DateTime @default(now())
+  
+  @@unique([formId, userId])
+  @@index([userId])
+}
+
+// PRC v2 DATA MODELS
+model PlayerLocation {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  userId          String
+  playerName      String?
+  
+  locationX       Float
+  locationZ       Float
+  postalCode      String?
+  streetName      String?
+  buildingNumber  String?
+  
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, userId, createdAt])
+}
+
+model ModCall {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  callerId        String
+  callerName      String?
+  description     String?
+  callNumber      Int?
+  positionX       Float?
+  positionZ       Float?
+  positionDescriptor String?
+  respondingPlayers  String?  // JSON array of Roblox IDs who responded
+  
+  timestamp       Int?     // PRC timestamp
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model EmergencyCall {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  team            String   // Police, Fire, etc.
+  callerId        String
+  callerName      String?
+  description     String?
+  callNumber      Int?
+  positionX       Float?
+  positionZ       Float?
+  positionDescriptor String?
+  
+  timestamp       Int?     // PRC timestamp
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+model VehicleLog {
+  id              String   @id @default(cuid())
+  serverId        String
+  server          Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  
+  ownerId         String
+  ownerName       String?
+  vehicleName     String
+  licensePlate    String?
+  color           String?
+  livery          String?
+  positionX       Float?
+  positionZ       Float?
+  
+  timestamp       Int?     // PRC timestamp
+  createdAt       DateTime @default(now())
+
+  @@index([serverId, createdAt])
+}
+
+
 model VisionDevice {
   id           String    @id @default(cuid())
   userId       String
@@ -227,4 +573,26 @@ model VisionDevice {
   revokedAt    DateTime?
 
   @@index([userId])
+}
+
+// Rotector third-party safety-signal cache. Bare flagType integer only —
+// never category/reasons/confidence/evidence (see rotector-integration-compliance.md).
+// flagType 8 (redacted) is never stored: the row is deleted on sight instead.
+model RotectorFlag {
+  robloxId    String   @id
+  flagType    Int
+  retrievedAt DateTime @default(now())
+}
+
+// Access log for every disclosure of a Rotector flag to a moderator, retained
+// separately from RotectorFlag itself.
+model RotectorFlagView {
+  id          String   @id @default(cuid())
+  serverId    String
+  actorUserId String
+  robloxId    String
+  viewedAt    DateTime @default(now())
+
+  @@index([serverId])
+  @@index([robloxId])
 }

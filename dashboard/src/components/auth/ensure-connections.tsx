@@ -7,7 +7,11 @@ import { ConnectionRequirementScreen } from "@/components/auth/connection-requir
 export function EnsureConnections({ children }: { children: React.ReactNode }) {
     const { user, isLoaded } = useUser()
 
-    if (!isLoaded) return <div className="p-8 text-white">Loading...</div>
+    // Render optimistically while Clerk loads: signed-out visitors (the common
+    // case on public pages) would otherwise stare at a blank loading screen,
+    // and a Clerk outage would take down the whole site. The connection
+    // requirement below still kicks in as soon as a signed-in user resolves.
+    if (!isLoaded) return <>{children}</>
     if (!user) return <>{children}</>
 
     // Check for discord account in external accounts

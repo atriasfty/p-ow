@@ -19,6 +19,10 @@ module.exports = {
       cwd: `${currentLink}/dashboard`,
       watch: false,
       autorestart: true,
+      env: {
+        NODE_ENV: 'production',
+        APP_ENV: envPrefix,
+      }
     },
     {
       name: `pow-bot-${envPrefix}`,
@@ -28,7 +32,11 @@ module.exports = {
       watch: false,
       autorestart: true,
       env: {
-        BOT_HEALTH_PORT: process.env.BOT_HEALTH_PORT || 41732
+        // NODE_ENV matters: the log-sync driver only suppresses
+        // connection-refused alerts outside production
+        NODE_ENV: 'production',
+        APP_ENV: envPrefix,
+        BOT_HEALTH_PORT: process.env.BOT_HEALTH_PORT || 41734
       }
     },
     {
@@ -39,6 +47,8 @@ module.exports = {
       watch: false,
       autorestart: true,
       env: {
+        NODE_ENV: 'production',
+        APP_ENV: envPrefix,
         SYNC_PORT: syncPort
       }
     },

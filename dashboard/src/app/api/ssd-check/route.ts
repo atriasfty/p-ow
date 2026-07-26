@@ -19,6 +19,13 @@ export async function GET(req: Request) {
         return NextResponse.json({ ssd: null })
     }
 
+    // Only current members of the server may read its SSD notice — consistent with
+    // the POST handler. Without this a user who has left the server could still
+    // receive its shutdown notice if their old ID lingers in affectedUserIds.
+    if (!(await isServerMember(session.user, serverId))) {
+        return NextResponse.json({ ssd: null })
+    }
+
     try {
         // Check for SSD event for this server
         const ssdEvent = await prisma.config.findUnique({

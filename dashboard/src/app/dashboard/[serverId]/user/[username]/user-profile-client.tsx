@@ -42,6 +42,7 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
     const [error, setError] = useState("")
     const [robloxWarning, setRobloxWarning] = useState("") // Warning for partial panel
     const [playerStatus, setPlayerStatus] = useState<PlayerStatus | null>(null)
+    const [rotectorFlagged, setRotectorFlagged] = useState(false)
     const { permissions } = usePermissions()
     const { showConfirm } = useDialog()
     // Admin shift management state
@@ -166,6 +167,29 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
         return () => clearInterval(interval)
     }, [serverId, username, robloxUser])
 
+    // Rotector flag check — bare boolean only, no detail fetched or stored client-side.
+    useEffect(() => {
+        if (!robloxUser?.id) return
+        let cancelled = false
+
+        const checkFlag = async () => {
+            try {
+                const res = await apiFetch(`/api/rotector/status`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ serverId, robloxIds: [String(robloxUser.id)] })
+                })
+                if (res.ok && !cancelled) {
+                    const data: Record<string, boolean> = await res.json()
+                    setRotectorFlagged(Boolean(data[String(robloxUser.id)]))
+                }
+            } catch (e) { }
+        }
+
+        checkFlag()
+        return () => { cancelled = true }
+    }, [serverId, robloxUser?.id])
+
     // End a user's shift
     const handleEndShift = async () => {
         if (!robloxUser || !activeShift) return
@@ -288,6 +312,27 @@ export function UserProfileClient({ serverId, username }: { serverId: string, us
                             </div>
                         </div>
                     </div>
+
+                    {/* Rotector Flag Notice — bare attribution only, no reasons/category/confidence shown per compliance doc */}
+                    {rotectorFlagged && (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-red-400 font-bold">This user was flagged by Rotector</p>
+                                <p className="text-red-400/70 text-sm mt-1">
+                                    Confirmed by Rotector&apos;s human reviewers. Atria has not independently verified this flag.
+                                </p>
+                                <a
+                                    href={`https://roscoe.rotector.com/v1/lookup/roblox/user/${robloxUser.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block mt-2 text-sm text-red-400 underline hover:text-red-300"
+                                >
+                                    View on Rotector &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Live Status Card */}
                     <div className="bg-[#1a1a1a] rounded-2xl p-5 border border-[#2a2a2a]">

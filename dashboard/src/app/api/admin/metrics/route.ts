@@ -72,21 +72,29 @@ async function queryPostHogEvents(eventName: string, hours: number = 24): Promis
     }
 }
 
+// Events carry `weight` = number of real occurrences they represent
+// (fast OK calls are sampled 1-in-N at the source). Sum weights, don't count events.
+function weightOf(e: PostHogEvent): number {
+    return e.properties.weight || 1
+}
+
 function aggregateServiceMetrics(serviceEvents: PostHogEvent[], service: string) {
     if (serviceEvents.length === 0) {
         return { service, avgMs: 0, p95Ms: 0, p99Ms: 0, totalCalls: 0, errorRate: 0, errors: 0, timeouts: 0 }
     }
 
     const durations = serviceEvents.map((e) => e.properties.duration_ms).sort((a: number, b: number) => a - b)
-    const errors = serviceEvents.filter((e) => e.properties.status === "error").length
-    const timeouts = serviceEvents.filter((e) => e.properties.status === "timeout").length
-    const total = serviceEvents.length
+    const errors = serviceEvents.filter((e) => e.properties.status === "error").reduce((a, e) => a + weightOf(e), 0)
+    const timeouts = serviceEvents.filter((e) => e.properties.status === "timeout").reduce((a, e) => a + weightOf(e), 0)
+    const total = serviceEvents.reduce((a, e) => a + weightOf(e), 0)
+    const weightedDurationSum = serviceEvents.reduce((a, e) => a + (e.properties.duration_ms || 0) * weightOf(e), 0)
 
     return {
         service,
-        avgMs: Math.round(durations.reduce((a: number, b: number) => a + b, 0) / total),
-        p95Ms: Math.round(durations[Math.floor(total * 0.95)] || 0),
-        p99Ms: Math.round(durations[Math.floor(total * 0.99)] || 0),
+        avgMs: Math.round(weightedDurationSum / total),
+        // Percentiles over observed samples (approximation under sampling)
+        p95Ms: Math.round(durations[Math.floor(durations.length * 0.95)] || 0),
+        p99Ms: Math.round(durations[Math.floor(durations.length * 0.99)] || 0),
         totalCalls: total,
         errorRate: Math.round((errors + timeouts) / total * 100),
         errors,
@@ -101,7 +109,7 @@ function getStatusCodeBreakdown(events: PostHogEvent[]) {
         // Use the http_status property, fallback to status
         const code = e.properties.http_status || (e.properties.status === "ok" ? 200 : 500)
         const key = code.toString()
-        codes.set(key, (codes.get(key) || 0) + 1)
+        codes.set(key, (codes.get(key) || 0) + weightOf(e))
     }
 
     return Array.from(codes.entries())
@@ -110,7 +118,7 @@ function getStatusCodeBreakdown(events: PostHogEvent[]) {
 }
 
 function getTimeSeries(serviceEvents: PostHogEvent[], service: string, hours: number, bucketMinutes: number = 5) {
-    const buckets = new Map<string, { durations: number[]; errors: number }>()
+    const buckets = new Map<string, { durations: number[]; errors: number; calls: number; weightedMs: number }>()
 
     // Initialize ALL buckets with zeros to prevent gaps that break charts
     // Use UTC to ensure alignment with PostHog's ISO strings
@@ -123,7 +131,7 @@ function getTimeSeries(serviceEvents: PostHogEvent[], service: string, hours: nu
     const roundedStart = Math.floor(startMs / bucketMs) * bucketMs
 
     for (let t = roundedStart; t <= now.getTime(); t += bucketMs) {
-        buckets.set(new Date(t).toISOString(), { durations: [], errors: 0 })
+        buckets.set(new Date(t).toISOString(), { durations: [], errors: 0, calls: 0, weightedMs: 0 })
     }
 
     for (const e of serviceEvents) {
@@ -137,27 +145,30 @@ function getTimeSeries(serviceEvents: PostHogEvent[], service: string, hours: nu
 
         // If exact key doesn't exist (edge case), find nearest or create
         if (!buckets.has(key)) {
-            buckets.set(key, { durations: [], errors: 0 })
+            buckets.set(key, { durations: [], errors: 0, calls: 0, weightedMs: 0 })
         }
 
         const bucket = buckets.get(key)!
+        const w = weightOf(e)
         bucket.durations.push(e.properties.duration_ms)
-        if (e.properties.status !== "ok") bucket.errors++
+        bucket.calls += w
+        bucket.weightedMs += (e.properties.duration_ms || 0) * w
+        if (e.properties.status !== "ok") bucket.errors += w
     }
 
     return Array.from(buckets.entries())
         .sort(([a], [b]) => a.localeCompare(b)) // ISO sort works for time
         .map(([time, data]) => ({
             time,
-            avgMs: data.durations.length > 0 ? Math.round(data.durations.reduce((a, b) => a + b, 0) / data.durations.length) : 0,
+            avgMs: data.calls > 0 ? Math.round(data.weightedMs / data.calls) : 0,
             p95Ms: data.durations.length > 0 ? Math.round(data.durations.sort((a, b) => a - b)[Math.floor(data.durations.length * 0.95)] || 0) : 0,
             errors: data.errors,
-            calls: data.durations.length,
+            calls: data.calls,
         }))
 }
 
 function getEndpointBreakdown(serviceEvents: PostHogEvent[], service: string) {
-    const byEndpoint = new Map<string, { durations: number[]; errors: number }>()
+    const byEndpoint = new Map<string, { durations: number[]; errors: number; calls: number; weightedMs: number }>()
 
     for (const e of serviceEvents) {
         // Fallback to "unknown" if endpoint is missing, but it should be there.
@@ -165,20 +176,23 @@ function getEndpointBreakdown(serviceEvents: PostHogEvent[], service: string) {
         let endpoint = e.properties.endpoint || "unknown"
         if (endpoint.includes("?")) endpoint = endpoint.split("?")[0]
 
-        const data = byEndpoint.get(endpoint) || { durations: [], errors: 0 }
+        const data = byEndpoint.get(endpoint) || { durations: [], errors: 0, calls: 0, weightedMs: 0 }
+        const w = weightOf(e)
         data.durations.push(e.properties.duration_ms)
-        if (e.properties.status !== "ok") data.errors++
+        data.calls += w
+        data.weightedMs += (e.properties.duration_ms || 0) * w
+        if (e.properties.status !== "ok") data.errors += w
         byEndpoint.set(endpoint, data)
     }
 
     return Array.from(byEndpoint.entries())
         .map(([endpoint, data]) => ({
             endpoint,
-            avgMs: Math.round(data.durations.length > 0 ? data.durations.reduce((a, b) => a + b, 0) / data.durations.length : 0),
+            avgMs: Math.round(data.calls > 0 ? data.weightedMs / data.calls : 0),
             p95Ms: Math.round(data.durations.length > 0 ? data.durations.sort((a, b) => a - b)[Math.floor(data.durations.length * 0.95)] || 0 : 0),
-            calls: data.durations.length,
+            calls: data.calls,
             errors: data.errors,
-            errorRate: data.durations.length > 0 ? Math.round(data.errors / data.durations.length * 100) : 0,
+            errorRate: data.calls > 0 ? Math.round(data.errors / data.calls * 100) : 0,
         }))
         .sort((a, b) => b.avgMs - a.avgMs)
 }
@@ -217,27 +231,36 @@ export async function GET(req: Request) {
         prc: aggregateServiceMetrics(prcEvents, "prc"),
         clerk: aggregateServiceMetrics(clerkEvents, "clerk"),
         powApi: aggregateServiceMetrics(powApiEvents, "pow-api"),
-        database: {
-            service: "database",
-            avgMs: dbEvents.length > 0
-                ? Math.round(dbEvents.reduce((a, e) => a + (e.properties.avg_duration_ms || 0), 0) / dbEvents.length)
-                : 0,
-            p95Ms: 0,
-            totalCalls: dbEvents.reduce((a, e) => a + (e.properties.count || 0), 0),
-            errorRate: 0,
-            errors: 0,
-            timeouts: 0,
-        },
+        // DB metrics now emit one "__overall__" summary per flush plus per-query
+        // events for slow queries only — use just the summaries for totals to
+        // avoid double counting.
+        database: (() => {
+            const overall = dbEvents.filter((e) => e.properties.query === "__overall__")
+            const source = overall.length > 0 ? overall : dbEvents
+            const totalCalls = source.reduce((a, e) => a + (e.properties.count || 0), 0)
+            return {
+                service: "database",
+                avgMs: totalCalls > 0
+                    ? Math.round(source.reduce((a, e) => a + (e.properties.avg_duration_ms || 0) * (e.properties.count || 0), 0) / totalCalls)
+                    : 0,
+                p95Ms: 0,
+                totalCalls,
+                errorRate: 0,
+                errors: 0,
+                timeouts: 0,
+            }
+        })(),
     }
 
-    // Sync pipeline stats
+    // Sync pipeline stats (OK cycles arrive pre-aggregated with weight = cycle count)
+    const totalSyncCycles = syncEvents.reduce((a, e) => a + weightOf(e), 0)
     const syncStats = {
-        totalCycles: syncEvents.length,
-        successRate: syncEvents.length > 0
-            ? Math.round(syncEvents.filter((e) => e.properties.status === "ok").length / syncEvents.length * 100)
+        totalCycles: totalSyncCycles,
+        successRate: totalSyncCycles > 0
+            ? Math.round(syncEvents.filter((e) => e.properties.status === "ok").reduce((a, e) => a + weightOf(e), 0) / totalSyncCycles * 100)
             : 0,
-        avgDurationMs: syncEvents.length > 0
-            ? Math.round(syncEvents.reduce((a, e) => a + (e.properties.duration_ms || 0), 0) / syncEvents.length)
+        avgDurationMs: totalSyncCycles > 0
+            ? Math.round(syncEvents.reduce((a, e) => a + (e.properties.duration_ms || 0) * weightOf(e), 0) / totalSyncCycles)
             : 0,
         totalLogsIngested: syncEvents.reduce((a, e) => a + (e.properties.new_logs_count || 0), 0),
         lastSync: syncEvents.length > 0 ? syncEvents[0].timestamp : null,

@@ -12,6 +12,33 @@ import { startLogSyncService } from "./services/log-sync"
 import { startAutoRoleSync } from "./services/role-sync"
 import { startServerCleanupJob } from "./services/server-cleanup"
 import { deployCommands } from "./deploy-commands"
+import { sendAlert } from "./lib/alerting"
+
+// --- Process-level crash reporting ---
+// A rejected promise with no handler used to kill the process silently and
+// leave PM2 restart-looping with no trace. Report, then let PM2 restart us.
+process.on("unhandledRejection", (reason: any) => {
+    console.error("[FATAL] unhandledRejection:", reason)
+    sendAlert({
+        key: "bot:unhandledRejection",
+        title: "Bot unhandled rejection",
+        message: `\`\`\`${(reason?.stack || String(reason)).slice(0, 1500)}\`\`\``,
+        severity: "critical",
+    })
+})
+
+process.on("uncaughtException", (err) => {
+    console.error("[FATAL] uncaughtException:", err)
+    sendAlert({
+        key: "bot:uncaughtException",
+        title: "Bot uncaught exception — process exiting",
+        message: `\`\`\`${(err.stack || err.message).slice(0, 1500)}\`\`\``,
+        severity: "critical",
+        cooldownMs: 0,
+    })
+    // Give the webhook a moment to send, then exit so PM2 restarts us clean
+    setTimeout(() => process.exit(1), 2000)
+})
 
 client.once(Events.ClientReady, async (c: any) => {
     console.log(`Ready! Logged in as ${c.user?.tag || 'Bot'}`)
@@ -31,6 +58,40 @@ client.once(Events.ClientReady, async (c: any) => {
 
     // Start automated server cleanup (PRC 24h Deletion Policy)
     startServerCleanupJob()
+
+    sendAlert({
+        key: "bot:ready",
+        title: "Bot online",
+        message: `Logged in as ${c.user?.tag || "Bot"} — ${client.guilds.cache.size} guild(s).`,
+        severity: "info",
+        cooldownMs: 5 * 60 * 1000, // quiet rapid restart loops
+    })
+})
+
+// Gateway connection loss — the bot process stays alive but stops doing
+// anything useful (no commands, no log sync driver).
+client.on(Events.ShardDisconnect, (event) => {
+    console.error(`[GATEWAY] Disconnected (code ${event.code})`)
+    sendAlert({
+        key: "bot:gateway-disconnect",
+        title: "Bot disconnected from Discord gateway",
+        message: `Close code ${event.code}. Log syncing and slash commands are down until it reconnects.`,
+        severity: "critical",
+    })
+})
+
+client.on(Events.ShardResume, () => {
+    console.log("[GATEWAY] Resumed")
+})
+
+client.on(Events.Error, (err) => {
+    console.error("[CLIENT] Error:", err)
+    sendAlert({
+        key: "bot:client-error",
+        title: "Discord client error",
+        message: `\`\`\`${(err.stack || err.message).slice(0, 1500)}\`\`\``,
+        severity: "warning",
+    })
 })
 
 client.on(Events.InteractionCreate, async (interaction: Interaction) => {
@@ -161,12 +222,46 @@ client.on(Events.GuildCreate, async (guild) => {
     }
 })
 
-// Health check server
+// Health check server — reports gateway status, DB reachability and
+// outbound queue backlog instead of an unconditional ok.
 const healthPort = parseInt(process.env.BOT_HEALTH_PORT || "41732")
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
     if (req.url === "/health") {
-        res.writeHead(200, { "Content-Type": "application/json" })
-        res.end(JSON.stringify({ ok: true, service: "pow-bot" }))
+        const checks: Record<string, any> = {}
+        let ok = true
+
+        // Discord gateway: 0 = READY
+        const wsStatus = client.ws.status
+        checks.gateway = { ok: wsStatus === 0, status: wsStatus, pingMs: client.ws.ping }
+        if (wsStatus !== 0) ok = false
+
+        try {
+            const oldestPending = await prisma.botQueue.findFirst({
+                where: { status: "PENDING" },
+                orderBy: { createdAt: "asc" },
+                select: { createdAt: true },
+            })
+            const pendingCount = await prisma.botQueue.count({ where: { status: "PENDING" } })
+            const oldestAgeSec = oldestPending
+                ? Math.round((Date.now() - oldestPending.createdAt.getTime()) / 1000)
+                : 0
+            // Queue is processed every few seconds — a minutes-old backlog means it's stuck
+            checks.queue = { ok: oldestAgeSec < 120, pending: pendingCount, oldestAgeSec }
+            checks.db = { ok: true }
+            if (oldestAgeSec >= 120) ok = false
+        } catch (e: any) {
+            checks.db = { ok: false, error: e.message }
+            ok = false
+        }
+
+        checks.process = {
+            uptimeSec: Math.round(process.uptime()),
+            rssMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
+            guilds: client.guilds.cache.size,
+        }
+
+        res.writeHead(ok ? 200 : 503, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ ok, service: "pow-bot", checks }))
         return
     }
     res.writeHead(404)

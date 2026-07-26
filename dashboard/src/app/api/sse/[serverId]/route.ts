@@ -4,6 +4,7 @@ import { isServerMember } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { eventBus, ServerEventType, ServerEventMap } from "@/lib/event-bus"
 import { getServerSettings } from "@/lib/server-settings"
+import { healthState } from "@/lib/health-state"
 
 // Tell Next.js to always run this route dynamically (never statically render it)
 export const dynamic = "force-dynamic"
@@ -45,10 +46,12 @@ export async function GET(
         async start(controller) {
             let closed = false
             let heartbeat: ReturnType<typeof setInterval> | undefined
+            healthState.sseConnections++
 
             const cleanup = () => {
                 if (closed) return
                 closed = true
+                healthState.sseConnections = Math.max(0, healthState.sseConnections - 1)
                 clearInterval(heartbeat)
                 unsubscribe()
                 try { controller.close() } catch { /* already closed */ }
@@ -182,7 +185,8 @@ export async function GET(
                 enqueue("ssd", { ssd: ssdEventData })
 
             } catch (e) {
-                console.error("[SSE] Snapshot error:", e)
+                const { trackError } = await import("@/lib/errors")
+                trackError(e, { source: "sse:snapshot", serverId, userId })
             }
 
             // ---- Flush any live events that arrived while the snapshot was being

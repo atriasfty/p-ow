@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
 import { prisma } from "@/lib/db"
 import { getVisionCorsHeaders } from "@/lib/vision-auth"
+import { checkSecurity } from "@/lib/security"
 
 const MAX_DEVICES_PER_USER = 10
 
@@ -11,6 +12,10 @@ export async function OPTIONS(req: Request) {
 
 export async function POST(req: Request) {
     try {
+        // Rate-limit / IP-ban check, consistent with the other vision routes.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
         if (!process.env.VISION_JWT_SECRET) {
             return NextResponse.json(
                 { error: "Server configuration error" },

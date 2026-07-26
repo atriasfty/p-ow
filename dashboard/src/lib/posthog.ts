@@ -8,10 +8,11 @@ export default function PostHogClient() {
             process.env.NEXT_PUBLIC_POSTHOG_KEY!,
             {
                 host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-                // Flush immediately to ensure data is available for the status dashboard.
-                // This eliminates batching delays.
-                flushAt: 1,
-                flushInterval: 0
+                // Batch events — one HTTP request per ~20 events or every 10s,
+                // instead of one request per event. The status dashboard reads
+                // with up to ~10s lag, which is acceptable.
+                flushAt: 20,
+                flushInterval: 10000
             }
         )
     }

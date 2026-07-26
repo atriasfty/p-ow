@@ -7,6 +7,8 @@ import { findMemberByRobloxId } from "@/lib/clerk-lookup"
 import { eventBus } from "@/lib/event-bus"
 import { getServerSettings } from "@/lib/server-settings"
 import { getWeekStart } from "@/lib/time-windows"
+import { trackError } from "@/lib/errors"
+import { warmRotectorCache } from "@/lib/rotector"
 // import { Prisma } from "@prisma/client"
 
 async function getAutomationEngine() {
@@ -176,7 +178,7 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             engine.trigger("SHIFT_START", {
                 serverId,
                 player: { name: playerName, id: member.userId }
-            }).catch(() => {})
+            }).catch((e) => trackError(e, { source: "log-syncer:automation:SHIFT_START", serverId }))
 
             if (newShift) {
                 eventBus.emit(serverId, 'shift-status', {
@@ -222,10 +224,10 @@ async function handleShiftCommand(log: any, serverId: string, client: PrcClient,
             serverId,
             player: { name: playerName, id: member.userId },
             details: { duration }
-        }).catch(() => {})
+        }).catch((e) => trackError(e, { source: "log-syncer:automation:SHIFT_END", serverId }))
 
         const { processMilestones } = await import("@/lib/milestones")
-        await processMilestones(member.userId, serverId).catch(() => {})
+        await processMilestones(member.userId, serverId).catch((e) => trackError(e, { source: "log-syncer:milestones", serverId, userId: member.userId }))
 
         eventBus.emit(serverId, 'shift-status', { shift: null })
         const onDutyNow = await prisma.shift.findMany({ where: { serverId, endTime: null }, select: { userId: true } })
@@ -330,28 +332,34 @@ async function handleShutdownCommand(log: any, serverId: string) {
     // ⚡ Bolt: Using $transaction to batch all individual shift updates into a single database transaction,
     // drastically reducing overhead from N+1 concurrent transactions during server shutdowns.
     if (activeShifts.length > 0) {
-        await prisma.$transaction(
+        // Guard each update with `endTime: null` so a concurrent `:log shift end`
+        // that already closed a shift in the window between the findMany above and
+        // this write isn't clobbered with a later (wrong) endTime/duration —
+        // which would corrupt quota totals. Only fire side effects for shifts we
+        // actually ended here (count > 0).
+        const results = await prisma.$transaction(
             activeShifts.map((shift: any) => {
                 const duration = Math.floor((now.getTime() - shift.startTime.getTime()) / 1000)
-                return prisma.shift.update({
-                    where: { id: shift.id },
+                return prisma.shift.updateMany({
+                    where: { id: shift.id, endTime: null },
                     data: { endTime: now, duration }
                 })
             })
         )
+        const endedShifts = activeShifts.filter((_: any, i: number) => results[i].count > 0)
 
         const engine = await getAutomationEngine()
         const { processMilestones } = await import("@/lib/milestones")
 
-        for (const shift of activeShifts) {
+        for (const shift of endedShifts) {
             const duration = Math.floor((now.getTime() - shift.startTime.getTime()) / 1000)
             engine.trigger("SHIFT_END", {
                 serverId,
                 player: { name: "System Shutdown", id: shift.userId },
                 details: { duration }
-            }).catch(() => {})
+            }).catch((e) => trackError(e, { source: "log-syncer:automation:SHIFT_END:shutdown", serverId }))
 
-            processMilestones(shift.userId, serverId).catch(() => {})
+            processMilestones(shift.userId, serverId).catch((e) => trackError(e, { source: "log-syncer:milestones:shutdown", serverId, userId: shift.userId }))
         }
 
         eventBus.emit(serverId, 'staff-on-duty-ids', [])
@@ -561,8 +569,13 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
         const dbLogs = parsedLogs.map(l => logToDbFormat(l, serverId)).filter((l): l is any => l !== null)
 
         // Manual deduplication for SQLite (which doesn't support skipDuplicates: true)
-        // 1. Get all timestamps from the logs we're trying to insert
-        const timestamps = dbLogs.map(l => l.prcTimestamp).filter(t => t !== null) as number[]
+        // 1. Get all timestamps from the logs we're trying to insert.
+        //    Note: prcTimestamp can be `undefined` (not just null) when a PRC entry
+        //    omits both Timestamp fields — a plain `!== null` check would let it
+        //    through and poison the Prisma `in` filter, so guard both.
+        const timestamps = dbLogs
+            .map(l => l.prcTimestamp)
+            .filter((t): t is number => t !== null && t !== undefined)
 
         // 2. Fetch existing logs with those timestamps for this server
         const existingLogs = await prisma.log.findMany({
@@ -582,10 +595,26 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
         const uniqueDbLogs = dbLogs.filter(l => !existingKeys.has(getLogKey(l)))
 
         if (uniqueDbLogs.length > 0) {
-            // Batch create unique logs
-            await prisma.log.createMany({
-                data: uniqueDbLogs
-            })
+            // Batch create unique logs. SQLite's createMany has no skipDuplicates,
+            // so any single row that still collides with the DB unique constraint
+            // (e.g. a race with a concurrent poll) would abort the ENTIRE batch and,
+            // via the outer catch, silently discard this whole sync cycle. Guard
+            // against that: on a batch failure, fall back to per-row inserts so one
+            // bad row can't take down the rest of the cycle.
+            try {
+                await prisma.log.createMany({
+                    data: uniqueDbLogs
+                })
+            } catch {
+                for (const row of uniqueDbLogs) {
+                    try {
+                        await prisma.log.create({ data: row })
+                    } catch {
+                        // Row already exists (unique violation) or is otherwise
+                        // unwritable — skip it; the rest of the batch still lands.
+                    }
+                }
+            }
             // Push new logs to SSE clients using the same 5-field key used for deduplication,
             // so we only emit truly new logs (not duplicates that happen to share a timestamp).
             const uniqueDbKeys = new Set(uniqueDbLogs.map(getLogKey))
@@ -662,11 +691,21 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                 const caller = parsePrcPlayer(c.Caller)
                 const moderator = c.Moderator ? parsePrcPlayer(c.Moderator) : null
 
-                // Try to find an existing call by this caller
-                // Best match is one with the exact timestamp, otherwise the most recent one
+                // Try to find an existing call by this caller.
+                // Best match is the exact timestamp; otherwise fall back to a
+                // NEAR-timestamp match (PRC timestamps can drift a second or two
+                // between polls for the same logical call). The tolerance is
+                // bounded so a genuine second call by the same caller later in the
+                // dedupe window isn't merged into an earlier, unrelated one — which
+                // would drop the new call and skip its MOD_CALL automation.
+                const TS_TOLERANCE_SEC = 5
                 let existingCall = recentCalls.find(call => call.callerId === caller.id && call.timestamp === c.Timestamp)
                 if (!existingCall) {
-                    existingCall = recentCalls.find(call => call.callerId === caller.id)
+                    existingCall = recentCalls.find(call =>
+                        call.callerId === caller.id &&
+                        typeof call.timestamp === "number" &&
+                        Math.abs(call.timestamp - c.Timestamp) <= TS_TOLERANCE_SEC
+                    )
                 }
 
                 let newResponders: string[] = []
@@ -828,6 +867,7 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
         if (newLogsCount > 0) {
             const AutomationEngine = await getAutomationEngine()
             const newCommandLogsForDetection: any[] = []
+            const newlyJoinedRobloxIds: string[] = []
 
             // Trigger automations and handlers ONLY for logs that were determined to be new
             for (const log of parsedLogs) {
@@ -841,6 +881,12 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
 
                     if (type === "join") {
                         AutomationEngine.trigger(log.Join !== false ? "PLAYER_JOIN" : "PLAYER_LEAVE", context).catch(() => { })
+                        // Pre-warm the Rotector cache as players join, so a moderator who
+                        // looks a moment later already sees fresh data instead of triggering
+                        // the Rotector call themselves. Not a "view" — nothing is shown yet.
+                        if (log.Join !== false && context.player.id) {
+                            newlyJoinedRobloxIds.push(context.player.id)
+                        }
                     } else if (type === "command") {
                         const cmd = log.Command?.toLowerCase() || ""
                         const prefix = s.inGameCommandPrefix.toLowerCase()
@@ -864,6 +910,12 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
                         AutomationEngine.trigger("PLAYER_KILL", { ...context, target: { name: log.VictimName, id: log.VictimId } }).catch(() => { })
                     }
                 }
+            }
+
+            // One batched cache-warm call per sync cycle rather than one per joining
+            // player — avoids hammering the internal endpoint/Rotector on busy servers.
+            if (newlyJoinedRobloxIds.length > 0) {
+                warmRotectorCache(newlyJoinedRobloxIds).catch(() => { })
             }
 
             // Run Raid Detection

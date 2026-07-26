@@ -3,6 +3,7 @@ import { jwtVerify } from "jose"
 import { prisma } from "@/lib/db"
 import { PrcClient } from "@/lib/prc"
 import { verifyVisionDevice, getVisionCorsHeaders } from "@/lib/vision-auth"
+import { checkSecurity } from "@/lib/security"
 
 // Handle preflight requests
 export async function OPTIONS(req: Request) {
@@ -22,6 +23,11 @@ function parsePlayer(str: string | undefined): { name: string, id: string } {
 // Get all players from all servers
 export async function GET(req: Request) {
     try {
+        // Rate-limit / IP-ban check — this route fans out live PRC API calls to
+        // every server the caller belongs to, so throttle to bound API budget use.
+        const secBlock = await checkSecurity(req)
+        if (secBlock) return secBlock
+
         // Validate required environment variable
         if (!process.env.VISION_JWT_SECRET) {
             console.error("[Vision Users] VISION_JWT_SECRET is not set!")
