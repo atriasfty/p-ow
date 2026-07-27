@@ -27,6 +27,7 @@ p-ow/
   - Staff activity tracking
   - Server management
   - API key management for external integrations
+  - Rotector integration: surfaces third-party, human-confirmed safety flags on the player panel
 
 ### Bot (`/bot`)
 - **Stack**: Discord.js

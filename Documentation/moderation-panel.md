@@ -36,6 +36,7 @@ Clicking on any player's name will open their **Player Profile**. This provides 
 * Every punishment they have ever received on your server.
 * Their recent log activity (Joins, Kills, Commands).
 * **AI Risk Assessment:** (Requires POW Pro/Max) A generated summary analyzing their behavior to determine if they are a high-risk player.
+* **Rotector Flag:** A warning icon appears next to any online player with a confirmed safety flag from [Rotector](https://rotector.com), a third-party safety-signal provider. Opening their Player Panel shows the same notice with a link to Rotector's own assessment.
 
 For more details, see our guide on [**Player Profiles & Panels**](player-panel.md).
 

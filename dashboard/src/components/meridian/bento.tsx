@@ -12,6 +12,7 @@ import {
     Megaphone,
     MousePointer2,
     ScanLine,
+    ShieldAlert,
     Terminal,
     Wrench,
 } from "lucide-react"
@@ -367,8 +368,18 @@ export function FeatureBento() {
                 </Card>
             </Reveal>
 
-            <Reveal className="md:col-span-3">
-                <Card tone="violet" className="md:flex-row md:items-center md:gap-8">
+            <Reveal delay={0.16}>
+                <Card tone="rose" className="h-full">
+                    <CardHeader tone="rose" icon={ShieldAlert} title="Third-party safety signals">
+                        POW checks players against Rotector, a third-party safety-flagging service,
+                        and surfaces confirmed, human-reviewed flags on the player panel with a link
+                        to the source. It&apos;s advisory only — your staff always make the call.
+                    </CardHeader>
+                </Card>
+            </Reveal>
+
+            <Reveal className="md:col-span-2">
+                <Card tone="violet" className="h-full md:flex-row md:items-center md:gap-8">
                     <div className="relative mb-5 max-w-sm md:mb-0">
                         <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${TONES.violet.icon}`}>
                             <Wrench className="h-4.5 w-4.5" />
@@ -378,7 +389,7 @@ export function FeatureBento() {
                             The everyday actions your staff reach for, one tap away.
                         </p>
                     </div>
-                    <div className="relative grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+                    <div className="relative grid flex-1 grid-cols-2 gap-3">
                         {TOOLBOX_ITEMS.map(({ icon: Icon, label, cls }) => (
                             <div
                                 key={label}

@@ -13,5 +13,6 @@ The official dashboard is located at: [**pow.ciankelly.xyz**](https://pow.cianke
 * **Automation Engine:** Trigger Discord notifications and game commands based on server events.
 * **Form Builder:** Create recruitment applications and surveys with automatic role granting.
 * **Pro Features:** Protect your server with automated Raid Detection and AI-powered player risk assessments.
+* **Rotector Integration:** Surface confirmed, human-reviewed safety flags from [Rotector](https://rotector.com), a third-party safety signal, directly on the player panel — advisory only, your staff always make the call.
 
 Explore the sidebar to get started with setting up your community or learning more about specific features.
