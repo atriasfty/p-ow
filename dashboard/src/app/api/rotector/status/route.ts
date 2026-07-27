@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { isServerMember } from "@/lib/admin"
 import { checkSecurity } from "@/lib/security"
 import { logRotectorFlagView } from "@/lib/rotector"
+import { isFeatureEnabled } from "@/lib/feature-flags"
 import { NextResponse } from "next/server"
 
 // Batch Rotector flag lookup for the mod panel. Returns only a boolean per
@@ -44,6 +45,13 @@ export async function POST(req: Request) {
     // role gate is applied here per product decision).
     if (!(await isServerMember(session.user as any, serverId))) {
         return new NextResponse("Forbidden", { status: 403 })
+    }
+
+    // Rotector is behind a superadmin feature flag, defaulted off until its
+    // DPIA is reviewed. checkRotectorFlags() also enforces this, but bail out
+    // here too so a disabled integration doesn't even make the internal hop.
+    if (!(await isFeatureEnabled('ROTECTOR_INTEGRATION'))) {
+        return NextResponse.json({})
     }
 
     try {

@@ -1,5 +1,6 @@
 import { prisma } from "./db"
 import { trackApiCall } from "./metrics"
+import { isFeatureEnabled } from "./feature-flags"
 
 // Rotector third-party safety-signal integration.
 //
@@ -26,6 +27,14 @@ import { trackApiCall } from "./metrics"
 //     caller — the mod panel route and the /api/internal/rotector/status
 //     endpoint used by the bot — shares this one cache and one outbound
 //     rate-limit budget.
+//   - The whole integration is gated behind the ROTECTOR_INTEGRATION feature
+//     flag (superadmin-only, defaults OFF) because the DPIA covering this
+//     integration has not been reviewed yet. checkRotectorFlags() below is
+//     the single chokepoint every caller (both API routes, plus
+//     warmRotectorCache) funnels through, so gating it there — rather than in
+//     each caller — is what makes the flag authoritative. Do not add a path
+//     that reaches Rotector or reads/writes RotectorFlag rows without going
+//     through checkRotectorFlags().
 
 const ROTECTOR_BASE_URL = "https://roscoe.rotector.com"
 const ROTECTOR_STATUS_PATH = "/v1/lookup/roblox/user/status"
@@ -192,8 +201,14 @@ async function doFetchBatch(ids: string[], retryCount = 0): Promise<Map<string, 
  * bare flagType integer.
  */
 export async function checkRotectorFlags(robloxIds: string[]): Promise<Map<string, boolean>> {
-    const uniqueIds = [...new Set(robloxIds.filter(id => /^[0-9]+$/.test(id)))]
     const result = new Map<string, boolean>()
+
+    // Feature-flagged off (default, until the DPIA is reviewed): no outbound
+    // call, no cache read, nothing to display. Every caller funnels through
+    // this function, so this is the one place that needs to enforce it.
+    if (!(await isFeatureEnabled('ROTECTOR_INTEGRATION'))) return result
+
+    const uniqueIds = [...new Set(robloxIds.filter(id => /^[0-9]+$/.test(id)))]
     if (uniqueIds.length === 0) return result
 
     const cached = await prisma.rotectorFlag.findMany({

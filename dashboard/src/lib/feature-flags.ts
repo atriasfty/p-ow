@@ -11,6 +11,7 @@ export const FEATURE_FLAGS = {
     SUBSCRIPTIONS_ENABLED: 'subscriptions-enabled',
     SERVER_CREATION: 'server-creation',
     PRICING_PAGE: 'pricing-page',
+    ROTECTOR_INTEGRATION: 'rotector-integration',
 
     // Server-level feature capabilities
     FORMS_LIMIT_CHECK: 'forms-limit-check',           // "free" has limit, pro/max skip limits
@@ -95,6 +96,11 @@ export const isFeatureEnabled = cache(async (flag: FeatureFlag): Promise<boolean
     if (flag === 'SUBSCRIPTIONS_ENABLED' || flag === 'SERVER_CREATION' || flag === 'PRICING_PAGE') {
         const defaultValue = flag === 'PRICING_PAGE' ? true : true // Default all to true
         return await getGlobalConfig(flag, defaultValue)
+    }
+    // Rotector must stay off until its DPIA has been reviewed — default false,
+    // not true like the other global toggles above.
+    if (flag === 'ROTECTOR_INTEGRATION') {
+        return await getGlobalConfig(flag, false)
     }
     return true
 })

@@ -3,7 +3,7 @@
 import { apiFetch } from "@/lib/api-fetch"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Save, Shield, Zap, Globe, Lock, Info, Server, CreditCard, Layout } from "lucide-react"
+import { Loader2, Save, Shield, Zap, Globe, Lock, Info, Server, CreditCard, Layout, Eye } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -158,11 +158,18 @@ export function SuperSettingsPanel({ initialConfigs }: SuperSettingsPanelProps) 
                             icon={Layout}
                             defaultOn={true}
                         />
-                        <ToggleSetting 
+                        <ToggleSetting
                             id="MAINTENANCE_MODE"
                             label="Maintenance Mode"
                             description="Block access to the dashboard for maintenance."
                             icon={Lock}
+                        />
+                        <ToggleSetting
+                            id="ROTECTOR_INTEGRATION"
+                            label="Rotector Integration"
+                            description="Shows Rotector flags in the mod & player panels. OFF until the DPIA is reviewed — do not enable without legal sign-off."
+                            icon={Eye}
+                            defaultOn={false}
                         />
                     </div>
                 </div>
