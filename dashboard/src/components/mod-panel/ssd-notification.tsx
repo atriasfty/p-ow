@@ -40,6 +40,7 @@ export function SsdNotification({ serverId }: { serverId: string }) {
                         </div>
                         <button
                             onClick={handleDismiss}
+                            aria-label="Dismiss server shutdown notification"
                             className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors"
                         >
                             <X className="h-5 w-5" />
