@@ -2,6 +2,14 @@ import { redirect } from "next/navigation"
 import { getSession } from "@/lib/auth-clerk"
 import { SignJWT } from "jose"
 import { CopyButton } from "./copy-button"
+import { AutoRedirect } from "./auto-redirect"
+
+// Custom URL scheme names are short alphanumeric+hyphen tokens by
+// convention (e.g. "powvision-mac"). Validate before interpolating into a
+// `window.location.href` navigation — this is a public page driven by a
+// query param, so an unvalidated scheme could be abused to redirect a
+// user's own valid session token to an arbitrary scheme handler.
+const SCHEME_PATTERN = /^[a-z][a-z0-9-]{2,31}$/
 
 export const dynamic = 'force-dynamic'
 
@@ -13,19 +21,23 @@ const VISION_SECRET = new TextEncoder().encode(
 import { handshakeCodes } from "@/lib/handshake-store"
 
 interface Props {
-    searchParams: Promise<{ code?: string }>
+    searchParams: Promise<{ code?: string; scheme?: string }>
 }
 
 export default async function VisionAuthPage({ searchParams }: Props) {
-    const { code: handshakeCode } = await searchParams
+    const { code: handshakeCode, scheme: rawScheme } = await searchParams
+    const scheme = rawScheme && SCHEME_PATTERN.test(rawScheme) ? rawScheme : null
 
     // Check if user is logged in first
     const session = await getSession()
 
     if (!session?.user) {
-        // Redirect to login with the code preserved
+        // Redirect to login with the code (and scheme, if present) preserved
         if (handshakeCode) {
-            redirect(`/login?redirect_url=${encodeURIComponent(`/vision-auth?code=${handshakeCode}`)}`)
+            const returnPath = scheme
+                ? `/vision-auth?code=${handshakeCode}&scheme=${scheme}`
+                : `/vision-auth?code=${handshakeCode}`
+            redirect(`/login?redirect_url=${encodeURIComponent(returnPath)}`)
         }
         redirect("/login?redirect_url=/vision-auth")
     }
@@ -75,9 +87,13 @@ export default async function VisionAuthPage({ searchParams }: Props) {
                     </div>
                     <h1 className="text-white text-2xl font-bold mb-2">POW Vision Token</h1>
                     <p className="text-white/50 text-sm">
-                        Copy this token and paste it into POW Vision to log in.
+                        {scheme
+                            ? "Returning you to POW Vision automatically. If it doesn't work, copy the token below instead."
+                            : "Copy this token and paste it into POW Vision to log in."}
                     </p>
                 </div>
+
+                {scheme && <AutoRedirect token={token} scheme={scheme} />}
 
                 <div className="mb-6">
                     <label className="block text-white/40 text-xs uppercase font-bold mb-2">
