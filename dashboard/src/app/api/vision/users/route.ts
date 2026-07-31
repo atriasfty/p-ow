@@ -76,7 +76,17 @@ export async function GET(req: Request) {
             where: { userId: visionPayload.userId as string },
             select: { serverId: true }
         })
-        const serverIds = memberServers.map((m: { serverId: string }) => m.serverId)
+        let serverIds = memberServers.map((m: { serverId: string }) => m.serverId)
+
+        // Optional single-server scope (Vision app's server picker). Only
+        // ever narrows the already-verified membership list — a
+        // requested serverId the caller isn't a member of is ignored
+        // rather than trusted, so this can't be used to read another
+        // server's roster.
+        const requestedServerId = new URL(req.url).searchParams.get("serverId")
+        if (requestedServerId) {
+            serverIds = serverIds.filter(id => id === requestedServerId)
+        }
 
         const servers = await prisma.server.findMany({
             where: {

@@ -12,6 +12,7 @@ import { RandomGreeting } from "@/components/random-greeting"
 import { DashboardFooter } from "@/components/layout/dashboard-footer"
 import { WarningBanner } from "@/components/ui/warning-banner"
 import { UpsellBanner } from "@/components/subscription/upsell-banner"
+import { UserSettingsPanel } from "@/components/dashboard/user-settings-panel"
 
 import { performAutoJoin } from "@/lib/auto-join"
 import { getUserPlan } from "@/lib/subscription"
@@ -99,6 +100,18 @@ export default async function ServerSelectorPage() {
     const hasFreeServer = servers.some((s: any) => !s.subscriptionPlan || s.subscriptionPlan === 'free')
     const firstFreeServerId = servers.find((s: any) => !s.subscriptionPlan || s.subscriptionPlan === 'free')?.id
 
+    // POW Vision devices, for the settings panel's device-management section
+    const visionDevices = await prisma.visionDevice.findMany({
+        where: { userId: session.user.id, revokedAt: null },
+        orderBy: { createdAt: "desc" }
+    })
+    const visionDeviceSummaries = visionDevices.map((d: any) => ({
+        id: d.id,
+        deviceName: d.deviceName,
+        createdAt: d.createdAt.toISOString(),
+        lastUsedAt: d.lastUsedAt ? d.lastUsedAt.toISOString() : null
+    }))
+
     return (
         <EnsureDiscordConnection>
             <div className="min-h-screen bg-[#111] font-sans text-zinc-100">
@@ -131,6 +144,7 @@ export default async function ServerSelectorPage() {
                                         Superadmin
                                     </Link>
                                 )}
+                                <UserSettingsPanel devices={visionDeviceSummaries} />
                                 <UserButton afterSignOutUrl="/" appearance={{ elements: { userButtonAvatarBox: "h-10 w-10" } }} />
                             </div>
                         </div>

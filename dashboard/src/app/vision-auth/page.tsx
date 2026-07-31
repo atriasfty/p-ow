@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth-clerk"
 import { SignJWT } from "jose"
 import { CopyButton } from "./copy-button"
 import { AutoRedirect } from "./auto-redirect"
+import { TokenFallback } from "./token-fallback"
 
 // Custom URL scheme names are short alphanumeric+hyphen tokens by
 // convention (e.g. "powvision-mac"). Validate before interpolating into a
@@ -69,7 +70,8 @@ export default async function VisionAuthPage({ searchParams }: Props) {
         username: session.user.username,
         robloxId: session.user.robloxId,
         robloxUsername: session.user.robloxUsername,
-        discordId: session.user.discordId
+        discordId: session.user.discordId,
+        image: session.user.image
     })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
@@ -88,29 +90,16 @@ export default async function VisionAuthPage({ searchParams }: Props) {
                     <h1 className="text-white text-2xl font-bold mb-2">POW Vision Token</h1>
                     <p className="text-white/50 text-sm">
                         {scheme
-                            ? "Returning you to POW Vision automatically. If it doesn't work, copy the token below instead."
+                            ? "Redirecting…"
                             : "Copy this token and paste it into POW Vision to log in."}
                     </p>
                 </div>
 
                 {scheme && <AutoRedirect token={token} scheme={scheme} />}
 
-                <div className="mb-6">
-                    <label className="block text-white/40 text-xs uppercase font-bold mb-2">
-                        Your Token
-                    </label>
-                    <div className="bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg p-4">
-                        <code className="text-indigo-400 text-xs break-all select-all">
-                            {token}
-                        </code>
-                    </div>
-                    <p className="text-white/30 text-xs mt-2">
-                        This token expires in 7 days. Keep it secret!
-                    </p>
-                </div>
+                <TokenFallback token={token} hiddenByDefault={scheme !== null} />
 
                 <div className="space-y-3">
-                    <CopyButton token={token} />
                     <a
                         href="/dashboard"
                         className="block w-full text-center py-3 rounded-lg bg-[#1e1e2e] hover:bg-[#2a2a3a] text-white/60 text-sm transition-colors"

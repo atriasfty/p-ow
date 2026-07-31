@@ -110,7 +110,8 @@ export async function POST(req: Request) {
                 username: payload.username,
                 robloxId: payload.robloxId,
                 robloxUsername: payload.robloxUsername,
-                discordId: payload.discordId
+                discordId: payload.discordId,
+                image: payload.image
             }
         }, { headers: getVisionCorsHeaders(req) })
     } catch (error) {
