@@ -5,6 +5,7 @@ import { getServerSettings } from "@/lib/server-settings"
 import { maybeRunDataCleanup } from "@/lib/data-cleanup"
 import { sendAlert } from "@/lib/alerting"
 import { healthState } from "@/lib/health-state"
+import { PrcInvalidKeyError } from "@/lib/prc"
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 
@@ -80,7 +81,22 @@ export async function POST(req: Request) {
 
                 const failures = (healthState.consecutiveSyncFailures.get(server.id) || 0) + 1
                 healthState.consecutiveSyncFailures.set(server.id, failures)
-                if (failures === SYNC_FAILURE_ALERT_THRESHOLD) {
+
+                if (e instanceof PrcInvalidKeyError) {
+                    // Known-dead key — the client itself now short-circuits further
+                    // requests for this key, so this isn't a transient failure that
+                    // will clear on its own. Alert immediately (don't wait for the
+                    // generic threshold) so staff can rotate the key rather than
+                    // leaving the mod panel silently stale.
+                    sendAlert({
+                        key: `sync-invalid-key:${server.id}`,
+                        title: "PRC Server-Key invalid — sync disabled",
+                        message: `Sync for **${server.name || server.id}** stopped because PRC returned 403 (invalid Server-Key). To avoid risking an IP ban from repeated invalid-key requests, we will not retry this server until its key is updated.\n\nHave the server owner regenerate their key in-game and re-enter it in POW settings.`,
+                        severity: "critical",
+                        cooldownMs: 60 * 60 * 1000,
+                        fields: { serverId: server.id },
+                    })
+                } else if (failures === SYNC_FAILURE_ALERT_THRESHOLD) {
                     sendAlert({
                         key: `sync-fail:${server.id}`,
                         title: "Log sync failing",

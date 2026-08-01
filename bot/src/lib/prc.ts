@@ -2,6 +2,17 @@
 const BASE_URL = "https://api.erlc.gg/v1"
 const DEFAULT_WEBHOOK_URL = process.env.DISCORD_PUNISHMENT_WEBHOOK || ""
 
+// Thrown when PRC has told us a server-key is invalid (403). Distinct from
+// generic/429/timeout errors so callers can stop retrying instead of hammering
+// PRC with the same dead key — repeated 403s on an invalid key are grounds for
+// a permanent IP ban per PRC's API use guidelines.
+export class PrcInvalidKeyError extends Error {
+    constructor(message = "Invalid PRC API Key (403)") {
+        super(message)
+        this.name = "PrcInvalidKeyError"
+    }
+}
+
 export interface PrcServer {
     Name: string
     OwnerId: number
@@ -19,6 +30,7 @@ interface RateLimitState {
     resetTime: number  // Epoch timestamp in ms
     blockedUntil: number  // Epoch timestamp in ms (for 429 retry_after)
     lastWebhookTime: number // For cooldown
+    invalidKey: boolean  // Set once PRC returns 403 for this key — stop making requests entirely
 }
 
 // Persist state across module reloads using globalThis (useful if using ts-node/register or similar in dev)
@@ -53,7 +65,8 @@ export class PrcClient {
                 remaining: 35,  // Default from docs
                 resetTime: Date.now() + 1000,
                 blockedUntil: 0,
-                lastWebhookTime: 0
+                lastWebhookTime: 0,
+                invalidKey: false
             })
         }
         return rateLimitStates.get(this.keyHash)!
@@ -163,6 +176,12 @@ export class PrcClient {
     private async doFetch<T>(endpoint: string, options: RequestInit = {}, retryCount = 0): Promise<T> {
         const MAX_RETRIES = 3
 
+        // Once PRC has told us this key is invalid (403), never send it again —
+        // repeated requests with a known-dead key risk a permanent IP ban.
+        if (this.getState().invalidKey) {
+            throw new PrcInvalidKeyError()
+        }
+
         // Wait if we're rate limited
         await this.waitIfNeeded()
 
@@ -209,7 +228,8 @@ export class PrcClient {
                     throw new Error("Rate Limited")
                 }
                 if (res.status === 403) {
-                    throw new Error("Invalid API Key")
+                    this.getState().invalidKey = true
+                    throw new PrcInvalidKeyError()
                 }
                 throw new Error(`PRC API Error: ${res.statusText}`)
             }
