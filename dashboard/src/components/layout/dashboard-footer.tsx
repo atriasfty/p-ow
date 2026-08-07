@@ -46,7 +46,7 @@ export function DashboardFooter() {
                 {/* Cookie Preferences */}
                 <button
                     onClick={handleOpenPreferences}
-                    className="flex items-center gap-2 hover:text-zinc-300 transition-colors"
+                    className="flex items-center gap-2 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md"
                 >
                     <Cookie className="w-4 h-4" />
                     Cookie Preferences
