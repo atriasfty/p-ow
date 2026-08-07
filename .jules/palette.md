@@ -1,0 +1,3 @@
+## 2024-07-10 - Modal Accessibility Learnings
+**Learning:** Custom dialogs like cookie banners need semantic roles (`alertdialog`), `aria-modal="true"`, label associations (`aria-labelledby`, `aria-describedby`), and explicit `focus-visible` styling with `ring-offset` for dark backgrounds to ensure keyboard navigability. Decorative icons must also be explicitly hidden from screen readers.
+**Action:** Always verify custom modal containers include `role="dialog"` or `role="alertdialog"`, explicit ARIA label associations, and that primary action buttons within them have clear `focus-visible:ring-offset-2` styling.
