@@ -92,14 +92,18 @@ export function MapModal({ serverId, onClose }: MapModalProps) {
                         <div className="flex items-center gap-1 bg-[#111] p-1 rounded-xl border border-white/5">
                             <button
                                 onClick={() => setZoom(Math.max(1, zoom - 0.5))}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover"
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                                aria-label="Zoom out"
+                                title="Zoom out"
                             >
                                 <ZoomOut className="h-4 w-4" />
                             </button>
                             <span className="text-[10px] font-mono w-10 text-center text-zinc-500">{Math.round(zoom * 100)}%</span>
                             <button
                                 onClick={() => setZoom(Math.min(4, zoom + 0.5))}
-                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover"
+                                className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-all shadow-glow-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                                aria-label="Zoom in"
+                                title="Zoom in"
                             >
                                 <ZoomIn className="h-4 w-4" />
                             </button>
@@ -107,7 +111,9 @@ export function MapModal({ serverId, onClose }: MapModalProps) {
 
                         <button
                             onClick={onClose}
-                            className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-400 hover:text-red-400 transition-all active:scale-95"
+                            className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-400 hover:text-red-400 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            aria-label="Close map"
+                            title="Close map"
                         >
                             <X className="h-6 w-6" />
                         </button>
