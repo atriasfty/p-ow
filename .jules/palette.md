@@ -1,0 +1,3 @@
+## 2024-06-23 - Modal Dialog Accessibility
+**Learning:** Custom dialogs in this application lacked proper semantic roles (dialog/alertdialog), aria-modal attributes, and explicit focus-visible styles for keyboard navigation against dark backgrounds.
+**Action:** Always ensure custom modal containers use role="dialog" or role="alertdialog" with aria-modal="true" and label associations. Ensure all interactive elements inside, especially icon-only close buttons, have descriptive aria-labels and explicit focus-visible rings with dark ring-offsets (like focus-visible:ring-offset-zinc-900) to remain visible against dark themed backgrounds.
