@@ -1,0 +1,3 @@
+## 2024-05-18 - Tooltip/Focus Styles missing on Dismiss Button
+**Learning:** Found an icon-only dismiss button on `upsell-banner.tsx` that was missing the `focus-visible:outline-none focus-visible:ring-2` keyboard accessibility styling and an explicit `title` for hover, although it had an `aria-label`. It's a common pattern to forget this explicit focus styling for small inline action buttons, making keyboard navigation hard to see.
+**Action:** Always add explicit `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400` styling and `title` to small icon-only buttons for both screen readers and visual keyboard users.
