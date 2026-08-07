@@ -93,7 +93,8 @@ export function PlayerSearch({ serverId, onlinePlayers = [] }: { serverId: strin
                     }}
                     onFocus={() => query.length >= 2 && setOpen(true)}
                     placeholder="Search player..."
-                    className="w-full rounded-lg bg-black/40 border border-[#333] pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 transition-colors"
+                    aria-label="Search players"
+                    className="w-full rounded-lg bg-black/40 border border-[#333] pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
                 />
             </div>
 
@@ -103,7 +104,8 @@ export function PlayerSearch({ serverId, onlinePlayers = [] }: { serverId: strin
                         <button
                             key={i}
                             onClick={() => handleSelect(r.name)}
-                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#2a2a2a] transition-colors border-b border-[#333] last:border-0"
+                            aria-label={`Select player ${r.displayName || r.name}`}
+                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#2a2a2a] transition-colors border-b border-[#333] last:border-0 focus-visible:outline-none focus-visible:bg-zinc-700"
                         >
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden">
