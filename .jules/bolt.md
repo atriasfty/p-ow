@@ -1,0 +1,3 @@
+## 2024-06-03 - Concurrent Chunking for Clerk API Limits
+**Learning:** The Clerk API limits getUserList queries to a maximum of 100 IDs per request. When bypassing this limit with batched requests, using sequential await statements inside a loop severely degrades performance.
+**Action:** Map the chunks to an array of promises and execute them concurrently using Promise.all() to ensure performant batching.
