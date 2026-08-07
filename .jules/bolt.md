@@ -1,0 +1,3 @@
+## 2024-05-20 - Prisma groupBy Anti-Pattern
+**Learning:** Using `groupBy` followed by `findMany` with a dynamically generated `OR` array to fetch the latest record per user is an anti-pattern. It can cause performance bottlenecks and linting issues due to complex types and dynamic OR queries. A better approach is using a single `findMany` combining `distinct` and `orderBy`. Crucially, when using PostgreSQL, the field used in `distinct` must be the first element in the `orderBy` array to prevent ConnectorErrors.
+**Action:** Replace two-step `groupBy` queries with a single `distinct` and `orderBy` query when fetching the latest record per grouping.
