@@ -1,0 +1,3 @@
+## 2024-06-20 - Explicit Keyboard Focus in Dark Modals
+**Learning:** Custom dialog containers require explicit `role="dialog"`/`alertdialog`, `aria-modal="true"`, and label mappings. Furthermore, primary action buttons within dark-themed custom modals need explicit focus styling with dark offsets (`focus-visible:ring-offset-zinc-900`) to ensure focus rings are clearly visible.
+**Action:** Always include semantic ARIA roles, label relationships, and explicit, high-contrast focus states (using ring offsets) when building custom modal components to ensure robust accessibility for both screen readers and keyboard users.
