@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/auth-clerk"
 import { verifyCsrf } from "@/lib/auth-permissions"
 import { prisma } from "@/lib/db"
+import { verifyCsrf } from "@/lib/auth-permissions"
 import { NextResponse } from "next/server"
 
 // Ensure user's Discord ID is saved to their Member records
