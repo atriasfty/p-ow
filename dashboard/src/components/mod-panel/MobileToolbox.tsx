@@ -366,36 +366,39 @@ export function MobileToolbox({
 
                         <form onSubmit={handlePermLogSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Permission</label>
+                                <label htmlFor="mobile-permission" className="block text-sm font-medium text-zinc-400 mb-2">Permission</label>
                                 <input
+                                    id="mobile-permission"
                                     type="text"
                                     value={permLogData.permission}
                                     onChange={(e) => setPermLogData({ ...permLogData, permission: e.target.value })}
                                     placeholder="e.g., Roadwork"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Username/s</label>
+                                <label htmlFor="mobile-usernames" className="block text-sm font-medium text-zinc-400 mb-2">Username/s</label>
                                 <input
+                                    id="mobile-usernames"
                                     type="text"
                                     value={permLogData.usernames}
                                     onChange={(e) => setPermLogData({ ...permLogData, usernames: e.target.value })}
                                     placeholder="e.g., ciankellya, user123"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Time</label>
+                                <label htmlFor="mobile-time" className="block text-sm font-medium text-zinc-400 mb-2">Time</label>
                                 <input
+                                    id="mobile-time"
                                     type="text"
                                     value={permLogData.time}
                                     onChange={(e) => setPermLogData({ ...permLogData, time: e.target.value })}
                                     placeholder="e.g., Permanent or 30m"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
 
@@ -444,37 +447,40 @@ export function MobileToolbox({
                         <form onSubmit={handleLoaSubmit} className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-400 mb-2">Start</label>
+                                    <label htmlFor="mobile-startDate" className="block text-sm font-medium text-zinc-400 mb-2">Start Date</label>
                                     <input
+                                        id="mobile-startDate"
                                         type="date"
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
                                         required
-                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-zinc-400 mb-2">End</label>
+                                    <label htmlFor="mobile-endDate" className="block text-sm font-medium text-zinc-400 mb-2">End Date</label>
                                     <input
+                                        id="mobile-endDate"
                                         type="date"
                                         value={endDate}
                                         onChange={(e) => setEndDate(e.target.value)}
                                         required
                                         min={startDate}
-                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Reason</label>
+                                <label htmlFor="mobile-reason" className="block text-sm font-medium text-zinc-400 mb-2">Reason</label>
                                 <textarea
+                                    id="mobile-reason"
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
                                     required
                                     rows={3}
                                     placeholder="Why you need time off..."
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 resize-none"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 resize-none"
                                 />
                             </div>
 
@@ -522,14 +528,15 @@ export function MobileToolbox({
 
                         <form onSubmit={handleCommandSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-zinc-400 mb-2">Command</label>
+                                <label htmlFor="mobile-commandInput" className="block text-sm font-medium text-zinc-400 mb-2">Command</label>
                                 <input
+                                    id="mobile-commandInput"
                                     type="text"
                                     value={commandInput}
                                     onChange={(e) => setCommandInput(e.target.value)}
                                     placeholder=":h [message] or any command..."
                                     autoFocus
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                 />
                             </div>
 
@@ -577,14 +584,15 @@ export function MobileToolbox({
 
                         <form onSubmit={handleStaffRequestSubmit} className="p-6 space-y-4">
                             <div>
-                                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                                <label htmlFor="mobile-staffRequestReason" className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
                                     Reason
                                 </label>
                                 <textarea
+                                    id="mobile-staffRequestReason"
                                     value={staffRequestReason}
                                     onChange={(e) => setStaffRequestReason(e.target.value)}
                                     placeholder="Why you need assistance..."
-                                    className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-red-500/50 min-h-[100px] resize-none"
+                                    className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-red-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 min-h-[100px] resize-none"
                                     required
                                     autoFocus
                                 />
