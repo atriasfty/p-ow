@@ -271,8 +271,10 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                 <h3 className="font-bold text-white">Punishments</h3>
                 <button
                     onClick={() => setShowFilter(f => !f)}
-                    className={`p-1 rounded transition-colors ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                    className={`p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
                     title="Toggle filters"
+                    aria-label="Toggle filters"
+                    aria-expanded={showFilter}
                 >
                     <Filter className="h-4 w-4" />
                 </button>
@@ -335,9 +337,11 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                             e.stopPropagation()
                                                             setOpenMenu(openMenu === p.id ? null : p.id)
                                                         }}
-                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                                                         aria-label={`Manage punishment for ${user?.name || p.userId}`}
                                                         title={`Manage punishment for ${user?.name || p.userId}`}
+                                                        aria-expanded={openMenu === p.id}
+                                                        aria-haspopup="menu"
                                                     >
                                                         <MoreVertical className="h-3 w-3 text-zinc-500" />
                                                     </button>
@@ -419,7 +423,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 <button
                                                     onClick={() => handleEdit(p.id)}
                                                     disabled={loading === p.id}
-                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                                     aria-label={`Save reason for ${user?.name || p.userId}`}
                                                     title={loading === p.id ? "Saving..." : "Save reason"}
                                                 >
@@ -427,7 +431,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 </button>
                                                 <button
                                                     onClick={() => setEditingId(null)}
-                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                                                     aria-label="Cancel editing reason"
                                                     title="Cancel"
                                                 >
