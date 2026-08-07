@@ -1,0 +1,3 @@
+## YYYY-MM-DD - Missing Keyboard Navigation for Modal Close Buttons
+**Learning:** Icon-only modal close buttons throughout the application (such as in `map-modal.tsx`, `calls-modal.tsx`, `toolbox.tsx`, and `super-server-edit-modal.tsx`) lack the explicit `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400` styling required for clear keyboard navigability. They also lack `aria-label` attributes for screen readers.
+**Action:** When implementing icon-only utility/close buttons, always ensure they have explicit focus-visible styles and a descriptive `aria-label` and `title` to maintain accessibility standards.

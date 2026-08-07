@@ -60,14 +60,17 @@ export function CallsModal({ serverId, onClose }: { serverId: string, onClose: (
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleRefresh}
-                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors"
-                            title="Refresh"
+                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            title="Refresh calls"
+                            aria-label="Refresh calls"
                         >
                             <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            title="Close calls modal"
+                            aria-label="Close calls modal"
                         >
                             <X className="h-5 w-5" />
                         </button>
