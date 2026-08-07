@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { isServerAdmin, isServerMember } from "@/lib/admin"
 import { clerkClient } from "@clerk/nextjs/server"
 import { verifyCsrf } from "@/lib/auth-permissions"
+import { getClerkUsersInBatches } from "@/lib/clerk-lookup"
 
 // POST /api/forms/editor-access - Claim editor access via share link
 export async function POST(request: NextRequest) {
@@ -114,10 +115,7 @@ export async function GET(request: NextRequest) {
 
             // Batch fetch Clerk users for profile pictures
             const client = await clerkClient()
-            const clerkUsersRes = await client.users.getUserList({
-                userId: userIds,
-                limit: 100
-            })
+            const clerkUsersRes = await getClerkUsersInBatches(client, userIds)
             const clerkUsers = clerkUsersRes.data
 
             // Batch fetch Member records for Roblox usernames

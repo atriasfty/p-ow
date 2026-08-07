@@ -118,3 +118,26 @@ export async function findMemberByRobloxId(serverId: string, robloxId: string) {
         possibleUserIds
     }
 }
+
+/**
+ * Fetch Clerk users in batches of 100 to avoid API limits, executing concurrently.
+ */
+export async function getClerkUsersInBatches(client: any, userIds: string[]) {
+    const uniqueIds = Array.from(new Set(userIds)).filter(Boolean)
+    if (uniqueIds.length === 0) return { data: [], totalCount: 0 }
+
+    const chunkSize = 100
+    const chunks = []
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+        chunks.push(uniqueIds.slice(i, i + chunkSize))
+    }
+
+    const responses = await Promise.all(
+        chunks.map(chunk => client.users.getUserList({ userId: chunk, limit: 100 }))
+    )
+
+    const combinedData = responses.flatMap(r => r.data)
+    const combinedCount = responses.reduce((acc, r) => acc + r.totalCount, 0)
+
+    return { data: combinedData, totalCount: combinedCount }
+}
