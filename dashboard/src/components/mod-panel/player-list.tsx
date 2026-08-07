@@ -197,7 +197,7 @@ export function PlayerList({ serverId, players: externalPlayers }: { serverId: s
             {!showAll && players.length > DISPLAY_LIMIT && (
                 <button
                     onClick={() => setShowAll(true)}
-                    className="w-full py-2 text-[10px] text-zinc-500 hover:text-white transition-colors border border-dashed border-zinc-800 rounded-lg mt-2 font-mono uppercase tracking-widest"
+                    className="w-full py-2 text-[10px] text-zinc-500 hover:text-white transition-colors border border-dashed border-zinc-800 rounded-lg mt-2 font-mono uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
                 >
                     + {players.length - DISPLAY_LIMIT} more players
                 </button>
