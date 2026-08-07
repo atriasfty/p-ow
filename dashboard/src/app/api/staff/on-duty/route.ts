@@ -45,8 +45,9 @@ export async function GET(req: Request) {
         })
 
         // 3. Map active shifts to Clerk users (ensures we show everyone we can find)
+        const userMap = new Map(clerkUsers.data.map(u => [u.id, u]))
         const staffOnDuty = activeShifts.map((shift: any) => {
-            const user = clerkUsers.data.find((u: any) => u.id === shift.userId)
+            const user = userMap.get(shift.userId)
             if (!user) return null
 
             // Find roblox username from external accounts
