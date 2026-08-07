@@ -45,8 +45,10 @@ export async function GET(req: Request) {
             // Get Discord/Roblox usernames from Clerk (excluding emails/PII)
             const clerk = await clerkClient()
             const userIds: string[] = members.map((m: any) => m.userId)
-            // Fetch in batches if necessary, but assume small enough for standard Clerk call
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
+            // ⚡ Bolt: Chunk Clerk queries into batches of 100 and execute concurrently for O(1) fetch times
+            const userChunks = Array.from({ length: Math.ceil(userIds.length / 100) }, (_, i) => userIds.slice(i * 100, i * 100 + 100))
+            const clerkUsersRes = await Promise.all(userChunks.map(chunk => clerk.users.getUserList({ userId: chunk, limit: 100 })))
+            const clerkUsers = { data: clerkUsersRes.flatMap(res => res.data) }
 
             const userMap = new Map(clerkUsers.data.map((u: any) => {
                 const robloxAccount = u.externalAccounts.find((a: any) =>
@@ -75,7 +77,10 @@ export async function GET(req: Request) {
 
             const clerk = await clerkClient()
             const userIds: string[] = Array.from(new Set(shifts.map((s: any) => s.userId)))
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
+            // ⚡ Bolt: Chunk Clerk queries into batches of 100 and execute concurrently for O(1) fetch times
+            const userChunks = Array.from({ length: Math.ceil(userIds.length / 100) }, (_, i) => userIds.slice(i * 100, i * 100 + 100))
+            const clerkUsersRes = await Promise.all(userChunks.map(chunk => clerk.users.getUserList({ userId: chunk, limit: 100 })))
+            const clerkUsers = { data: clerkUsersRes.flatMap(res => res.data) }
 
             const userMap = new Map(clerkUsers.data.map((u: any) => {
                 const robloxAccount = u.externalAccounts.find((a: any) =>
@@ -128,7 +133,11 @@ export async function GET(req: Request) {
             ].filter(id => id && !identityMap.has(id))))
 
             if (missingIds.length > 0) {
-                const clerkUsers = await clerk.users.getUserList({ userId: missingIds, limit: 100 })
+                // ⚡ Bolt: Chunk Clerk queries into batches of 100 and execute concurrently for O(1) fetch times
+                const missingChunks = Array.from({ length: Math.ceil(missingIds.length / 100) }, (_, i) => missingIds.slice(i * 100, i * 100 + 100))
+                const clerkUsersRes = await Promise.all(missingChunks.map(chunk => clerk.users.getUserList({ userId: chunk, limit: 100 })))
+                const clerkUsers = { data: clerkUsersRes.flatMap(res => res.data) }
+
                 clerkUsers.data.forEach((u: any) => {
                     const robloxAccount = u.externalAccounts.find((a: any) =>
                         a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
