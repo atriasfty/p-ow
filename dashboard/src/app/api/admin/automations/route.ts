@@ -33,6 +33,10 @@ export async function POST(req: Request) {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
 
+    if (!verifyCsrf(req)) {
+        return new NextResponse("CSRF validation failed", { status: 403 })
+    }
+
     try {
         const body = await req.json()
         const { serverId, id, name, trigger, conditions, actions, enabled } = body
@@ -99,6 +103,10 @@ export async function DELETE(req: Request) {
     if (!verifyCsrf(req)) return new NextResponse("Forbidden", { status: 403 })
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
+
+    if (!verifyCsrf(req)) {
+        return new NextResponse("CSRF validation failed", { status: 403 })
+    }
 
     try {
         const body = await req.json()
