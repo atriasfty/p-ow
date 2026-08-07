@@ -1,0 +1,4 @@
+
+## 2024-04-30 - Accessible Custom Comboboxes
+**Learning:** Custom interactive combobox components (e.g., div/button-based dropdown triggers replacing native `<select>`) must include explicit keyboard navigability (`focus-visible:ring-2` on the trigger, `focus-visible:bg-zinc-700` on options) and semantic ARIA attributes (`aria-expanded`, `aria-haspopup="listbox"`, `role="combobox"`, `role="listbox"`, `role="option"`, `aria-selected`) to ensure screen reader context and accessibility compliance.
+**Action:** When creating or modifying custom dropdown components, always add `role="combobox"` and `aria-expanded` to the trigger, `role="listbox"` to the container, and `role="option"` with `aria-selected` to the individual selectable items. Ensure keyboard focus is visually distinct for both the trigger and the options.
