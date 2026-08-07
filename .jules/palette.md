@@ -1,0 +1,3 @@
+## 2025-05-30 - Dialog Provider Accessibility Improvements
+**Learning:** Custom modal/dialog implementations often neglect crucial accessibility attributes for decorative icons and focus states for close buttons and primary action buttons.
+**Action:** Always add `aria-hidden="true"` to purely decorative icons (e.g. status indicators, X icons in buttons). Ensure all interactive elements, especially icon-only close buttons and primary action buttons, have an `aria-label`, a `title` tooltip, and robust focus-visible styles (like `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`) so keyboard navigation is clear and accessible.
