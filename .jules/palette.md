@@ -1,0 +1,3 @@
+## 2024-06-25 - Accessible Modal Close Buttons
+**Learning:** Found a systemic pattern across multiple custom modals (e.g., `DialogProvider`, `SuperServerEditModal`, `ConfirmModal`) where the icon-only "Close" (X) buttons were lacking essential accessibility features like `aria-label`, `title`, and explicit `focus-visible` styling for keyboard navigation.
+**Action:** When building custom modals, ensure all standalone icon buttons have descriptive ARIA labels, titles, and `focus-visible:outline-none focus-visible:ring-2` to clearly show keyboard focus, improving both screen-reader and keyboard-only experiences.
