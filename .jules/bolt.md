@@ -1,0 +1,3 @@
+## 2025-05-19 - Optimize latest record fetch per user
+**Learning:** Avoid using `groupBy` combined with `findMany` (using a large dynamically generated `OR` array) when fetching the latest record per user, as it causes excessive load. Instead, use a single `findMany` with `distinct: ["userId"]` and `orderBy: [{ userId: "asc" }, { startTime: "desc" }]`. In PostgreSQL, the field used in `distinct` must be the first element in the `orderBy` array to avoid ConnectorErrors.
+**Action:** Always prefer `distinct` with `orderBy` over `groupBy` + `findMany` for fetching the most recent records per group.
