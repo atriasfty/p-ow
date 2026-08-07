@@ -1,0 +1,3 @@
+## 2024-05-23 - Batching APIs Concurrently
+**Learning:** Clerk's `users.getUserList` limits `userId` arrays to 100 elements. When handling lists with more than 100 elements, such as data exports or user searches, we must chunk the `userId` arrays. To maximize performance, avoid awaiting these chunks sequentially inside a `for` loop. Instead, `map` the chunks to an array of promises and execute them concurrently with `Promise.all()`.
+**Action:** When working with batched third-party API fetches inside Next.js routes (like Clerk exports or Roblox thumbnails), implement chunking logic paired with `Promise.all()` to prevent loop blocking and significantly reduce overall request latency.
