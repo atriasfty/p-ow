@@ -38,11 +38,32 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
+    // Get server settings for quota configuration
+    const settings = await getServerSettings(serverId)
+
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
+    })
+
     // Fetch Clerk users
     const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
 
-    const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
+    // Chunk user IDs to avoid Clerk API limits
+    const uniqueUserIds = Array.from(new Set(members.map(m => m.userId)))
+    let allClerkUsers: any[] = []
+
+    const CHUNK_SIZE = 100
+    for (let i = 0; i < uniqueUserIds.length; i += CHUNK_SIZE) {
+        const chunk = uniqueUserIds.slice(i, i + CHUNK_SIZE)
+        if (chunk.length > 0) {
+            const usersResponse = await client.users.getUserList({ userId: chunk })
+            allClerkUsers = allClerkUsers.concat(usersResponse.data)
+        }
+    }
+
+    const clerkUsers: ClerkUser[] = allClerkUsers.map(user => {
         const discordAccount = user.externalAccounts.find(
             a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
         )
@@ -63,13 +84,17 @@ export default async function AdminQuotaPage({
         }
     })
 
+    // Pre-compute O(1) maps for user lookup to avoid O(N*M) in render loops
+    const userMap = new Map<string, ClerkUser>()
+    clerkUsers.forEach(u => {
+        userMap.set(u.id, u)
+        if (u.discordId) userMap.set(u.discordId, u)
+        if (u.robloxId) userMap.set(u.robloxId, u)
+    })
+
     // Helper to get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = userMap.get(userId)
 
         if (user?.robloxUsername) return user.robloxUsername
         if (user?.name || user?.username) return user.name || user.username || userId
@@ -78,22 +103,9 @@ export default async function AdminQuotaPage({
 
     // Helper to get user avatar
     const getUserAvatar = (userId: string): string | null => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = userMap.get(userId)
         return user?.image || null
     }
-
-    // Get server settings for quota configuration
-    const settings = await getServerSettings(serverId)
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
 
     // Calculate period start using server-configured week start day and timezone
     // Uses the same algorithm as milestones.ts to stay consistent
