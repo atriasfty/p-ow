@@ -178,3 +178,6 @@ migrate-data.js
 PERFORMANCE_OPTIMIZATIONS.md
 resolve-migrations.sh
 .DS_Store
+
+# Observability stack — bearer tokens for scrape auth, never committed
+observability/prometheus/secrets/

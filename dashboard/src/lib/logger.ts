@@ -8,6 +8,8 @@
  * LOG_LEVEL env var: debug | info | warn | error (default info in prod, debug in dev)
  */
 
+import { getCorrelationId } from "./request-context"
+
 type Level = "debug" | "info" | "warn" | "error"
 const LEVELS: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 }
 
@@ -26,6 +28,8 @@ function emit(level: Level, component: string, ctx: Ctx, msg: string, extra?: Ct
     if (LEVELS[level] < minLevel) return
     const merged: Ctx = { ...ctx, ...extra }
     if (merged.err) merged.err = serializeError(merged.err)
+    const correlationId = getCorrelationId()
+    if (correlationId && !merged.correlationId) merged.correlationId = correlationId
 
     if (isProd) {
         // eslint-disable-next-line no-console

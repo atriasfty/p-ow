@@ -1,0 +1,59 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["127.0.0.1:9093"]
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+
+  - job_name: node
+    static_configs:
+      - targets: ["127.0.0.1:9100"]
+
+  # --- Phase 2: app code + PROMETHEUS_METRICS_SECRET generation are ready
+  # (deploy.sh), but nothing has actually been deployed with this code yet.
+  # Uncomment these once a deploy has run and PROMETHEUS_METRICS_SECRET
+  # exists in shared/prod.env — copy its value into
+  # ./secrets/dashboard_prod.token, ./secrets/bot_prod.token,
+  # ./secrets/sync_prod.token (same value in all three, it's one shared
+  # secret across the three processes, same as INTERNAL_SYNC_SECRET already
+  # works). Ports below are confirmed from the live process list on prod —
+  # note the bot's is 41732, not 41734 as CLAUDE.md's stale docs implied.
+
+  # - job_name: pow-dashboard-prod
+  #   metrics_path: /api/metrics
+  #   authorization:
+  #     credentials_file: /etc/prometheus/secrets/dashboard_prod.token
+  #   static_configs:
+  #     - targets: ["127.0.0.1:41729"]
+  #       labels: { env: prod, service: dashboard }
+
+  # - job_name: pow-bot-prod
+  #   metrics_path: /metrics
+  #   authorization:
+  #     credentials_file: /etc/prometheus/secrets/bot_prod.token
+  #   static_configs:
+  #     - targets: ["127.0.0.1:41732"]
+  #       labels: { env: prod, service: bot }
+
+  # - job_name: pow-sync-prod
+  #   metrics_path: /metrics
+  #   authorization:
+  #     credentials_file: /etc/prometheus/secrets/sync_prod.token
+  #   static_configs:
+  #     - targets: ["127.0.0.1:41730"]
+  #       labels: { env: prod, service: sync }
+
+  # Staging isn't currently deployed on this box (no pow-*-staging PM2
+  # processes at last check) — add pow-dashboard-staging/pow-bot-staging/
+  # pow-sync-staging jobs the same way once it is, confirming actual
+  # staging ports first rather than assuming CLAUDE.md's documented ones.

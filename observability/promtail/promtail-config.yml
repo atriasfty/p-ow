@@ -1,0 +1,38 @@
+server:
+  # 9080 (Promtail's default) is already bound by something else on this box —
+  # rebind off the default.
+  http_listen_address: 127.0.0.1
+  http_listen_port: 19080
+  grpc_listen_port: 0
+
+positions:
+  filename: /var/lib/promtail/positions.yaml
+
+clients:
+  - url: http://127.0.0.1:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: pow-pm2
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: pow
+          __path__: /var/log/pow-pm2/pow-*-{prod,staging}-{out,error}.log
+    pipeline_stages:
+      # dashboard/src/lib/logger.ts (and bot's equivalent) emit one JSON
+      # object per line in prod: {ts, level, component, msg, ...}. Non-JSON
+      # lines (e.g. raw console.log from third-party deps) pass through
+      # un-labeled rather than erroring the pipeline.
+      - json:
+          expressions:
+            level: level
+            component: component
+            ts: ts
+      - labels:
+          level:
+          component:
+      - timestamp:
+          source: ts
+          format: RFC3339
+          fallback_formats:
+            - RFC3339Nano

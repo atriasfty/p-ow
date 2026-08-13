@@ -1,0 +1,3 @@
+# Alert rules live here. Empty for now (Phase 1 infra bring-up) —
+# populated in Phase 5 once app-side metrics + PagerDuty wiring exist.
+groups: []

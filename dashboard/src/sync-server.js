@@ -5,6 +5,7 @@ const http = require('http')
 const ywsUtils = require('y-websocket/bin/utils')
 const url = require('url')
 const crypto = require('crypto')
+const promClient = require('prom-client')
 
 const port = process.env.SYNC_PORT || 41730
 const SYNC_SECRET = process.env.SYNC_WS_SECRET
@@ -49,7 +50,15 @@ process.on('unhandledRejection', (reason) => {
 
 let activeConnections = 0
 
-const server = http.createServer((request, response) => {
+const promRegister = new promClient.Registry()
+promClient.collectDefaultMetrics({ register: promRegister, prefix: 'pow_sync_' })
+const wsConnectionsGauge = new promClient.Gauge({
+  name: 'pow_sync_ws_connections',
+  help: 'Current active Yjs WebSocket connections',
+  registers: [promRegister],
+})
+
+const server = http.createServer(async (request, response) => {
   if (request.url === '/health') {
     response.writeHead(200, { 'Content-Type': 'application/json' })
     response.end(JSON.stringify({
@@ -61,6 +70,28 @@ const server = http.createServer((request, response) => {
     }))
     return
   }
+
+  if (request.url === '/metrics') {
+    const secret = process.env.PROMETHEUS_METRICS_SECRET
+    const authHeader = request.headers.authorization || ''
+    const expected = `Bearer ${secret || ''}`
+    const authorized = !!secret &&
+      authHeader.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
+
+    if (!authorized) {
+      response.writeHead(401)
+      response.end('Unauthorized')
+      return
+    }
+
+    wsConnectionsGauge.set(activeConnections)
+    const body = await promRegister.metrics()
+    response.writeHead(200, { 'Content-Type': promRegister.contentType })
+    response.end(body)
+    return
+  }
+
   response.writeHead(200, { 'Content-Type': 'text/plain' })
   response.end('POW Yjs Sync Server Running')
 })

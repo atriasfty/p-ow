@@ -1,4 +1,7 @@
 import { EventEmitter } from "events"
+import { createLogger } from "./logger"
+
+const log = createLogger("event-bus")
 
 // ---- Types ----
 
@@ -96,6 +99,10 @@ class ServerEventBus {
 
     /** Emit an event to all SSE clients subscribed to a specific server */
     emit<T extends ServerEventType>(serverId: string, type: T, data: ServerEventMap[T]) {
+        // Debug-level: high volume (fires per log/player-status update), but
+        // this is the one point where a sync-cycle's correlation ID can be
+        // tied to the SSE delivery it triggers — see request-context.ts.
+        log.debug("event emitted", { serverId, type })
         this.emitter.emit(`server:${serverId}`, type, data)
     }
 

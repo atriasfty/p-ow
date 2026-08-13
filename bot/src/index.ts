@@ -13,6 +13,8 @@ import { startAutoRoleSync } from "./services/role-sync"
 import { startServerCleanupJob } from "./services/server-cleanup"
 import { deployCommands } from "./deploy-commands"
 import { sendAlert } from "./lib/alerting"
+import { register, gatewayStatus, queuePending, queueOldestAgeSeconds } from "./lib/prometheus"
+import crypto from "crypto"
 
 // --- Process-level crash reporting ---
 // A rejected promise with no handler used to kill the process silently and
@@ -234,6 +236,7 @@ http.createServer(async (req, res) => {
         const wsStatus = client.ws.status
         checks.gateway = { ok: wsStatus === 0, status: wsStatus, pingMs: client.ws.ping }
         if (wsStatus !== 0) ok = false
+        gatewayStatus.set(wsStatus)
 
         try {
             const oldestPending = await prisma.botQueue.findFirst({
@@ -249,6 +252,8 @@ http.createServer(async (req, res) => {
             checks.queue = { ok: oldestAgeSec < 120, pending: pendingCount, oldestAgeSec }
             checks.db = { ok: true }
             if (oldestAgeSec >= 120) ok = false
+            queuePending.set(pendingCount)
+            queueOldestAgeSeconds.set(oldestAgeSec)
         } catch (e: any) {
             checks.db = { ok: false, error: e.message }
             ok = false
@@ -264,6 +269,28 @@ http.createServer(async (req, res) => {
         res.end(JSON.stringify({ ok, service: "pow-bot", checks }))
         return
     }
+
+    if (req.url === "/metrics") {
+        const secret = process.env.PROMETHEUS_METRICS_SECRET
+        const authHeader = req.headers.authorization || ""
+        const expected = `Bearer ${secret || ""}`
+        const authorized =
+            !!secret &&
+            authHeader.length === expected.length &&
+            crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected))
+
+        if (!authorized) {
+            res.writeHead(401)
+            res.end("Unauthorized")
+            return
+        }
+
+        const body = await register.metrics()
+        res.writeHead(200, { "Content-Type": register.contentType })
+        res.end(body)
+        return
+    }
+
     res.writeHead(404)
     res.end()
 }).listen(healthPort, () => {

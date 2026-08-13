@@ -1,0 +1,9 @@
+# Minimal valid config for Phase 1 bring-up — a null receiver so
+# Alertmanager starts cleanly. Real routing (critical -> the dashboard's
+# /api/internal/infra-alert relay, which fans out to Discord + PagerDuty
+# through the existing sendAlert() cooldown/dedup logic) is added in Phase 5.
+route:
+  receiver: default
+
+receivers:
+  - name: default

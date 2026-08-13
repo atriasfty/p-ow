@@ -1,0 +1,127 @@
+name: pow-observability
+
+# All services run on the host network namespace and bind to 127.0.0.1 only.
+# POW's own processes (dashboard/bot/sync-server) run natively via PM2, not
+# Docker, so host networking lets these containers reach 127.0.0.1:41729 etc.
+# directly without bridge/extra_hosts plumbing or extra docker-proxy memory
+# overhead. Nothing here is reachable from outside the box except through the
+# existing Cloudflare Tunnel connector already running on this host — no
+# inbound port is ever opened for this stack. See README.md for the Public
+# Hostname step (done from the Cloudflare dashboard, not from this file).
+#
+# Run via ./setup.sh (as root — matches how deploy.sh/PM2 already operate on
+# this box), not `docker compose up` directly on a first run, so config file
+# permissions and the .env file get set up correctly first.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    network_mode: host
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=20d
+      - --storage.tsdb.retention.size=2GB
+      - --web.listen-address=127.0.0.1:9090
+    mem_limit: 220m
+    mem_reservation: 110m
+    cpus: 0.5
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    network_mode: host
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --web.listen-address=127.0.0.1:9093
+    mem_limit: 64m
+    mem_reservation: 32m
+    cpus: 0.1
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.2.1
+    network_mode: host
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+      - -server.http-listen-address=127.0.0.1
+    mem_limit: 160m
+    mem_reservation: 80m
+    cpus: 0.3
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.2.1
+    network_mode: host
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - promtail-positions:/var/lib/promtail
+      # Wherever PM2's prod daemon actually writes logs — override via
+      # PM2_LOG_DIR in .env if it's not the default root-owned location.
+      - ${PM2_LOG_DIR:-/root/.pm2/logs}:/var/log/pow-pm2:ro
+    command:
+      - -config.file=/etc/promtail/config.yml
+    mem_limit: 50m
+    mem_reservation: 25m
+    cpus: 0.1
+    restart: unless-stopped
+
+  node_exporter:
+    image: prom/node-exporter:v1.8.2
+    network_mode: host
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --web.listen-address=127.0.0.1:9100
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    mem_limit: 40m
+    mem_reservation: 16m
+    cpus: 0.1
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:11.3.1
+    network_mode: host
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_HTTP_PORT: "3300"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    env_file:
+      - .env
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    mem_limit: 180m
+    mem_reservation: 90m
+    cpus: 0.3
+    restart: unless-stopped
+
+  # No cloudflared service here — an existing connector on this box already
+  # handles tunneling. Exposure is just a Public Hostname added in the
+  # Cloudflare dashboard pointing at http://127.0.0.1:3300 (see README.md).
+
+volumes:
+  prometheus-data:
+  alertmanager-data:
+  loki-data:
+  promtail-positions:
+  grafana-data:

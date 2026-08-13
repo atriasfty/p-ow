@@ -186,6 +186,7 @@ if [ ! -f "${SHARED_ENV_FILE}" ]; then
     SYNC_WS_SECRET_GEN="$(openssl rand -base64 32)"
     VISION_JWT_SECRET_GEN="$(openssl rand -base64 32)"
     NEXTAUTH_SECRET_GEN="$(openssl rand -base64 32)"
+    PROMETHEUS_METRICS_SECRET_GEN="$(openssl rand -base64 32)"
     
     read -p "PostgreSQL connection string [${TARGET_ENV^^}] (default: ${DEFAULT_DB_URL}): " DB_URL_INPUT
     DATABASE_URL_VAL="${DB_URL_INPUT:-$DEFAULT_DB_URL}"
@@ -210,6 +211,7 @@ INTERNAL_SYNC_SECRET="${INTERNAL_SYNC_SECRET_GEN}"
 SYNC_WS_SECRET="${SYNC_WS_SECRET_GEN}"
 NEXT_PUBLIC_SYNC_WS_SECRET="${SYNC_WS_SECRET_GEN}"
 VISION_JWT_SECRET="${VISION_JWT_SECRET_GEN}"
+PROMETHEUS_METRICS_SECRET="${PROMETHEUS_METRICS_SECRET_GEN}"
 
 # Roblox Config
 ROBLOX_API_KEY="${ROBLOX_API_KEY}"
@@ -276,6 +278,11 @@ else
         echo "Adding missing INTERNAL_SYNC_SECRET..."
         sed -i '/^INTERNAL_SYNC_SECRET=/d' "${SHARED_ENV_FILE}" 2>/dev/null || true
         echo "INTERNAL_SYNC_SECRET=\"$(openssl rand -base64 32)\"" >> "${SHARED_ENV_FILE}"
+    fi
+    if ! grep -q "PROMETHEUS_METRICS_SECRET=" "${SHARED_ENV_FILE}" || grep -q 'PROMETHEUS_METRICS_SECRET=""' "${SHARED_ENV_FILE}"; then
+        echo "Adding missing PROMETHEUS_METRICS_SECRET..."
+        sed -i '/^PROMETHEUS_METRICS_SECRET=/d' "${SHARED_ENV_FILE}" 2>/dev/null || true
+        echo "PROMETHEUS_METRICS_SECRET=\"$(openssl rand -base64 32)\"" >> "${SHARED_ENV_FILE}"
     fi
     if ! grep -q "SYNC_WS_SECRET=" "${SHARED_ENV_FILE}" || grep -q 'SYNC_WS_SECRET=""' "${SHARED_ENV_FILE}"; then
         echo "Adding missing SYNC_WS_SECRET..."
