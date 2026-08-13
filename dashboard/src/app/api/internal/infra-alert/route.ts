@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { sendAlert, type AlertSeverity } from "@/lib/alerting"
+import { withHttpMetrics } from "@/lib/http-metrics"
 import crypto from "crypto"
 
 /**
@@ -35,7 +36,7 @@ function severityOf(labels: Record<string, string>): AlertSeverity {
     return "info"
 }
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("internal/infra-alert", async (req: Request) => {
     const authHeader = req.headers.get("authorization") || ""
     const expected = `Bearer ${INTERNAL_SECRET || ""}`
 
@@ -68,4 +69,4 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ ok: true })
-}
+})

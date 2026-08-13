@@ -2,8 +2,9 @@ import { prisma } from "@/lib/db"
 import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { PrcClient } from "@/lib/prc"
 import { NextResponse } from "next/server"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("public/v1/staff/request", async (req: Request) => {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
 
@@ -70,4 +71,4 @@ const { reason, requester } = body
         console.error("Public Staff Request Error:", error)
         return withRateLimit(NextResponse.json({ error: "Internal Error" }, { status: 500 }), auth)
     }
-}
+})

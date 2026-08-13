@@ -19,6 +19,26 @@ scrape_configs:
     static_configs:
       - targets: ["127.0.0.1:9100"]
 
+  # Self-monitoring for the observability stack's own components — before
+  # this, if Loki/Alertmanager/Promtail/Grafana died, nothing would notice
+  # (only the `pow-*`/`wren` app jobs and `node`/`prometheus` were watched).
+  # All bind to 127.0.0.1 only, so no auth needed on their /metrics.
+  - job_name: alertmanager
+    static_configs:
+      - targets: ["127.0.0.1:9093"]
+
+  - job_name: loki
+    static_configs:
+      - targets: ["127.0.0.1:3100"]
+
+  - job_name: promtail
+    static_configs:
+      - targets: ["127.0.0.1:19080"]
+
+  - job_name: grafana
+    static_configs:
+      - targets: ["127.0.0.1:3300"]
+
   # Bot health/metrics port is 41734 for prod, 41735 for staging — NOT
   # 41732, despite that being both the app's own code default and what was
   # briefly, incorrectly deployed here. 41732 collides with staging's
@@ -68,15 +88,10 @@ scrape_configs:
 
   # --- Wren (github.com/atriasfty/wren) — Atria's other product, also
   # running on this box. This Prometheus/Grafana instance serves both.
-  # Commented until wren has actually been redeployed with the metrics code
-  # (WREN_METRICS_SECRET doesn't exist yet, so ./secrets/wren_prod.token
-  # can't be populated) — Prometheus fails to load its whole config if a
-  # referenced credentials_file doesn't exist, which would take down
-  # scraping for POW too. Uncomment once the token file is in place.
-  # - job_name: wren-prod
-  #   metrics_path: /metrics
-  #   authorization:
-  #     credentials_file: /etc/prometheus/secrets/wren_prod.token
-  #   static_configs:
-  #     - targets: ["127.0.0.1:4167"]
-  #       labels: { env: prod }
+  - job_name: wren-prod
+    metrics_path: /metrics
+    authorization:
+      credentials_file: /etc/prometheus/secrets/wren_prod.token
+    static_configs:
+      - targets: ["127.0.0.1:4167"]
+        labels: { env: prod }

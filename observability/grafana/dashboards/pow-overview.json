@@ -1,107 +1,710 @@
 {
   "uid": "pow-overview",
   "title": "POW Overview",
-  "tags": ["pow"],
+  "tags": [
+    "pow"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "links": [
-    { "title": "Sync Pipeline Health", "type": "link", "url": "/d/pow-sync-pipeline", "icon": "dashboard", "targetBlank": false },
-    { "title": "API Dependencies", "type": "link", "url": "/d/pow-api-dependencies", "icon": "dashboard", "targetBlank": false },
-    { "title": "Host Resources", "type": "link", "url": "/d/pow-host-resources", "icon": "dashboard", "targetBlank": false },
-    { "title": "Bot Health", "type": "link", "url": "/d/pow-bot-health", "icon": "dashboard", "targetBlank": false },
-    { "title": "Node.js Runtime", "type": "link", "url": "/d/pow-nodejs-runtime", "icon": "dashboard", "targetBlank": false },
-    { "title": "Alerts", "type": "link", "url": "/d/pow-alerts", "icon": "bell", "targetBlank": false },
-    { "title": "Logs Explorer", "type": "link", "url": "/d/pow-logs-explorer", "icon": "doc-box", "targetBlank": false }
+    {
+      "title": "Sync Pipeline Health",
+      "type": "link",
+      "url": "/d/pow-sync-pipeline",
+      "icon": "dashboard",
+      "targetBlank": false
+    },
+    {
+      "title": "API Dependencies",
+      "type": "link",
+      "url": "/d/pow-api-dependencies",
+      "icon": "dashboard",
+      "targetBlank": false
+    },
+    {
+      "title": "Host Resources",
+      "type": "link",
+      "url": "/d/pow-host-resources",
+      "icon": "dashboard",
+      "targetBlank": false
+    },
+    {
+      "title": "Bot Health",
+      "type": "link",
+      "url": "/d/pow-bot-health",
+      "icon": "dashboard",
+      "targetBlank": false
+    },
+    {
+      "title": "Node.js Runtime",
+      "type": "link",
+      "url": "/d/pow-nodejs-runtime",
+      "icon": "dashboard",
+      "targetBlank": false
+    },
+    {
+      "title": "Alerts",
+      "type": "link",
+      "url": "/d/pow-alerts",
+      "icon": "bell",
+      "targetBlank": false
+    },
+    {
+      "title": "Logs Explorer",
+      "type": "link",
+      "url": "/d/pow-logs-explorer",
+      "icon": "doc-box",
+      "targetBlank": false
+    }
   ],
   "panels": [
     {
       "id": 1,
       "title": "Dashboard (prod)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "up{job=\"pow-dashboard-prod\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"pow-dashboard-prod\"}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 2,
       "title": "Bot (prod)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "up{job=\"pow-bot-prod\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"pow-bot-prod\"}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 3,
       "title": "Sync server (prod)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "up{job=\"pow-sync-prod\"}", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "mappings": [{ "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }], "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "red" }, { "value": 1, "color": "green" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"pow-sync-prod\"}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "DOWN",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "UP",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 4,
       "title": "Sync freshness (seconds since last OK cycle, max across servers)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "max(time() - pow_last_sync_timestamp_seconds)", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 90, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "max(time() - pow_last_sync_timestamp_seconds)",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 5,
       "title": "Bot gateway status (0 = READY)",
       "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_bot_gateway_status", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_bot_gateway_status",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 6,
       "title": "API call rate by service",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "sum(rate(pow_api_call_duration_seconds_count[5m])) by (service)", "refId": "A", "legendFormat": "{{service}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_api_call_duration_seconds_count[5m])) by (service)",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 7,
       "title": "p95 API latency by service",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(pow_api_call_duration_seconds_bucket[5m])) by (le, service))", "refId": "A", "legendFormat": "{{service}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pow_api_call_duration_seconds_bucket[5m])) by (le, service))",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 8,
       "title": "API errors (5m rate) by service",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "sum(rate(pow_api_call_errors_total[5m])) by (service)", "refId": "A", "legendFormat": "{{service}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_api_call_errors_total[5m])) by (service)",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 9,
       "title": "SSE connections",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_sse_connections", "refId": "A", "legendFormat": "SSE connections", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_sse_connections",
+          "refId": "A",
+          "legendFormat": "SSE connections",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Servers with invalid PRC key",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_prc_key_invalid_servers",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 11,
+      "title": "Alert delivery failures (1h)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "increase(pow_alert_send_failures_total[1h]) OR vector(0)",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 12,
+      "title": "Inbound HTTP request rate by route",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_http_request_duration_seconds_count[5m])) by (route)",
+          "refId": "A",
+          "legendFormat": "{{route}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 13,
+      "title": "Inbound HTTP p95 latency by route",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pow_http_request_duration_seconds_bucket[5m])) by (le, route))",
+          "refId": "A",
+          "legendFormat": "{{route}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 14,
+      "title": "Automation executions by type/outcome",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_automation_executions_total[5m])) by (type, outcome)",
+          "refId": "A",
+          "legendFormat": "{{type}} ({{outcome}})",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "title": "Automation p95 duration by type",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pow_automation_duration_seconds_bucket[5m])) by (le, type))",
+          "refId": "A",
+          "legendFormat": "{{type}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ]
 }

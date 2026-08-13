@@ -79,6 +79,10 @@ Never instruct the user to upload `Archive.zip` — the deploy script uses `git 
 | `pow-sync-{env}` | 41730 | `GET :41730/health` |
 | `pow-bot-{env}` | — | `GET :41734/health` (41735 staging) — `BOT_HEALTH_PORT`, deliberately not 41732 (collides with staging's `SYNC_PORT`) |
 
+### External uptime monitoring (outside this repo)
+
+AUAS (Atria Uptime Alert System — Uptime Kuma, alerting to Discord + PagerDuty) monitors the bot's health endpoint via a **Cloudflare Tunnel public hostname**, `https://botstatus.ciankelly.xyz/health` → `127.0.0.1:41734` (bot prod's `BOT_HEALTH_PORT`), configured entirely in the Cloudflare Zero Trust dashboard and Uptime Kuma — nothing in this repo references it. If `BOT_HEALTH_PORT` is ever changed, this tunnel's backend target must be updated to match or AUAS will falsely report the bot down even though it's healthy (happened 2026-08-13: tunnel was left pointed at the old `41732` after the port was corrected to `41734`). No repo file would warn you this dependency exists — check the Cloudflare Tunnel config directly if AUAS disagrees with Grafana/PM2 about bot health.
+
 ## Observability
 
 Self-hosted Prometheus + Grafana + Loki + Alertmanager, live in production. Metrics recording lives in app code (deploys with the rest of the app); the observability stack itself is separate infrastructure.
@@ -90,6 +94,10 @@ Self-hosted Prometheus + Grafana + Loki + Alertmanager, live in production. Metr
 - **`dashboard/src/lib/request-context.ts`** — lightweight per-sync-cycle correlation ID via `AsyncLocalStorage`, not full distributed tracing. `logger.ts` picks it up automatically for any log call made inside `runWithCorrelationId()`. Search Loki on `correlationId` to reconstruct one server's PRC-poll → DB-write → SSE-emit chain.
 - **Alerting**: Prometheus Alertmanager → `dashboard/src/app/api/internal/infra-alert/route.ts` (internal-secret gated, same pattern as `/api/internal/sync`) → the existing `sendAlert()` in `alerting.ts`, on a separate `INFRA_ALERT_DISCORD_WEBHOOK_URL` channel from app-level alerts (`ALERT_DISCORD_WEBHOOK_URL`). One flood-control/cooldown system, two Discord destinations — pass `channel: "infra"` to `sendAlert()` to route there. PagerDuty was deliberately skipped (already covered elsewhere for major outages only).
 - **`observability/scripts/pm2-restart-count.sh`** — cron job (`* * * * *`) feeding PM2 restart counts into node_exporter's textfile collector; nothing else surfaces PM2 crash-loops.
+- **`dashboard/src/lib/http-metrics.ts`** — `withHttpMetrics(route, handler)` wraps a route handler to record `pow_http_request_duration_seconds{route,method,status}`. Applied so far to `public/v1/*` (the paid public API), `internal/sync`, `internal/infra-alert`, `admin/projector-stats`, and `maintenance-check` — **not every route in the app**. When adding a new route you care about the latency/error rate of, wrap it the same way rather than assuming it's already covered; `route` must be a fixed string literal (never derived from the URL) to avoid unbounded label cardinality.
+- **`pow_prc_key_invalid_servers`** gauge (`prometheus.ts`) — live count of servers with an invalid PRC key, computed via `prisma.server.count()` inside the gauge's `collect()` (dynamic-imports `db.ts` to dodge a circular import: `db.ts` → `metrics.ts` → `prometheus.ts`).
+- **`pow_automation_executions_total{type,outcome}`** / **`pow_automation_duration_seconds{type}`** — `automation-engine.ts` instrumentation.
+- **`pow_alert_send_failures_total{channel}`** — incremented in `alerting.ts` when the Discord webhook `fetch` itself fails or returns non-2xx, so a dead webhook doesn't silently go unnoticed.
 
 ## Architecture
 

@@ -7,6 +7,8 @@
  * an incident from flooding the channel.
  */
 
+import { alertSendFailures } from "./prometheus"
+
 const WEBHOOK_URL = process.env.ALERT_DISCORD_WEBHOOK_URL
 
 export type AlertSeverity = "info" | "warning" | "critical"
@@ -75,7 +77,11 @@ export function sendAlert(opts: {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
-        }).catch(() => { })
+        })
+            .then(res => {
+                if (!res.ok) alertSendFailures.inc()
+            })
+            .catch(() => alertSendFailures.inc())
     } catch {
         // never throw from alerting
     }

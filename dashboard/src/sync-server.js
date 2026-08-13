@@ -35,7 +35,11 @@ function sendAlert(title, message, severity = 'critical') {
         timestamp: new Date().toISOString(),
       }],
     }),
-  }).catch(() => { })
+  })
+    .then((res) => {
+      if (!res.ok) alertFailuresCounter.inc()
+    })
+    .catch(() => alertFailuresCounter.inc())
 }
 
 process.on('uncaughtException', (err) => {
@@ -57,6 +61,11 @@ promClient.collectDefaultMetrics({ register: promRegister, prefix: 'pow_sync_' }
 const wsConnectionsGauge = new promClient.Gauge({
   name: 'pow_sync_ws_connections',
   help: 'Current active Yjs WebSocket connections',
+  registers: [promRegister],
+})
+const alertFailuresCounter = new promClient.Counter({
+  name: 'pow_sync_alert_send_failures_total',
+  help: 'Discord webhook alert deliveries that failed (fetch threw or returned non-2xx)',
   registers: [promRegister],
 })
 

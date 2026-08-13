@@ -7,6 +7,8 @@
  * next allowed send as "(suppressed N repeats)".
  */
 
+import { alertSendFailures } from "./prometheus"
+
 const WEBHOOK_URL = process.env.ALERT_DISCORD_WEBHOOK_URL
 // Separate channel for infra-level alerts (host mem/disk, PM2 process down,
 // container down) forwarded from Alertmanager via api/internal/infra-alert —
@@ -90,15 +92,23 @@ export function sendAlert(opts: {
             ],
         }
 
+        const channel = opts.channel === "infra" ? "infra" : "app"
         const targetUrl = opts.channel === "infra" ? INFRA_WEBHOOK_URL : WEBHOOK_URL
         if (!targetUrl) return // no webhook configured — nothing to send
 
-        // Fire and forget — an alerting failure must never affect the app
+        // Fire and forget — an alerting failure must never affect the app.
+        // Still tracked via pow_alert_send_failures_total so a dead webhook
+        // (bad URL, Discord outage, rate limit) doesn't fail completely
+        // silently — this is the alerting pipeline's own dead-man's switch.
         fetch(targetUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),
-        }).catch(() => { })
+        })
+            .then(res => {
+                if (!res.ok) alertSendFailures.inc({ channel })
+            })
+            .catch(() => alertSendFailures.inc({ channel }))
     } catch {
         // never throw from alerting
     }

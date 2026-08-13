@@ -10,6 +10,7 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { newCorrelationId, runWithCorrelationId } from "@/lib/request-context"
 import { createLogger } from "@/lib/logger"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
 const log = createLogger("sync-route")
 
@@ -19,7 +20,7 @@ const INTERNAL_SECRET = process.env.INTERNAL_SYNC_SECRET!
 // continuous breakage before we page.
 const SYNC_FAILURE_ALERT_THRESHOLD = 15
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("internal/sync", async (req: Request) => {
     const authHeader = req.headers.get("x-internal-secret")
 
     if (!INTERNAL_SECRET || !authHeader || authHeader.length !== INTERNAL_SECRET.length || !crypto.timingSafeEqual(Buffer.from(authHeader), Buffer.from(INTERNAL_SECRET))) {
@@ -158,5 +159,5 @@ export async function POST(req: Request) {
     } catch (e: any) {
         return new NextResponse(e.message, { status: 500 })
     }
-}
+})
 

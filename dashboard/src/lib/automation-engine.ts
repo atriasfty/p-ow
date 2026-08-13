@@ -4,6 +4,7 @@ import { getServerConfig } from "@/lib/server-config"
 import { getServerOverride } from "./config"
 import * as https from "https"
 import { fireWebhook, resolvePublicIp } from "./webhook"
+import { automationExecutions, automationDuration } from "./prometheus"
 
 // Define expanded triggers
 export type TriggerType =
@@ -105,6 +106,7 @@ export class AutomationEngine {
     }
 
     static async trigger(type: TriggerType, context: AutomationContext, specificAutomation?: any) {
+        const __start = Date.now()
         try {
             const server = await getServerConfig(context.serverId)
             if (!server) return
@@ -163,8 +165,12 @@ export class AutomationEngine {
                     }
                 }
             }
+            automationExecutions.inc({ type, outcome: "ok" })
         } catch (e) {
             console.error(`[AUTOMATION] Error processing trigger ${type}: `, e)
+            automationExecutions.inc({ type, outcome: "error" })
+        } finally {
+            automationDuration.observe({ type }, (Date.now() - __start) / 1000)
         }
     }
 

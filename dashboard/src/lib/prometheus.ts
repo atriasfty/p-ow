@@ -19,6 +19,11 @@ interface PowMetrics {
     syncCycleFailures: client.Counter<"server_id">
     lastSyncTimestamp: client.Gauge<"server_id">
     sseConnections: client.Gauge
+    httpRequestDuration: client.Histogram<"route" | "method" | "status">
+    prcKeyInvalidServers: client.Gauge
+    automationExecutions: client.Counter<"type" | "outcome">
+    automationDuration: client.Histogram<"type">
+    alertSendFailures: client.Counter<"channel">
 }
 
 function build(): PowMetrics {
@@ -83,6 +88,44 @@ function build(): PowMetrics {
                 this.set(healthState.sseConnections)
             },
         }),
+        httpRequestDuration: new client.Histogram({
+            name: "pow_http_request_duration_seconds",
+            help: "Inbound HTTP request duration for routes wrapped with withHttpMetrics (see http-metrics.ts) — not yet applied to every route in the app",
+            labelNames: ["route", "method", "status"],
+            buckets: [0.02, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+            registers: [register],
+        }),
+        // Dynamic import inside collect() to avoid a static circular import
+        // (db.ts -> metrics.ts -> prometheus.ts) — same pattern used for
+        // AutomationEngine in api/internal/sync/route.ts.
+        prcKeyInvalidServers: new client.Gauge({
+            name: "pow_prc_key_invalid_servers",
+            help: "Count of servers currently flagged with an invalid PRC Server-Key (sync stopped for them)",
+            registers: [register],
+            async collect() {
+                const { prisma } = await import("./db")
+                this.set(await prisma.server.count({ where: { prcKeyInvalid: true } }))
+            },
+        }),
+        automationExecutions: new client.Counter({
+            name: "pow_automation_executions_total",
+            help: "Automation engine trigger executions",
+            labelNames: ["type", "outcome"],
+            registers: [register],
+        }),
+        automationDuration: new client.Histogram({
+            name: "pow_automation_duration_seconds",
+            help: "Automation engine execution duration per trigger type",
+            labelNames: ["type"],
+            buckets: [0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+            registers: [register],
+        }),
+        alertSendFailures: new client.Counter({
+            name: "pow_alert_send_failures_total",
+            help: "Discord webhook alert deliveries that failed (fetch threw or returned non-2xx) — a nonzero rate here means alerting itself may be blind",
+            labelNames: ["channel"],
+            registers: [register],
+        }),
     }
 }
 
@@ -99,4 +142,9 @@ export const {
     syncCycleFailures,
     lastSyncTimestamp,
     sseConnections,
+    httpRequestDuration,
+    prcKeyInvalidServers,
+    automationExecutions,
+    automationDuration,
+    alertSendFailures,
 } = metrics

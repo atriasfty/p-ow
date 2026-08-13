@@ -33,6 +33,22 @@ groups:
           summary: "{{ $labels.job }} is down"
           description: "Prometheus target {{ $labels.job }} has been unreachable for over 2 minutes."
 
+      - alert: WrenDown
+        expr: up{job="wren-prod"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Wren process is down"
+          description: "Prometheus can't scrape wren-prod — the process is down or unresponsive."
+
+      - alert: WrenGatewayDisconnected
+        expr: wren_discord_gateway_status != 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Wren disconnected from Discord gateway"
+          description: "wren_discord_gateway_status has been non-zero (not READY) for over 2 minutes. Chat/voice/slash commands are down for every tenant guild."
+
   - name: pow-warning
     rules:
       - alert: HostMemoryPressure
@@ -70,3 +86,44 @@ groups:
         annotations:
           summary: "{{ $labels.name }} restarting repeatedly"
           description: "{{ $labels.name }} has restarted more than 3 times in the last 10 minutes — likely crash-looping."
+
+      - alert: WrenChatPipelineErrorRate
+        expr: rate(wren_chat_pipeline_errors_total[10m]) > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Wren chat pipeline error rate elevated"
+          description: "wren_chat_pipeline_errors_total has been climbing at over 0.1/s (~1 in 10 requests failing) for 5+ minutes — check LLM provider status and recent deploys."
+
+      - alert: PrcKeyInvalidServers
+        expr: pow_prc_key_invalid_servers > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} server(s) have an invalid PRC key"
+          description: "At least one server has had an invalid PRC Server-Key for 5+ minutes and sync has stopped for it. A per-server Discord alert already fired when this started — this is the aggregate view. Check the mod/admin panel banner or query pow_prc_key_invalid_servers to see which."
+
+      - alert: AlertDeliveryFailing
+        # If this fires, don't trust Discord to have told you already —
+        # check Grafana/Prometheus directly. Covers dashboard, bot, and
+        # sync-server's independent sendAlert() implementations.
+        expr: increase(pow_alert_send_failures_total[15m]) + increase(pow_bot_alert_send_failures_total[15m]) + increase(pow_sync_alert_send_failures_total[15m]) > 0
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "Discord alert delivery is failing"
+          description: "One or more sendAlert() calls failed to reach Discord in the last 15 minutes (bad webhook URL, Discord outage, rate limit). Other alerts may be silently not reaching you — check webhook config and Discord status directly."
+
+      - alert: ObservabilityComponentDown
+        # Loki/Alertmanager/Promtail/Grafana dying previously went completely
+        # unnoticed — only the app jobs and node/prometheus itself were
+        # watched. This alert fires via Alertmanager -> infra-alert route ->
+        # Discord, same as everything else, UNLESS Alertmanager itself is the
+        # thing that's down, in which case nothing fires and this stays a
+        # blind spot — check Grafana/Prometheus directly if alerts go quiet.
+        expr: up{job=~"alertmanager|loki|promtail|grafana"} == 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.job }} (observability stack component) is down"
+          description: "Prometheus target {{ $labels.job }} has been unreachable for 5+ minutes. Part of the observability stack itself is degraded — logs, dashboards, or alert routing may be affected."

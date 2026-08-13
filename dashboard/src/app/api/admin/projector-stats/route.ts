@@ -3,6 +3,7 @@ import { isSuperAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
 import { healthState } from "@/lib/health-state"
+import { withHttpMetrics } from "@/lib/http-metrics"
 import os from "os"
 
 // A server with zero players still syncs successfully every ~4s cycle —
@@ -68,7 +69,7 @@ async function querySyncHealth(minutes = 5): Promise<{ successRate: number; tota
     }
 }
 
-export async function GET() {
+export const GET = withHttpMetrics("admin/projector-stats", async () => {
     const session = await getSession()
     if (!session) return new NextResponse("Unauthorized", { status: 401 })
     if (!isSuperAdmin(session.user as any)) return new NextResponse("Forbidden", { status: 403 })
@@ -258,4 +259,4 @@ export async function GET() {
         anyAlert: Object.values(alerts).some(Boolean),
         updatedAt: now.toISOString(),
     })
-}
+})

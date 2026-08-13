@@ -4,8 +4,9 @@ import { getServerSettings } from "@/lib/server-settings"
 import { eventBus } from "@/lib/event-bus"
 import { PrcClient } from "@/lib/prc"
 import { NextResponse } from "next/server"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("public/v1/shifts/start", async (req: Request) => {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
@@ -129,4 +130,4 @@ export async function POST(req: Request) {
 
     await logApiAccess(auth.apiKey, "PUBLIC_SHIFT_STARTED", `User: ${userId}, Server: ${server.name}`)
     return withRateLimit(NextResponse.json({ success: true, shift }), auth)
-}
+})

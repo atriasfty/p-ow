@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db"
 import { validatePublicApiKey, withRateLimit, logApiAccess } from "@/lib/public-auth"
 import { NextResponse } from "next/server"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("public/v1/punishments/resolve", async (req: Request) => {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
@@ -27,4 +28,4 @@ export async function POST(req: Request) {
         console.error("Public Punishment Resolve API Error:", e)
         return withRateLimit(NextResponse.json({ error: "Internal Error or Invalid ID" }, { status: 500 }), auth)
     }
-}
+})

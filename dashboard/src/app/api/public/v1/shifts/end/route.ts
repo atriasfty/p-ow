@@ -2,8 +2,9 @@ import { prisma } from "@/lib/db"
 import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { eventBus } from "@/lib/event-bus"
 import { NextResponse } from "next/server"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("public/v1/shifts/end", async (req: Request) => {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
@@ -64,4 +65,4 @@ export async function POST(req: Request) {
 
     await logApiAccess(auth.apiKey, "PUBLIC_SHIFT_ENDED", `User: ${userId}, Server: ${server.name}, Duration: ${duration}s`)
     return withRateLimit(NextResponse.json({ success: true, shift: updated }), auth)
-}
+})

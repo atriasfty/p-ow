@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { withHttpMetrics } from '@/lib/http-metrics'
 
 // Force dynamic - no caching
 export const dynamic = 'force-dynamic'
@@ -15,7 +16,7 @@ const MAINTENANCE_HEADERS = {
     'Expires': '0',
 }
 
-export async function GET() {
+export const GET = withHttpMetrics('maintenance-check', async () => {
     try {
         const config = await prisma.config.findUnique({
             where: { key: 'MAINTENANCE_MODE' }
@@ -33,4 +34,4 @@ export async function GET() {
         const maintenance = cachedMaintenance ?? false
         return NextResponse.json({ maintenance }, { headers: MAINTENANCE_HEADERS })
     }
-}
+})

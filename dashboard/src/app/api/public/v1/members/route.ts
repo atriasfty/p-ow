@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db"
 import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { NextResponse } from "next/server"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
-export async function GET(req: Request) {
+export const GET = withHttpMetrics("public/v1/members", async (req: Request) => {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: auth.status || 401 }), auth)
 
@@ -38,4 +39,4 @@ export async function GET(req: Request) {
         console.error("Public Member List API Error:", e)
         return withRateLimit(NextResponse.json({ error: "Internal Error" }, { status: 500 }), auth)
     }
-}
+})

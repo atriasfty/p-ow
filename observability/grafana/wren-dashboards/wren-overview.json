@@ -1,115 +1,539 @@
 {
   "uid": "wren-overview",
   "title": "Wren Overview",
-  "description": "github.com/atriasfty/wren — multi-tenant ER:LC Discord bot (RAG chat, voice, MCP tool calling). Shares this Prometheus/Grafana instance with POW.",
-  "tags": ["wren"],
+  "description": "github.com/atriasfty/wren \u2014 multi-tenant ER:LC Discord bot (RAG chat, voice, MCP tool calling). Shares this Prometheus/Grafana instance with POW.",
+  "tags": [
+    "wren"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "title": "Gateway status (0 = READY)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "wren_discord_gateway_status", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_discord_gateway_status",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 2,
       "title": "Guilds (tenants)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "wren_discord_guild_count", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "value", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_discord_guild_count",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "id": 3,
       "title": "Chat pipeline errors (1h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "increase(wren_chat_pipeline_errors_total[1h])", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "yellow" }, { "value": 5, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "increase(wren_chat_pipeline_errors_total[1h])",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "yellow"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 4,
       "title": "Process memory (RSS)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "wren_process_resident_memory_bytes", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "value", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_process_resident_memory_bytes",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "id": 5,
       "title": "HTTP request rate by route",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "sum(rate(wren_http_request_duration_seconds_count[5m])) by (route)", "refId": "A", "legendFormat": "{{route}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_http_request_duration_seconds_count[5m])) by (route)",
+          "refId": "A",
+          "legendFormat": "{{route}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 6,
       "title": "HTTP p95 latency by route",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(wren_http_request_duration_seconds_bucket[5m])) by (le, route))", "refId": "A", "legendFormat": "{{route}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_http_request_duration_seconds_bucket[5m])) by (le, route))",
+          "refId": "A",
+          "legendFormat": "{{route}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 7,
       "title": "Chat pipeline duration (p50/p95/max)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "description": "Full runAssistantPipeline — RAG retrieval + tool calls + LLM, not just the raw LLM call.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "description": "Full runAssistantPipeline \u2014 RAG retrieval + tool calls + LLM, not just the raw LLM call.",
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(wren_chat_pipeline_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "p50", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "histogram_quantile(0.95, sum(rate(wren_chat_pipeline_duration_seconds_bucket[5m])) by (le))", "refId": "B", "legendFormat": "p95", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "max(wren_chat_pipeline_duration_seconds_sum) / max(wren_chat_pipeline_duration_seconds_count)", "refId": "C", "legendFormat": "avg", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(wren_chat_pipeline_duration_seconds_bucket[5m])) by (le))",
+          "refId": "A",
+          "legendFormat": "p50",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_chat_pipeline_duration_seconds_bucket[5m])) by (le))",
+          "refId": "B",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "max(wren_chat_pipeline_duration_seconds_sum) / max(wren_chat_pipeline_duration_seconds_count)",
+          "refId": "C",
+          "legendFormat": "avg",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 8,
       "title": "DB query duration (p95)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(wren_db_query_duration_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "p95", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_db_query_duration_seconds_bucket[5m])) by (le))",
+          "refId": "A",
+          "legendFormat": "p95",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 9,
       "title": "Event loop lag (p99)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 21 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "wren_nodejs_eventloop_lag_p99_seconds", "refId": "A", "legendFormat": "p99", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_nodejs_eventloop_lag_p99_seconds",
+          "refId": "A",
+          "legendFormat": "p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 10,
       "title": "Heap used / total",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 21 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "wren_nodejs_heap_size_used_bytes", "refId": "A", "legendFormat": "used", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "wren_nodejs_heap_size_total_bytes", "refId": "B", "legendFormat": "total", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "wren_nodejs_heap_size_used_bytes",
+          "refId": "A",
+          "legendFormat": "used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "wren_nodejs_heap_size_total_bytes",
+          "refId": "B",
+          "legendFormat": "total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "title": "LLM token usage rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 29
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_llm_tokens_total[5m])) by (type)",
+          "refId": "A",
+          "legendFormat": "{{type}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 12,
+      "title": "MCP tool call rate by tool",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 29
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_mcp_tool_calls_total[5m])) by (tool)",
+          "refId": "A",
+          "legendFormat": "{{tool}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 13,
+      "title": "MCP tool error rate by tool",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_mcp_tool_calls_total{outcome=\"error\"}[5m])) by (tool)",
+          "refId": "A",
+          "legendFormat": "{{tool}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 14,
+      "title": "MCP tool p95 duration by tool",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_mcp_tool_duration_seconds_bucket[5m])) by (le, tool))",
+          "refId": "A",
+          "legendFormat": "{{tool}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ]
 }

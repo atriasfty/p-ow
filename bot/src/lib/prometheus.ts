@@ -28,3 +28,9 @@ export const queueOldestAgeSeconds = new client.Gauge({
     help: "Age in seconds of the oldest pending queue item",
     registers: [register],
 })
+
+export const alertSendFailures = new client.Counter({
+    name: "pow_bot_alert_send_failures_total",
+    help: "Discord webhook alert deliveries that failed (fetch threw or returned non-2xx)",
+    registers: [register],
+})

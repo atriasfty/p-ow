@@ -1,8 +1,9 @@
 import { PrcClient } from "@/lib/prc"
 import { validatePublicApiKey, withRateLimit, resolveServer, logApiAccess } from "@/lib/public-auth"
 import { NextResponse } from "next/server"
+import { withHttpMetrics } from "@/lib/http-metrics"
 
-export async function POST(req: Request) {
+export const POST = withHttpMetrics("public/v1/commands", async (req: Request) => {
     const auth = await validatePublicApiKey()
     if (!auth.valid) return withRateLimit(NextResponse.json({ error: auth.error }, { status: 401 }), auth)
 
@@ -24,4 +25,4 @@ export async function POST(req: Request) {
         console.error("Public Command API Error:", e)
         return withRateLimit(NextResponse.json({ error: "Internal Error" }, { status: 500 }), auth)
     }
-}
+})

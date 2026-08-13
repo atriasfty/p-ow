@@ -1,87 +1,365 @@
 {
   "uid": "pow-host-resources",
   "title": "POW Host Resources",
-  "description": "Host-wide metrics from node_exporter — this box is shared with other, unrelated tenants (not POW-exclusive), so these numbers reflect the whole VPS, not just POW's processes.",
-  "tags": ["pow"],
+  "description": "Host-wide metrics from node_exporter \u2014 this box is shared with other, unrelated tenants (not POW-exclusive), so these numbers reflect the whole VPS, not just POW's processes.",
+  "tags": [
+    "pow"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "title": "CPU usage",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "refId": "A", "legendFormat": "CPU %", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "refId": "A",
+          "legendFormat": "CPU %",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "min": 0
+        },
+        "overrides": []
+      }
     },
     {
       "id": 2,
       "title": "Memory available",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "node_memory_MemAvailable_bytes", "refId": "A", "legendFormat": "available", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "node_memory_MemTotal_bytes", "refId": "B", "legendFormat": "total", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "refId": "A",
+          "legendFormat": "available",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "node_memory_MemTotal_bytes",
+          "refId": "B",
+          "legendFormat": "total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 3,
       "title": "Swap used",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes", "refId": "A", "legendFormat": "swap used", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "bytes", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1073741824, "color": "yellow" }, { "value": 4294967296, "color": "red" }] }, "custom": { "thresholdsStyle": { "mode": "line" } } }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes",
+          "refId": "A",
+          "legendFormat": "swap used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1073741824,
+                "color": "yellow"
+              },
+              {
+                "value": 4294967296,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 4,
       "title": "Disk free (/)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}", "refId": "A", "legendFormat": "free ratio", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1, "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 0.1, "color": "red" }] } }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}",
+          "refId": "A",
+          "legendFormat": "free ratio",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 5,
       "title": "Network I/O",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "sum(rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])) by (device)", "refId": "A", "legendFormat": "rx {{device}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "sum(rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])) by (device)", "refId": "B", "legendFormat": "tx {{device}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "sum(rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])) by (device)",
+          "refId": "A",
+          "legendFormat": "rx {{device}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])) by (device)",
+          "refId": "B",
+          "legendFormat": "tx {{device}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 6,
       "title": "POW process memory (dashboard/bot/sync-server, via collectDefaultMetrics)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "pow_dashboard_process_resident_memory_bytes", "refId": "A", "legendFormat": "dashboard", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_process_resident_memory_bytes", "refId": "B", "legendFormat": "bot", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_sync_process_resident_memory_bytes", "refId": "C", "legendFormat": "sync-server", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "pow_dashboard_process_resident_memory_bytes",
+          "refId": "A",
+          "legendFormat": "dashboard",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_process_resident_memory_bytes",
+          "refId": "B",
+          "legendFormat": "bot",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_process_resident_memory_bytes",
+          "refId": "C",
+          "legendFormat": "sync-server",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 7,
       "title": "PM2 restarts (cumulative, all processes on this box)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "description": "From observability/scripts/pm2-restart-count.sh (cron, per-minute). A rising line for any single process usually means it's crash-looping.",
-      "targets": [{ "expr": "pow_pm2_restart_total", "refId": "A", "legendFormat": "{{name}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "targets": [
+        {
+          "expr": "pow_pm2_restart_total",
+          "refId": "A",
+          "legendFormat": "{{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "Observability stack component status (prometheus/alertmanager/loki/promtail/grafana/node)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "up{job=~\"prometheus|alertmanager|loki|promtail|grafana|node\"}",
+          "refId": "A",
+          "legendFormat": "{{job}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
     }
   ]
 }
