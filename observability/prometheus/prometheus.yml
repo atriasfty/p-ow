@@ -23,6 +23,14 @@ scrape_configs:
   # 41732, not 41734 as CLAUDE.md's stale docs implied. Token files under
   # ./secrets/*.token (gitignored) hold PROMETHEUS_METRICS_SECRET's value —
   # one shared secret across the three processes, same as INTERNAL_SYNC_SECRET.
+  #
+  # No `service:` static label here — `job` already identifies the process
+  # (pow-dashboard-prod/pow-bot-prod/pow-sync-prod), and pow_api_call_* /
+  # pow_db_query_* metrics have their OWN `service` label (prc/clerk/rotector/
+  # pow-api/db model name). A static label with the same name as a metric's
+  # own label gets relabeled to `exported_service` by Prometheus to resolve
+  # the collision — which silently broke every `service="prc"`-style query,
+  # including Grafana's API Dependencies dashboard. Don't reintroduce this.
 
   - job_name: pow-dashboard-prod
     metrics_path: /api/metrics
@@ -30,7 +38,7 @@ scrape_configs:
       credentials_file: /etc/prometheus/secrets/dashboard_prod.token
     static_configs:
       - targets: ["127.0.0.1:41729"]
-        labels: { env: prod, service: dashboard }
+        labels: { env: prod }
 
   - job_name: pow-bot-prod
     metrics_path: /metrics
@@ -38,7 +46,7 @@ scrape_configs:
       credentials_file: /etc/prometheus/secrets/bot_prod.token
     static_configs:
       - targets: ["127.0.0.1:41732"]
-        labels: { env: prod, service: bot }
+        labels: { env: prod }
 
   - job_name: pow-sync-prod
     metrics_path: /metrics
@@ -46,7 +54,7 @@ scrape_configs:
       credentials_file: /etc/prometheus/secrets/sync_prod.token
     static_configs:
       - targets: ["127.0.0.1:41730"]
-        labels: { env: prod, service: sync }
+        labels: { env: prod }
 
   # Staging isn't currently deployed on this box (no pow-*-staging PM2
   # processes at last check) — add pow-dashboard-staging/pow-bot-staging/

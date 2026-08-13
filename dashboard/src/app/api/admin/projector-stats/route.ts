@@ -11,64 +11,61 @@ const SYNC_STALE_MS = 90 * 1000
 
 export const dynamic = "force-dynamic"
 
-const POSTHOG_HOST = "https://a.atriasafety.org"
+// Prometheus runs locally on the same box (see observability/) — a plain
+// unauthenticated loopback call, same as everything else in this codebase
+// that talks to it. This used to query PostHog's `metric_api_call` /
+// `metric_sync_cycle` events, but metrics.ts stopped emitting those when it
+// switched to recording straight into Prometheus (no more PostHog sampling
+// needed at this volume) — this just follows that move.
+const PROMETHEUS_URL = process.env.PROMETHEUS_URL || "http://127.0.0.1:9090"
 
 interface PhLatency { avgMs: number; errorRate: number; totalCalls: number }
 
-async function queryPostHogLatency(service: string, minutes = 5): Promise<PhLatency | null> {
-    const key = process.env.POSTHOG_PERSONAL_API_KEY
-    const proj = process.env.POSTHOG_PROJECT_ID
-    if (!key || !proj) return null
-
-    const after = new Date(Date.now() - minutes * 60 * 1000).toISOString()
-    // 403s are expected auth rejections — excluded from error rate
-    const errorCondition = `properties.status != 'ok' AND toInt64OrZero(toString(properties.http_status)) != 403`
+async function promInstantQuery(query: string): Promise<string | null> {
     try {
-        const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                query: {
-                    kind: "HogQLQuery",
-                    query: `SELECT avg(toFloat64OrZero(toString(properties.duration_ms))), countIf(${errorCondition}), count() FROM events WHERE event = 'metric_api_call' AND properties.service = '${service}' AND timestamp > toDateTime('${after}') LIMIT 1`
-                }
-            }),
+        const res = await fetch(`${PROMETHEUS_URL}/api/v1/query?query=${encodeURIComponent(query)}`, {
             signal: AbortSignal.timeout(2500),
             cache: "no-store",
         })
         if (!res.ok) return null
         const data = await res.json()
-        const row = data.results?.[0]
-        if (!row || row[2] === 0) return null
-        return { avgMs: Math.round(row[0] ?? 0), errorRate: Math.round((row[1] / row[2]) * 100), totalCalls: row[2] }
+        if (data.status !== "success") return null
+        const value = data.data?.result?.[0]?.value?.[1]
+        return value === undefined ? null : value
     } catch { return null }
 }
 
-async function querySyncHealth(minutes = 5): Promise<{ successRate: number; totalCycles: number } | null> {
-    const key = process.env.POSTHOG_PERSONAL_API_KEY
-    const proj = process.env.POSTHOG_PROJECT_ID
-    if (!key || !proj) return null
+async function queryPrcLatency(service: string, minutes = 5): Promise<PhLatency | null> {
+    const range = `${minutes}m`
+    const [totalCallsRaw, avgSecRaw, errCountRaw] = await Promise.all([
+        promInstantQuery(`sum(increase(pow_api_call_duration_seconds_count{service="${service}"}[${range}]))`),
+        promInstantQuery(`sum(increase(pow_api_call_duration_seconds_sum{service="${service}"}[${range}])) / sum(increase(pow_api_call_duration_seconds_count{service="${service}"}[${range}]))`),
+        promInstantQuery(`sum(increase(pow_api_call_errors_total{service="${service}"}[${range}]))`),
+    ])
+    const totalCalls = Number(totalCallsRaw)
+    if (!totalCallsRaw || !totalCalls) return null
+    const avgSec = Number(avgSecRaw) || 0
+    const errCount = Number(errCountRaw) || 0
+    return {
+        avgMs: Math.round(avgSec * 1000),
+        errorRate: Math.round((errCount / totalCalls) * 100),
+        totalCalls: Math.round(totalCalls),
+    }
+}
 
-    const after = new Date(Date.now() - minutes * 60 * 1000).toISOString()
-    try {
-        const res = await fetch(`${POSTHOG_HOST}/api/projects/${proj}/query/`, {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-                query: {
-                    kind: "HogQLQuery",
-                    query: `SELECT countIf(properties.status = 'ok'), count() FROM events WHERE event = 'metric_sync_cycle' AND timestamp > toDateTime('${after}') LIMIT 1`
-                }
-            }),
-            signal: AbortSignal.timeout(2500),
-            cache: "no-store",
-        })
-        if (!res.ok) return null
-        const data = await res.json()
-        const row = data.results?.[0]
-        if (!row || row[1] === 0) return null
-        return { successRate: Math.round((row[0] / row[1]) * 100), totalCycles: row[1] }
-    } catch { return null }
+async function querySyncHealth(minutes = 5): Promise<{ successRate: number; totalCycles: number } | null> {
+    const range = `${minutes}m`
+    const [totalCyclesRaw, failuresRaw] = await Promise.all([
+        promInstantQuery(`sum(increase(pow_sync_cycle_duration_seconds_count[${range}]))`),
+        promInstantQuery(`sum(increase(pow_sync_cycle_failures_total[${range}]))`),
+    ])
+    const totalCycles = Number(totalCyclesRaw)
+    if (!totalCyclesRaw || !totalCycles) return null
+    const failures = Number(failuresRaw) || 0
+    return {
+        successRate: Math.round(((totalCycles - failures) / totalCycles) * 100),
+        totalCycles: Math.round(totalCycles),
+    }
 }
 
 export async function GET() {
@@ -163,8 +160,8 @@ export async function GET() {
         prisma.log.count(),
         prisma.punishment.count(),
         prisma.shift.count(),
-        queryPostHogLatency("prc"),
-        queryPostHogLatency("pow-api"),
+        queryPrcLatency("prc"),
+        queryPrcLatency("pow-api"),
         querySyncHealth(),
     ])
 
