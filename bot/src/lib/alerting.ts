@@ -53,6 +53,8 @@ export function sendAlert(opts: {
             }))
 
         const body = {
+            content: "@everyone",
+            allowed_mentions: { parse: ["everyone"] },
             embeds: [
                 {
                     title: `${severity === "critical" ? "🔴" : severity === "warning" ? "🟡" : "🔵"} ${opts.title}`.slice(0, 256),

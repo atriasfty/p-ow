@@ -60,6 +60,27 @@ The sync server (`sync-server.js`) must be started as a separate process. It is 
 
 ---
 
+## Optional: Observability stack
+
+A self-hosted Prometheus + Grafana + Loki + Alertmanager stack lives in the `observability/` directory. It's optional — POW runs fine without it — but recommended if you're operating this for a real community, since it gives you dashboards, log search, and alerting instead of flying blind.
+
+```bash
+cp -r observability /somewhere/stable/pow-observability   # see warning below
+cd /somewhere/stable/pow-observability
+cp .env.example .env   # set GF_SECURITY_ADMIN_PASSWORD
+sudo ./setup.sh
+```
+
+This brings up Prometheus (metrics), Grafana (dashboards, port 3300), Loki (log search), Alertmanager, and node_exporter (host metrics) — all bound to `127.0.0.1` only, nothing exposed publicly by default. Expose Grafana however you'd expose any other internal admin tool on your setup (reverse proxy with auth, an SSH tunnel, or a tunnel product like Cloudflare Tunnel).
+
+{% hint style="warning" %}
+**Deploy this to a stable path, not inside `deploy.sh`'s release directory.** If you copy `observability/` into `current-{env}/` or `releases/<timestamp>/`, the next deploy's symlink swap will silently orphan it — the running containers keep pointing at a directory nothing references anymore. Put it somewhere deploy.sh never touches.
+{% endhint %}
+
+To actually see data, set `PROMETHEUS_METRICS_SECRET` in your `dashboard`/`bot`/sync-server `.env` files (any random string — it authenticates Prometheus's scrape requests) and uncomment the corresponding jobs in `observability/prometheus/prometheus.yml`. For alerting to Discord, set `ALERT_DISCORD_WEBHOOK_URL` (app-level alerts) and optionally `INFRA_ALERT_DISCORD_WEBHOOK_URL` (host/infra-level alerts from Alertmanager — kept on a separate channel by design).
+
+---
+
 ## Billing and plan features
 
 POW has three tiers: **Free**, **POW Pro**, and **POW Max**. On the managed service, plans are handled by Clerk Billing. On a self-hosted instance there is no payment integration — you grant plans manually via the superadmin panel instead.
@@ -82,7 +103,7 @@ The self-hosted path gives you full control, but the official instance at **pow.
 
 - Zero-downtime deployments with every update
 - Database backups and migrations
-- Monitoring and uptime alerting
+- Monitoring and alerting already configured and maintained (self-hosters can set up the same [observability stack](#optional-observability-stack), but it's on you to run it)
 - Support via the Atria Discord server
 
 Self-hosted instances are on their own for upgrades, migrations, and incident response.

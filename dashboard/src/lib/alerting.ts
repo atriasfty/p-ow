@@ -71,6 +71,11 @@ export function sendAlert(opts: {
             }))
 
         const body = {
+            // @everyone so alerts actually notify someone instead of sitting
+            // unread in the channel. allowed_mentions must be set explicitly —
+            // Discord won't parse the mention into a real ping otherwise.
+            content: "@everyone",
+            allowed_mentions: { parse: ["everyone"] },
             embeds: [
                 {
                     title: `${severity === "critical" ? "🔴" : severity === "warning" ? "🟡" : "🔵"} ${opts.title}`.slice(0, 256),

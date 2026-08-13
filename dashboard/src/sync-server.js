@@ -25,6 +25,8 @@ function sendAlert(title, message, severity = 'critical') {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      content: '@everyone',
+      allowed_mentions: { parse: ['everyone'] },
       embeds: [{
         title: `${severity === 'critical' ? '🔴' : severity === 'warning' ? '🟡' : '🔵'} ${title}`,
         description: String(message).slice(0, 3900),

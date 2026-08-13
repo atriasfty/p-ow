@@ -219,4 +219,20 @@ Always use `getServerPlan(serverId)` or `getUserPlan(userId)` from `subscription
 - `EMERGENCY_CALL` (Triggered when a new 911 call is created)
 
 ---
-*Last updated: May 13, 2026*
+
+## 13. Observability & Monitoring
+
+Self-hosted Prometheus + Grafana + Loki + Alertmanager, running in production. Two distinct pieces:
+
+1. **App-level metrics/tracing code** — lives in the normal repo, deploys with everything else.
+   - `dashboard/src/lib/prometheus.ts`, `bot/src/lib/prometheus.ts` — `prom-client` registries. `/api/metrics` (dashboard, Next.js route) and `/metrics` (bot and `sync-server.js`, plain `http.createServer` branches) are scrape endpoints, gated behind `PROMETHEUS_METRICS_SECRET` as a Bearer token (timing-safe compare, mirrors `INTERNAL_SYNC_SECRET`'s existing pattern).
+   - `dashboard/src/lib/metrics.ts` — `trackApiCall` / `trackSyncCycle` / `trackDbQuery` write straight into Prometheus histograms/counters now. Same function signatures as before, so every existing call site (`prc.ts`, `rotector.ts`, `auth-clerk.ts`, `db.ts`, `api-metrics.ts`, the sync route) is unchanged. **Do not** reintroduce sampling/buffering here — that existed only to survive PostHog's old event quota, and Prometheus doesn't need it. PostHog still owns exception tracking (`errors.ts`) — untouched by this.
+   - `dashboard/src/lib/request-context.ts` — a per-sync-cycle correlation ID via `AsyncLocalStorage`. Not distributed tracing — `logger.ts` just picks it up automatically for any log call made inside `runWithCorrelationId(id, fn)`, so a Loki query on `correlationId` reconstructs one server's PRC-poll → DB-write → SSE-emit chain.
+   - `dashboard/src/app/api/internal/infra-alert/route.ts` — receives Alertmanager's webhook for infra-only alerts (host mem/disk, PM2 process down), internal-secret gated like `/api/internal/sync`, and forwards through the existing `sendAlert()` in `alerting.ts` onto a **separate** `INFRA_ALERT_DISCORD_WEBHOOK_URL` channel from app alerts (`ALERT_DISCORD_WEBHOOK_URL`) — pass `sendAlert({..., channel: "infra"})`. One cooldown/dedup system, two Discord destinations. All `sendAlert()` messages are prefixed with `@everyone` in the message content so they actually page someone.
+
+2. **The observability stack itself** (`observability/`) — Docker Compose (Prometheus, Grafana, Loki, Promtail, Alertmanager, node_exporter), Grafana dashboards, alert rules, `setup.sh`. This is infrastructure, not app code — **do not deploy it via `deploy.sh` or place it inside the blue-green release tree.** It must live at a stable path outside `releases/<ts>/` and `current-{env}/` (e.g. `/root/pow-observability/`) because `deploy.sh`'s symlink swap on every deploy silently orphans anything bind-mounted from inside that tree — containers keep running against a directory `current-{env}` no longer points to, and `.env`/local edits vanish from view. `setup.sh` warns if it detects it's running from a release-tree path. After a config change lands in git: `rsync` the `observability/` dir to the stable path, then `docker compose up -d` (no-op if only a bind-mounted file's *contents* changed and the service definition didn't — use `docker compose restart <service>` for that case).
+   - PagerDuty was deliberately skipped for this integration — there's a pre-existing PagerDuty setup reserved for major outages only, and duplicating that wasn't wanted.
+   - `observability/scripts/pm2-restart-count.sh` (cron, `* * * * *`) is the only thing that surfaces PM2 crash-loops — feeds `pow_pm2_restart_total` into node_exporter's textfile collector.
+
+---
+*Last updated: August 13, 2026*

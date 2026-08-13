@@ -79,6 +79,18 @@ Never instruct the user to upload `Archive.zip` — the deploy script uses `git 
 | `pow-sync-{env}` | 41730 | `GET :41730/health` |
 | `pow-bot-{env}` | — | `GET :41732/health` (`BOT_HEALTH_PORT`) |
 
+## Observability
+
+Self-hosted Prometheus + Grafana + Loki + Alertmanager, live in production. Metrics recording lives in app code (deploys with the rest of the app); the observability stack itself is separate infrastructure.
+
+- **`observability/`** — docker-compose stack, Grafana dashboards/provisioning, Prometheus scrape config + alert rules, Alertmanager config, Promtail log-shipping config, `setup.sh`.
+- **CRITICAL: deploy this stack to a stable path OUTSIDE the blue-green release tree** — e.g. `/root/pow-observability/`, never `current-{env}/observability` or `releases/<ts>/observability`. `deploy.sh`'s symlink swap on every deploy orphans anything bind-mounted from inside the release tree (containers keep running against a directory `current-{env}` no longer points to). `setup.sh` warns at runtime if launched from a dangerous path. After config changes land in git, `rsync` them to the stable path and `docker compose up -d` (or `restart <service>` if only a bind-mounted file's *contents* changed — `up -d` is a no-op when the compose service definition itself is unchanged).
+- **`dashboard/src/lib/prometheus.ts`**, **`bot/src/lib/prometheus.ts`** — `prom-client` registries. `/api/metrics` (dashboard) and `/metrics` (bot, sync-server) are scraped by Prometheus, gated behind `PROMETHEUS_METRICS_SECRET` (`Authorization: Bearer <secret>`, timing-safe compare — same pattern as `INTERNAL_SYNC_SECRET`).
+- **`dashboard/src/lib/metrics.ts`** — `trackApiCall`/`trackSyncCycle`/`trackDbQuery` now record directly into Prometheus histograms/counters (no sampling/buffering — that existed only to survive PostHog's old event quota). Call sites are unchanged from before this migration. PostHog still handles exception tracking (`errors.ts`) — that's untouched.
+- **`dashboard/src/lib/request-context.ts`** — lightweight per-sync-cycle correlation ID via `AsyncLocalStorage`, not full distributed tracing. `logger.ts` picks it up automatically for any log call made inside `runWithCorrelationId()`. Search Loki on `correlationId` to reconstruct one server's PRC-poll → DB-write → SSE-emit chain.
+- **Alerting**: Prometheus Alertmanager → `dashboard/src/app/api/internal/infra-alert/route.ts` (internal-secret gated, same pattern as `/api/internal/sync`) → the existing `sendAlert()` in `alerting.ts`, on a separate `INFRA_ALERT_DISCORD_WEBHOOK_URL` channel from app-level alerts (`ALERT_DISCORD_WEBHOOK_URL`). One flood-control/cooldown system, two Discord destinations — pass `channel: "infra"` to `sendAlert()` to route there. PagerDuty was deliberately skipped (already covered elsewhere for major outages only).
+- **`observability/scripts/pm2-restart-count.sh`** — cron job (`* * * * *`) feeding PM2 restart counts into node_exporter's textfile collector; nothing else surfaces PM2 crash-loops.
+
 ## Architecture
 
 ### Real-Time Data Flow (SSE)
