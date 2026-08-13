@@ -14,7 +14,8 @@ import { Toolbox } from "@/components/mod-panel/toolbox"
 import { MobileToolbox } from "@/components/mod-panel/MobileToolbox"
 import { ServerStatsHeader } from "@/components/mod-panel/server-stats-header"
 import { StaffOnDutyAvatars } from "@/components/mod-panel/staff-on-duty-avatars"
-import { isServerAdmin, getActiveLeave, getUserPermissions } from "@/lib/admin"
+import { isServerAdmin, isSuperAdmin, getActiveLeave, getUserPermissions } from "@/lib/admin"
+import { PrcKeyInvalidBanner } from "@/components/ui/prc-key-invalid-banner"
 import { MobileModPanel } from "@/components/mod-panel/MobileModPanel"
 import { SsdNotification } from "@/components/mod-panel/ssd-notification"
 import Link from "next/link"
@@ -55,6 +56,10 @@ export default async function ModPanelPage({
 
     const server = await prisma.server.findUnique({ where: { id: serverId } })
     if (!server) return <div>Server not found</div>
+
+    // subscriberUserId is already loaded on `server` — avoid an extra query
+    // that isServerOwner()'s own findUnique would otherwise duplicate.
+    const isOwner = session.user.id === server.subscriberUserId || isSuperAdmin(session.user)
 
     // Get User Permissions
     const permissions = await getUserPermissions(session.user, serverId)
@@ -208,6 +213,7 @@ export default async function ModPanelPage({
                     {/* MOBILE LAYOUT */}
                     <div className="md:hidden flex flex-col h-screen">
                         <WarningBanner />
+                        <PrcKeyInvalidBanner invalid={server.prcKeyInvalid} isOwner={isOwner} />
                         <SseStatusBanner />
                         <div className="flex-1 min-h-0">
                             <MobileModPanel
@@ -230,6 +236,7 @@ export default async function ModPanelPage({
                     {/* DESKTOP LAYOUT */}
                     <div className="hidden md:flex flex-col h-screen bg-[#111] text-zinc-100 font-sans overflow-hidden">
                         <WarningBanner />
+                        <PrcKeyInvalidBanner invalid={server.prcKeyInvalid} isOwner={isOwner} />
                         <SseStatusBanner />
                         <ModPanelContentGate>
                         <div className="flex flex-col flex-1 min-h-0 p-4 overflow-hidden">

@@ -18,6 +18,8 @@ model Server {
   id          String   @id @default(cuid())
   name        String
   apiUrl      String   @map("api_key") // Storing PRC Server Key here
+  prcKeyInvalid   Boolean   @default(false) // PRC returned 403 for apiUrl — sync is disabled until it's rotated
+  prcKeyInvalidAt DateTime? // When it was first detected invalid
   bannerUrl   String?  // Custom banner image URL
   customName  String?  // Display name override
   discordGuildId String? // Discord Guild ID for this server

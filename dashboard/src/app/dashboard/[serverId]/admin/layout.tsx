@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Settings, Users, Shield, Calendar, Clock, ChevronLeft, Zap, ShieldAlert, Trophy, Key, CreditCard, ActivitySquare, SlidersHorizontal } from "lucide-react"
 import { checkConnectionRequirements } from "@/lib/auth-server"
 import { ConnectionRequirementScreen } from "@/components/auth/connection-requirement-screen"
+import { PrcKeyInvalidBanner } from "@/components/ui/prc-key-invalid-banner"
 
 export default async function AdminLayout({
     children,
@@ -40,10 +41,11 @@ export default async function AdminLayout({
 
     const server = await prisma.server.findUnique({
         where: { id: serverId },
-        select: { featureLoa: true }
+        select: { featureLoa: true, subscriberUserId: true, prcKeyInvalid: true }
     })
 
     const superAdmin = isSuperAdmin(session.user)
+    const isOwner = superAdmin || session.user.id === server?.subscriberUserId
 
     const tabs = [
         { name: "General", href: `/dashboard/${serverId}/admin`, icon: Settings },
@@ -66,6 +68,7 @@ export default async function AdminLayout({
 
     return (
         <div className="min-h-[100dvh] bg-[#111] text-zinc-100 font-sans pb-[env(safe-area-inset-bottom)]">
+            <PrcKeyInvalidBanner invalid={!!server?.prcKeyInvalid} isOwner={isOwner} />
             {/* Header */}
             <div className="border-b border-[#222] bg-[#1a1a1a] pt-[max(0px,env(safe-area-inset-top))]">
                 <div className="max-w-7xl mx-auto px-6 py-4">

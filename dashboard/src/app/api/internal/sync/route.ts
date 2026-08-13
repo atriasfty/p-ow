@@ -91,6 +91,14 @@ export async function POST(req: Request) {
                         })
                     }
                     healthState.consecutiveSyncFailures.set(server.id, 0)
+                    // Clear the invalid-key flag surfaced in the mod/admin panels
+                    // — only write when it's actually set, this runs every ~4s.
+                    if (server.prcKeyInvalid) {
+                        prisma.server.update({
+                            where: { id: server.id },
+                            data: { prcKeyInvalid: false, prcKeyInvalidAt: null },
+                        }).catch(() => { })
+                    }
                 } catch (e: any) {
                     trackSyncCycle(server.id, Date.now() - syncStart, 0, "error", e.message)
                     // Log but don't stop the whole sync for one server failure
@@ -113,6 +121,15 @@ export async function POST(req: Request) {
                             cooldownMs: 60 * 60 * 1000,
                             fields: { serverId: server.id },
                         })
+                        // Surface it in the mod/admin panels too — only the
+                        // Discord alert existed before, which the server's
+                        // actual owner never sees.
+                        if (!server.prcKeyInvalid) {
+                            prisma.server.update({
+                                where: { id: server.id },
+                                data: { prcKeyInvalid: true, prcKeyInvalidAt: new Date() },
+                            }).catch(() => { })
+                        }
                     } else if (failures === SYNC_FAILURE_ALERT_THRESHOLD) {
                         sendAlert({
                             key: `sync-fail:${server.id}`,
