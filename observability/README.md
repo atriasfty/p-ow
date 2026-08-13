@@ -76,7 +76,12 @@ docker stats                  # confirm combined RSS stays under budget
 | Grafana | 3300 | the only one meant to be reached externally, via the tunnel |
 
 Scraped app targets (not part of this stack, just what it points at):
-POW dashboard `41729`, POW bot `41732`, POW sync-server `41730`, Wren `4167`.
+POW dashboard `41729`, POW bot `41734` (not 41732 — see `ecosystem.config.js`'s comment), POW sync-server `41730`, Wren `4167`.
+
+The `node` job also has a second target for atria1's `node_exporter`, reached
+over Tailscale rather than `127.0.0.1` — see the comment above that job in
+`prometheus.yml` for the why/how, not repeated here since it's atria1-the-box
+infra, not part of this stack.
 
 ## Memory budget
 

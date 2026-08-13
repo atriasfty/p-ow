@@ -1,7 +1,7 @@
 {
   "uid": "pow-host-resources",
-  "title": "POW Host Resources",
-  "description": "Host-wide metrics from node_exporter \u2014 this box is shared with other, unrelated tenants (not POW-exclusive), so these numbers reflect the whole VPS, not just POW's processes.",
+  "title": "Host Resources (atria1 & atria2)",
+  "description": "Host-wide metrics from node_exporter on both boxes \u2014 atria2 (POW/Wren prod) scraped locally, atria1 (this repo's dev box, also runs unrelated tenants: Pterodactyl, Matrix, DocuSeal, PHP-FPM sites) scraped over Tailscale (100.76.31.51:9100, not reachable any other way). Use the `host` label to tell them apart. Neither box's numbers are POW-exclusive \u2014 this is the whole VPS.",
   "tags": [
     "pow"
   ],
@@ -16,7 +16,7 @@
   "panels": [
     {
       "id": 1,
-      "title": "CPU usage",
+      "title": "CPU usage (atria1 + atria2)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -30,9 +30,9 @@
       },
       "targets": [
         {
-          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) by (host) * 100)",
           "refId": "A",
-          "legendFormat": "CPU %",
+          "legendFormat": "{{host}}",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
@@ -50,7 +50,7 @@
     },
     {
       "id": 2,
-      "title": "Memory available",
+      "title": "Memory available (atria1 + atria2)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -66,7 +66,7 @@
         {
           "expr": "node_memory_MemAvailable_bytes",
           "refId": "A",
-          "legendFormat": "available",
+          "legendFormat": "{{host}} available",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
@@ -75,7 +75,7 @@
         {
           "expr": "node_memory_MemTotal_bytes",
           "refId": "B",
-          "legendFormat": "total",
+          "legendFormat": "{{host}} total",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
@@ -91,7 +91,7 @@
     },
     {
       "id": 3,
-      "title": "Swap used",
+      "title": "Swap used (atria1 + atria2)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -107,7 +107,7 @@
         {
           "expr": "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes",
           "refId": "A",
-          "legendFormat": "swap used",
+          "legendFormat": "{{host}}",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
@@ -145,7 +145,7 @@
     },
     {
       "id": 4,
-      "title": "Disk free (/)",
+      "title": "Disk free (/) (atria1 + atria2)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -161,7 +161,7 @@
         {
           "expr": "node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}",
           "refId": "A",
-          "legendFormat": "free ratio",
+          "legendFormat": "{{host}}",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
@@ -192,7 +192,7 @@
     },
     {
       "id": 5,
-      "title": "Network I/O",
+      "title": "Network I/O (atria1 + atria2)",
       "type": "timeseries",
       "gridPos": {
         "h": 8,
@@ -206,18 +206,18 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])) by (device)",
+          "expr": "sum(rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])) by (device, host)",
           "refId": "A",
-          "legendFormat": "rx {{device}}",
+          "legendFormat": "{{host}} rx {{device}}",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
           }
         },
         {
-          "expr": "sum(rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])) by (device)",
+          "expr": "sum(rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])) by (device, host)",
           "refId": "B",
-          "legendFormat": "tx {{device}}",
+          "legendFormat": "{{host}} tx {{device}}",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"
@@ -332,7 +332,7 @@
         {
           "expr": "up{job=~\"prometheus|alertmanager|loki|promtail|grafana|node\"}",
           "refId": "A",
-          "legendFormat": "{{job}}",
+          "legendFormat": "{{job}} {{host}}",
           "datasource": {
             "type": "prometheus",
             "uid": "pow-prometheus"

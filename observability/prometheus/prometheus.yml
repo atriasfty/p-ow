@@ -15,9 +15,22 @@ scrape_configs:
     static_configs:
       - targets: ["127.0.0.1:9090"]
 
+  # Both boxes under one job_name (same metric names either way) so
+  # host-resources.json queries just filter on the `host` label rather than
+  # needing job=~"node.*" everywhere. atria1's node_exporter is reachable
+  # only over the Tailscale mesh (100.76.31.51:9100) — not 127.0.0.1, not its
+  # public eth0 IP — deployed via /root/node-exporter/docker-compose.yml on
+  # atria1 itself (outside this repo, since atria1 also runs unrelated
+  # tenants and this is a single standalone container, not the full stack).
+  # atria2 (this box) also needs to be reachable on the tailnet for the
+  # scrape to work — confirmed both are on the same tailnet via `tailscale
+  # status`.
   - job_name: node
     static_configs:
       - targets: ["127.0.0.1:9100"]
+        labels: { host: atria2 }
+      - targets: ["100.76.31.51:9100"]
+        labels: { host: atria1 }
 
   # Self-monitoring for the observability stack's own components — before
   # this, if Loki/Alertmanager/Promtail/Grafana died, nothing would notice

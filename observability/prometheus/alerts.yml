@@ -56,16 +56,26 @@ groups:
         for: 5m
         labels: { severity: warning }
         annotations:
-          summary: "Host memory available <5%"
-          description: "Available memory has been under 5% of total for 5+ minutes."
+          summary: "{{ $labels.host }}: memory available <5%"
+          description: "Available memory on {{ $labels.host }} has been under 5% of total for 5+ minutes."
 
       - alert: HostDiskPressure
         expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.10
         for: 10m
         labels: { severity: warning }
         annotations:
-          summary: "Host disk free <10%"
-          description: "Free disk space on / has been under 10% for 10+ minutes."
+          summary: "{{ $labels.host }}: disk free <10%"
+          description: "Free disk space on / on {{ $labels.host }} has been under 10% for 10+ minutes."
+
+      - alert: HostNodeExporterDown
+        # Base-layer alert: if this fires, HostMemoryPressure/HostDiskPressure
+        # also go silently blind for that host (no data to evaluate against).
+        expr: up{job="node"} == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "node_exporter down on {{ $labels.host }}"
+          description: "Prometheus can't scrape node_exporter on {{ $labels.host }} for 5+ minutes — CPU/mem/disk visibility for this box is blind. If this is atria1, check its Tailscale connection (tailscale status on either box) and the container (cd /root/node-exporter && docker compose ps, on atria1 itself)."
 
       - alert: BotQueueBacklog
         expr: pow_bot_queue_oldest_age_seconds > 120
@@ -94,6 +104,32 @@ groups:
         annotations:
           summary: "Wren chat pipeline error rate elevated"
           description: "wren_chat_pipeline_errors_total has been climbing at over 0.1/s (~1 in 10 requests failing) for 5+ minutes — check LLM provider status and recent deploys."
+
+      - alert: PublicApiErrorRate
+        # public/v1/* is the paid public API surface — an elevated 5xx rate
+        # here is customer-visible, not just an internal blip.
+        expr: sum(rate(pow_http_request_duration_seconds_count{route=~"public/v1/.*", status=~"5.."}[10m])) / sum(rate(pow_http_request_duration_seconds_count{route=~"public/v1/.*"}[10m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Public API 5xx rate elevated"
+          description: "Over 5% of public/v1/* requests have returned 5xx for 5+ minutes. Check recent deploys and PRC/DB health — this is the paid public API, not an internal route."
+
+      - alert: AutomationFailureRate
+        expr: sum(rate(pow_automation_executions_total{outcome="error"}[15m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Automation engine failure rate elevated"
+          description: "Automation trigger processing has been failing at over 0.05/s (~3/min) for 5+ minutes. Check recent automation config changes and PRC connectivity."
+
+      - alert: McpToolErrorRate
+        expr: sum(rate(wren_mcp_tool_calls_total{outcome="error"}[10m])) / sum(rate(wren_mcp_tool_calls_total[10m])) > 0.15
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Wren MCP tool-call error rate elevated"
+          description: "Over 15% of Wren tool calls have failed for 5+ minutes. Check PRC/Discord API health and recent tool changes in executor.js."
 
       - alert: PrcKeyInvalidServers
         expr: pow_prc_key_invalid_servers > 0
