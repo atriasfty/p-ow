@@ -769,11 +769,16 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
 
         // 3. Emergency Calls
         if (v2.EmergencyCalls && v2.EmergencyCalls.length > 0) {
-            const emerCallTimestamps = v2.EmergencyCalls.map(c => c.Timestamp)
-            const existingEmerCalls = await prisma.emergencyCall.findMany({
+            // An entry with no Timestamp would otherwise poison the Prisma `in`
+            // filter below with `undefined` and crash every cycle for this
+            // server — same guard already applied to prcTimestamp above.
+            const emerCallTimestamps = v2.EmergencyCalls
+                .map(c => c.Timestamp)
+                .filter((t): t is number => t !== null && t !== undefined)
+            const existingEmerCalls = emerCallTimestamps.length > 0 ? await prisma.emergencyCall.findMany({
                 where: { serverId, timestamp: { in: emerCallTimestamps } },
                 select: { timestamp: true, callNumber: true }
-            })
+            }) : []
             const existingEmerKeys = new Set(existingEmerCalls.map((c: any) => `${c.timestamp}_${c.callNumber}`))
 
             const newEmerCalls = v2.EmergencyCalls.filter(c => !existingEmerKeys.has(`${c.Timestamp}_${c.CallNumber}`)).map(c => {
@@ -978,7 +983,16 @@ export async function fetchAndSaveLogs(apiKey: string, serverId: string) {
 
         return { parsedLogs, newLogsCount }
     } catch (error) {
+        // Re-throw — the caller (api/internal/sync/route.ts) already has the
+        // correct per-server handling for this: trackSyncCycle(...,"error")
+        // so Prometheus/health-state reflect the real failure instead of a
+        // fake "ok, 0 new logs", an immediate targeted alert for
+        // PrcInvalidKeyError specifically, and a consecutive-failure-count
+        // alert for anything else. Swallowing it here into a fake success
+        // made every failure invisible — including an invalid PRC key
+        // spamming this exact catch block on every ~4s cycle indefinitely,
+        // never once reaching the alerting that already existed for it.
         console.error("[SYNC] Fatal Error:", error)
-        return { parsedLogs: [], newLogsCount: 0 }
+        throw error
     }
 }
