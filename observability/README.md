@@ -10,16 +10,31 @@ etc. (Prometheus scrapes them over `127.0.0.1`), not on a dev/workspace box.
 
 ## Setup (one-time, on the prod VPS)
 
+**Deploy this to a stable path OUTSIDE the blue-green release tree — never
+run it from inside `current-{env}/observability` or any `releases/<ts>/`
+directory.** `deploy.sh`'s symlink swap on every deploy will silently orphan
+whatever's bind-mounted from in there (this bit us once already: containers
+kept running against a directory the `current-prod` symlink no longer
+pointed to, `.env` and any un-committed local edits vanished from view when
+the next deploy landed). Copy this directory to something like
+`/root/pow-observability/` (a sibling of the app's deploy root, not inside
+it) and always operate from there:
+
 ```bash
-cd observability
+rsync -a --exclude .env /path/to/repo/observability/ /root/pow-observability/
+cd /root/pow-observability
 sudo ./setup.sh
 ```
 
-This generates `.env` (a random Grafana admin password — printed once, save
-it), makes the config tree readable regardless of which non-root UID each
-image runs as, brings the stack up, and prints health checks + a resource
-usage snapshot. Safe to re-run after pulling config changes — it just
-re-applies via `docker compose up -d`.
+Re-run that `rsync` + `docker compose up -d` (or `restart` for services whose
+compose *definition* didn't change, since `up -d` is a no-op when only a
+bind-mounted file's contents changed) whenever config changes land in the
+repo — this directory does not update itself on deploy, by design.
+
+`setup.sh` generates `.env` (a random Grafana admin password — printed once,
+save it) if one doesn't already exist, makes the config tree readable
+regardless of which non-root UID each image runs as, brings the stack up,
+and prints health checks + a resource usage snapshot.
 
 Then, in the Cloudflare Zero Trust dashboard, on this box's existing tunnel,
 add a **Public Hostname**: e.g. `grafana.atriasafety.org` → service
