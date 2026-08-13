@@ -8,6 +8,12 @@ on the **production VPS** — this directory is version-controlled here in the
 monorepo, but the stack itself must run co-located with `pow-dashboard-prod`
 etc. (Prometheus scrapes them over `127.0.0.1`), not on a dev/workspace box.
 
+**This instance also serves Wren** (`atriasfty/wren`, Atria's other product —
+also on this box). Wren's scrape job lives in `prometheus/prometheus.yml`
+(`wren-prod`) and its dashboard in `grafana/wren-dashboards/` (a separate
+"Wren" Grafana folder from POW's). This repo is the source of truth for both
+— Wren's own repo just has a pointer doc (`docs/observability.md`) back here.
+
 ## Setup (one-time, on the prod VPS)
 
 **Deploy this to a stable path OUTSIDE the blue-green release tree — never
@@ -69,6 +75,9 @@ docker stats                  # confirm combined RSS stays under budget
 | node_exporter | 9100 | |
 | Grafana | 3300 | the only one meant to be reached externally, via the tunnel |
 
+Scraped app targets (not part of this stack, just what it points at):
+POW dashboard `41729`, POW bot `41732`, POW sync-server `41730`, Wren `4167`.
+
 ## Memory budget
 
 Combined `mem_limit` ceiling ≈ 714MB, expected steady-state ≈ 350MB (measured
@@ -86,6 +95,6 @@ before raising any limits.
   *other* tenant's containers on a shared box, not POW signal.
 - Don't scrape/tail logs system-wide — Promtail is scoped to the PM2 `pow-*`
   log files only.
-- Don't run this stack on a box that doesn't also run POW's PM2 processes —
-  the whole design assumes `127.0.0.1` reachability to `pow-dashboard-*` /
-  `pow-bot-*` / `pow-sync-*`.
+- Don't run this stack on a box that doesn't also run POW's (and now Wren's)
+  processes — the whole design assumes `127.0.0.1` reachability to
+  `pow-dashboard-*` / `pow-bot-*` / `pow-sync-*` / `wren`.

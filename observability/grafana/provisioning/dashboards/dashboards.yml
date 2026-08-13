@@ -10,3 +10,18 @@ providers:
     allowUiUpdates: true
     options:
       path: /var/lib/grafana/dashboards
+
+  # This Prometheus/Grafana instance now serves both POW and Wren (Atria's
+  # other product, github.com/atriasfty/wren) — separate folder to keep
+  # their dashboards visually distinct. Source of truth for Wren's own
+  # dashboards is still this repo (POW's), since that's where the shared
+  # stack lives; wren's repo just points here.
+  - name: wren-dashboards
+    orgId: 1
+    folder: Wren
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/wren-dashboards

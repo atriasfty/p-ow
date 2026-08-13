@@ -60,3 +60,13 @@ scrape_configs:
   # processes at last check) — add pow-dashboard-staging/pow-bot-staging/
   # pow-sync-staging jobs the same way once it is, confirming actual
   # staging ports first rather than assuming CLAUDE.md's documented ones.
+
+  # --- Wren (github.com/atriasfty/wren) — Atria's other product, also
+  # running on this box. This Prometheus/Grafana instance serves both.
+  - job_name: wren-prod
+    metrics_path: /metrics
+    authorization:
+      credentials_file: /etc/prometheus/secrets/wren_prod.token
+    static_configs:
+      - targets: ["127.0.0.1:4167"]
+        labels: { env: prod }
