@@ -1,9 +1,20 @@
-# Minimal valid config for Phase 1 bring-up — a null receiver so
-# Alertmanager starts cleanly. Real routing (critical -> the dashboard's
-# /api/internal/infra-alert relay, which fans out to Discord + PagerDuty
-# through the existing sendAlert() cooldown/dedup logic) is added in Phase 5.
+# Routes all POW alerts to the dashboard's /api/internal/infra-alert relay,
+# which forwards them through the app's existing sendAlert() cooldown/dedup
+# logic onto the separate "infra" Discord channel (INFRA_ALERT_DISCORD_WEBHOOK_URL).
+# One flood-control system (sendAlert()'s per-key cooldown), not two.
+
 route:
-  receiver: default
+  receiver: pow-relay
+  group_by: [alertname, server_id]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
 
 receivers:
-  - name: default
+  - name: pow-relay
+    webhook_configs:
+      - url: http://127.0.0.1:41729/api/internal/infra-alert
+        send_resolved: true
+        http_config:
+          authorization:
+            credentials_file: /etc/alertmanager/secrets/infra-alert.token

@@ -8,6 +8,11 @@
  */
 
 const WEBHOOK_URL = process.env.ALERT_DISCORD_WEBHOOK_URL
+// Separate channel for infra-level alerts (host mem/disk, PM2 process down,
+// container down) forwarded from Alertmanager via api/internal/infra-alert —
+// kept apart from app-level alerts on purpose. Blank/unset = silently
+// disabled, same as the app webhook, rather than falling back to it.
+const INFRA_WEBHOOK_URL = process.env.INFRA_ALERT_DISCORD_WEBHOOK_URL
 
 export type AlertSeverity = "info" | "warning" | "critical"
 
@@ -39,6 +44,8 @@ export function sendAlert(opts: {
     fields?: Record<string, string | number | null | undefined>
     /** Override the per-key cooldown (ms). Pass 0 to always send. */
     cooldownMs?: number
+    /** Which Discord webhook to send to. Default "app". */
+    channel?: "app" | "infra"
 }): void {
     try {
         const severity = opts.severity || "warning"
@@ -78,10 +85,11 @@ export function sendAlert(opts: {
             ],
         }
 
-        if (!WEBHOOK_URL) return // no webhook configured — nothing to send
+        const targetUrl = opts.channel === "infra" ? INFRA_WEBHOOK_URL : WEBHOOK_URL
+        if (!targetUrl) return // no webhook configured — nothing to send
 
         // Fire and forget — an alerting failure must never affect the app
-        fetch(WEBHOOK_URL, {
+        fetch(targetUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body),

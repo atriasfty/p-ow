@@ -181,3 +181,5 @@ resolve-migrations.sh
 
 # Observability stack — bearer tokens for scrape auth, never committed
 observability/prometheus/secrets/
+# Runtime-generated node_exporter textfile-collector output, differs per host
+observability/node-exporter-textfiles/*.prom

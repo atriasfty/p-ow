@@ -38,6 +38,7 @@ services:
     network_mode: host
     volumes:
       - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./prometheus/secrets:/etc/alertmanager/secrets:ro
       - alertmanager-data:/alertmanager
     command:
       - --config.file=/etc/alertmanager/alertmanager.yml
@@ -85,12 +86,17 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+      # PM2 restart counts aren't natively scraped — a host cron job (see
+      # scripts/pm2-restart-count.sh) writes them here as a textfile-collector
+      # metric every minute.
+      - ./node-exporter-textfiles:/textfiles:ro
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
       - --path.rootfs=/rootfs
       - --web.listen-address=127.0.0.1:9100
       - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      - --collector.textfile.directory=/textfiles
     mem_limit: 40m
     mem_reservation: 16m
     cpus: 0.1

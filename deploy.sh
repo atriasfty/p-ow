@@ -180,6 +180,7 @@ if [ ! -f "${SHARED_ENV_FILE}" ]; then
     read -p "PostHog Personal API Key - from PostHog Settings -> Personal API Keys: " POSTHOG_PERSONAL_KEY
     read -p "PostHog Project ID - number from PostHog URL e.g. 12345: " POSTHOG_PROJECT_ID
     read -p "Alert Discord Webhook URL (operational alerts — leave blank to disable): " ALERT_DISCORD_WEBHOOK
+    read -p "Infra Alert Discord Webhook URL (host mem/disk/PM2-down alerts from Alertmanager — separate channel, leave blank to disable): " INFRA_ALERT_DISCORD_WEBHOOK
 
     # Generate automatic internal secrets
     INTERNAL_SYNC_SECRET_GEN="$(openssl rand -base64 32)"
@@ -245,6 +246,7 @@ NEXT_PUBLIC_LEGAL_URL="https://lacrp.ciankelly.xyz/project-overwatch-legal-docum
 
 # Operational Alerting
 ALERT_DISCORD_WEBHOOK_URL="${ALERT_DISCORD_WEBHOOK}"
+INFRA_ALERT_DISCORD_WEBHOOK_URL="${INFRA_ALERT_DISCORD_WEBHOOK}"
 EOL
     echo -e "${GREEN}New environment file created and saved in '${SHARED_DIR}/'.${NC}"
 else
@@ -318,7 +320,11 @@ else
         read -p "Alert Discord Webhook URL (operational alerts — leave blank to disable): " VAL
         echo "ALERT_DISCORD_WEBHOOK_URL=\"$VAL\"" >> "${SHARED_ENV_FILE}"
     fi
-    
+    if ! grep -q "INFRA_ALERT_DISCORD_WEBHOOK_URL=" "${SHARED_ENV_FILE}"; then
+        read -p "Infra Alert Discord Webhook URL (host mem/disk/PM2-down alerts from Alertmanager — separate channel, leave blank to disable): " VAL
+        echo "INFRA_ALERT_DISCORD_WEBHOOK_URL=\"$VAL\"" >> "${SHARED_ENV_FILE}"
+    fi
+
     # Clerk Auth - CRITICAL: Always verify these are present
     CLERK_SECRET_MISSING=false
     CLERK_PUBLISHABLE_MISSING=false

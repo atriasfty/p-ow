@@ -1,3 +1,68 @@
-# Alert rules live here. Empty for now (Phase 1 infra bring-up) —
-# populated in Phase 5 once app-side metrics + PagerDuty wiring exist.
-groups: []
+groups:
+  - name: pow-critical
+    rules:
+      - alert: SyncPipelineStale
+        expr: (time() - pow_last_sync_timestamp_seconds) > 90
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Sync pipeline stale >90s for server {{ $labels.server_id }}"
+          description: "No successful sync cycle for server {{ $labels.server_id }} in over 90 seconds. Mod panels for this server are stale."
+
+      - alert: BotGatewayDisconnected
+        expr: pow_bot_gateway_status != 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Bot disconnected from Discord gateway"
+          description: "pow_bot_gateway_status has been non-zero (not READY) for over 2 minutes. Slash commands and log-sync triggering are down."
+
+      - alert: DashboardDown
+        expr: up{job="pow-dashboard-prod"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Dashboard process is down"
+          description: "Prometheus can't scrape pow-dashboard-prod — the process is down or unresponsive."
+
+      - alert: PM2ProcessDown
+        expr: up{job=~"pow-.*"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Prometheus target {{ $labels.job }} has been unreachable for over 2 minutes."
+
+  - name: pow-warning
+    rules:
+      - alert: HostMemoryPressure
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Host memory available <5%"
+          description: "Available memory has been under 5% of total for 5+ minutes."
+
+      - alert: HostDiskPressure
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.10
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Host disk free <10%"
+          description: "Free disk space on / has been under 10% for 10+ minutes."
+
+      - alert: BotQueueBacklog
+        expr: pow_bot_queue_oldest_age_seconds > 120
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "Bot outbound queue backlogged"
+          description: "Oldest pending bot-queue item is over 2 minutes old — Discord messages/DMs/role changes are delayed."
+
+      - alert: PM2RestartLoop
+        expr: increase(pow_pm2_restart_total[10m]) > 3
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.name }} restarting repeatedly"
+          description: "{{ $labels.name }} has restarted more than 3 times in the last 10 minutes — likely crash-looping."
