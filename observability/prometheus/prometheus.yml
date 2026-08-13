@@ -63,10 +63,15 @@ scrape_configs:
 
   # --- Wren (github.com/atriasfty/wren) — Atria's other product, also
   # running on this box. This Prometheus/Grafana instance serves both.
-  - job_name: wren-prod
-    metrics_path: /metrics
-    authorization:
-      credentials_file: /etc/prometheus/secrets/wren_prod.token
-    static_configs:
-      - targets: ["127.0.0.1:4167"]
-        labels: { env: prod }
+  # Commented until wren has actually been redeployed with the metrics code
+  # (WREN_METRICS_SECRET doesn't exist yet, so ./secrets/wren_prod.token
+  # can't be populated) — Prometheus fails to load its whole config if a
+  # referenced credentials_file doesn't exist, which would take down
+  # scraping for POW too. Uncomment once the token file is in place.
+  # - job_name: wren-prod
+  #   metrics_path: /metrics
+  #   authorization:
+  #     credentials_file: /etc/prometheus/secrets/wren_prod.token
+  #   static_configs:
+  #     - targets: ["127.0.0.1:4167"]
+  #       labels: { env: prod }
