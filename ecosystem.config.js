@@ -36,7 +36,12 @@ module.exports = {
         // connection-refused alerts outside production
         NODE_ENV: 'production',
         APP_ENV: envPrefix,
-        BOT_HEALTH_PORT: process.env.BOT_HEALTH_PORT || 41734
+        // Hardcoded, not `process.env.BOT_HEALTH_PORT || ...` — that fallback
+        // depends on whatever shell env PM2's daemon happens to have at
+        // registration time, which flipped this between 41732/41734 across
+        // restarts in practice (broke Prometheus scraping + looked like an
+        // outage). Deterministic per-env value instead.
+        BOT_HEALTH_PORT: envPrefix === 'staging' ? 41735 : 41732
       }
     },
     {
