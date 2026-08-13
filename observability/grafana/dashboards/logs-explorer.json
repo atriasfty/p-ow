@@ -1,0 +1,64 @@
+{
+  "uid": "pow-logs-explorer",
+  "title": "POW Logs Explorer",
+  "tags": ["pow"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "custom",
+        "label": "Service",
+        "query": "dashboard,bot,sync",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      },
+      {
+        "name": "env",
+        "type": "custom",
+        "label": "Env",
+        "query": "prod,staging",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": ["$__all"] }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Errors and warnings",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "pow-loki" },
+      "targets": [
+        {
+          "expr": "{job=\"pow\", service=~\"$service\", env=~\"$env\"} |~ `(?i)error|warn|fatal`",
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "pow-loki" }
+        }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true }
+    },
+    {
+      "id": 2,
+      "title": "All logs (filtered by variables above)",
+      "type": "logs",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 },
+      "datasource": { "type": "loki", "uid": "pow-loki" },
+      "targets": [
+        {
+          "expr": "{job=\"pow\", service=~\"$service\", env=~\"$env\"}",
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "pow-loki" }
+        }
+      ],
+      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true, "enableLogDetails": true }
+    }
+  ]
+}

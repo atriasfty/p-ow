@@ -19,10 +19,20 @@ scrape_configs:
           job: pow
           __path__: /var/log/pow-pm2/pow-*-{prod,staging}-{out,error}.log
     pipeline_stages:
-      # dashboard/src/lib/logger.ts (and bot's equivalent) emit one JSON
-      # object per line in prod: {ts, level, component, msg, ...}. Non-JSON
-      # lines (e.g. raw console.log from third-party deps) pass through
-      # un-labeled rather than erroring the pipeline.
+      # service/env/stream come from the filename — works for every line
+      # regardless of content, which matters because only the dashboard
+      # (dashboard/src/lib/logger.ts) emits structured JSON; the bot and
+      # sync-server still use plain console.log/console.error.
+      - regex:
+          source: filename
+          expression: '/pow-(?P<service>dashboard|bot|sync)-(?P<env>prod|staging)-(?P<stream>out|error)\.log$'
+      - labels:
+          service:
+          env:
+          stream:
+      # Additional labels when the line IS one of logger.ts's JSON objects
+      # ({ts, level, component, msg, ...}) — a no-op (silently skipped) on
+      # the bot/sync-server's plain-text lines.
       - json:
           expressions:
             level: level
