@@ -2,7 +2,12 @@ import { getSession } from "@/lib/auth-clerk"
 import { isSuperAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/db"
 import { NextResponse } from "next/server"
+import { healthState } from "@/lib/health-state"
 import os from "os"
+
+// A server with zero players still syncs successfully every ~4s cycle —
+// don't confuse "no recent player activity" with "sync pipeline broken".
+const SYNC_STALE_MS = 90 * 1000
 
 export const dynamic = "force-dynamic"
 
@@ -95,6 +100,7 @@ export async function GET() {
 
     const [
         totalServers,
+        syncedServerIds,
         totalMembers,
         newMembersWeek,
         staffOnDuty,
@@ -102,8 +108,6 @@ export async function GET() {
         modCallsHour,
         emergencyCallsHour,
         activePlayers,
-        activeServers,
-        lastSyncRecord,
         logsToday,
         joinsToday,
         leavesToday,
@@ -122,6 +126,10 @@ export async function GET() {
         syncHealth,
     ] = await Promise.all([
         prisma.server.count(),
+        // Only servers with a configured PRC key are actually synced (matches
+        // api/internal/sync/route.ts's own filter) — anything else would
+        // never get a healthState entry and would look permanently stale.
+        prisma.server.findMany({ where: { apiUrl: { not: "" } }, select: { id: true } }),
         prisma.member.count(),
         prisma.member.count({ where: { createdAt: { gte: startOfWeek } } }),
         prisma.shift.count({ where: { endTime: null } }),
@@ -131,8 +139,6 @@ export async function GET() {
         prisma.modCall.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.emergencyCall.count({ where: { createdAt: { gte: oneHourAgo } } }),
         prisma.playerLocation.groupBy({ by: ["userId"], where: { createdAt: { gte: recentWindow } } }),
-        prisma.playerLocation.groupBy({ by: ["serverId"], where: { createdAt: { gte: recentWindow } } }),
-        prisma.playerLocation.findFirst({ orderBy: { createdAt: "desc" }, select: { createdAt: true } }),
         prisma.log.count({ where: { createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: true, createdAt: { gte: startOfToday } } }),
         prisma.log.count({ where: { type: "join", isJoin: false, createdAt: { gte: startOfToday } } }),
@@ -165,10 +171,18 @@ export async function GET() {
     const byType = (groups: { type: string; _count: { id: number } }[], type: string) =>
         groups.find((g) => g.type === type)?._count.id ?? 0
 
-    const lastSyncAgeSeconds = lastSyncRecord
-        ? Math.round((now.getTime() - lastSyncRecord.createdAt.getTime()) / 1000)
+    // healthState.lastSyncOkAt/lastSyncOkAtByServer are set on every
+    // successful sync cycle regardless of newLogsCount — unlike the old
+    // PlayerLocation-based check, an empty (no-player) server that's syncing
+    // fine won't be misread as stale here.
+    const lastSyncAgeSeconds = healthState.lastSyncOkAt
+        ? Math.round((now.getTime() - healthState.lastSyncOkAt) / 1000)
         : null
-    const staleServers = totalServers - activeServers.length
+    const activeServerCount = syncedServerIds.filter((s: { id: string }) => {
+        const lastOk = healthState.lastSyncOkAtByServer.get(s.id)
+        return lastOk !== undefined && now.getTime() - lastOk < SYNC_STALE_MS
+    }).length
+    const staleServers = syncedServerIds.length - activeServerCount
 
     const alerts = {
         emergencyActive: emergencyCallsHour > 0,
@@ -185,7 +199,7 @@ export async function GET() {
     return NextResponse.json({
         platform: {
             totalServers,
-            activeServers: activeServers.length,
+            activeServers: activeServerCount,
             staleServers,
             totalMembers,
             newMembersWeek,

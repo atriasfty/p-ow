@@ -76,6 +76,10 @@ export async function POST(req: Request) {
                     cycleLog.debug("sync cycle ok", { newLogs: res.newLogsCount, durationMs: Date.now() - syncStart })
 
                     healthState.lastSyncOkAt = Date.now()
+                    // Set unconditionally on cycle success — independent of
+                    // newLogsCount, so an empty (no-player) server isn't
+                    // wrongly treated as sync-stale by anything reading this.
+                    healthState.lastSyncOkAtByServer.set(server.id, Date.now())
                     const failures = healthState.consecutiveSyncFailures.get(server.id) || 0
                     if (failures >= SYNC_FAILURE_ALERT_THRESHOLD) {
                         sendAlert({
