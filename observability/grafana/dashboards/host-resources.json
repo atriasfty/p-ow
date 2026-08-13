@@ -72,6 +72,16 @@
         { "expr": "pow_sync_process_resident_memory_bytes", "refId": "C", "legendFormat": "sync-server", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
       ],
       "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+    },
+    {
+      "id": 7,
+      "title": "PM2 restarts (cumulative, all processes on this box)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "description": "From observability/scripts/pm2-restart-count.sh (cron, per-minute). A rising line for any single process usually means it's crash-looping.",
+      "targets": [{ "expr": "pow_pm2_restart_total", "refId": "A", "legendFormat": "{{name}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
     }
   ]
 }

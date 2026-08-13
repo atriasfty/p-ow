@@ -1,0 +1,65 @@
+{
+  "uid": "pow-alerts",
+  "title": "POW Alerts",
+  "description": "Currently firing/pending Prometheus alerts. Alert rules live in observability/prometheus/alerts.yml; routing to Discord in alertmanager.yml.",
+  "tags": ["pow"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Firing now",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "targets": [{ "expr": "count(ALERTS{alertstate=\"firing\"}) OR vector(0)", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "red" }] } }, "overrides": [] },
+      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+    },
+    {
+      "id": 2,
+      "title": "Pending (not yet firing)",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "targets": [{ "expr": "count(ALERTS{alertstate=\"pending\"}) OR vector(0)", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "yellow" }] } }, "overrides": [] },
+      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+    },
+    {
+      "id": 3,
+      "title": "Total alert rules loaded",
+      "type": "stat",
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "targets": [{ "expr": "count(count by (alertname) (ALERTS))  OR vector(0)", "refId": "A", "instant": true, "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "textMode": "value", "colorMode": "value", "graphMode": "none" }
+    },
+    {
+      "id": 4,
+      "title": "Active alerts (firing + pending)",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "targets": [{ "expr": "ALERTS{alertstate=~\"firing|pending\"}", "refId": "A", "instant": true, "format": "table", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true, "__name__": true }, "indexByName": {}, "renameByName": {} } }
+      ],
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "showHeader": true }
+    },
+    {
+      "id": 5,
+      "title": "Firing alerts over time (by severity)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "targets": [{ "expr": "sum(ALERTS{alertstate=\"firing\"}) by (severity)", "refId": "A", "legendFormat": "{{severity}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars" } }, "overrides": [] }
+    }
+  ]
+}

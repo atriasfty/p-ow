@@ -8,11 +8,13 @@
   "refresh": "30s",
   "time": { "from": "now-6h", "to": "now" },
   "links": [
-    { "title": "Sync Pipeline Health", "type": "dashboards", "tags": ["pow"], "asDropdown": false, "url": "/d/pow-sync-pipeline" },
-    { "title": "API Dependencies", "type": "dashboards", "tags": ["pow"], "asDropdown": false, "url": "/d/pow-api-dependencies" },
-    { "title": "Host Resources", "type": "dashboards", "tags": ["pow"], "asDropdown": false, "url": "/d/pow-host-resources" },
-    { "title": "Bot Health", "type": "dashboards", "tags": ["pow"], "asDropdown": false, "url": "/d/pow-bot-health" },
-    { "title": "Logs Explorer", "type": "dashboards", "tags": ["pow"], "asDropdown": false, "url": "/d/pow-logs-explorer" }
+    { "title": "Sync Pipeline Health", "type": "link", "url": "/d/pow-sync-pipeline", "icon": "dashboard", "targetBlank": false },
+    { "title": "API Dependencies", "type": "link", "url": "/d/pow-api-dependencies", "icon": "dashboard", "targetBlank": false },
+    { "title": "Host Resources", "type": "link", "url": "/d/pow-host-resources", "icon": "dashboard", "targetBlank": false },
+    { "title": "Bot Health", "type": "link", "url": "/d/pow-bot-health", "icon": "dashboard", "targetBlank": false },
+    { "title": "Node.js Runtime", "type": "link", "url": "/d/pow-nodejs-runtime", "icon": "dashboard", "targetBlank": false },
+    { "title": "Alerts", "type": "link", "url": "/d/pow-alerts", "icon": "bell", "targetBlank": false },
+    { "title": "Logs Explorer", "type": "link", "url": "/d/pow-logs-explorer", "icon": "doc-box", "targetBlank": false }
   ],
   "panels": [
     {
