@@ -118,6 +118,7 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./grafana/wren-dashboards:/var/lib/grafana/wren-dashboards:ro
+      - ./grafana/infra-dashboards:/var/lib/grafana/infra-dashboards:ro
     mem_limit: 180m
     mem_reservation: 90m
     cpus: 0.3

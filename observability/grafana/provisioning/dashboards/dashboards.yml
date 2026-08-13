@@ -25,3 +25,16 @@ providers:
     allowUiUpdates: true
     options:
       path: /var/lib/grafana/wren-dashboards
+
+  # General server/host stats that aren't specific to POW or Wren (both
+  # boxes are shared with unrelated tenants) — kept out of the POW folder
+  # on purpose, same reasoning as the separate Wren folder above.
+  - name: infra-dashboards
+    orgId: 1
+    folder: Infrastructure
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/infra-dashboards

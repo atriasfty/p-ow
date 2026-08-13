@@ -105,6 +105,19 @@ groups:
           summary: "Wren chat pipeline error rate elevated"
           description: "wren_chat_pipeline_errors_total has been climbing at over 0.1/s (~1 in 10 requests failing) for 5+ minutes — check LLM provider status and recent deploys."
 
+      - alert: EventLoopLagHigh
+        # p99 event loop lag has been tracked on all 4 Node processes
+        # (dashboard/bot/sync-server/wren, see nodejs-runtime.json and
+        # wren-overview.json) since early on, but nothing ever alerted on
+        # it — sustained lag here means the process is blocking on
+        # synchronous work and every request queues up behind it.
+        expr: pow_dashboard_nodejs_eventloop_lag_p99_seconds > 0.5 or pow_bot_nodejs_eventloop_lag_p99_seconds > 0.5 or pow_sync_nodejs_eventloop_lag_p99_seconds > 0.5 or wren_nodejs_eventloop_lag_p99_seconds > 0.5
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Node.js event loop lag elevated"
+          description: "p99 event loop lag has been over 500ms for 5+ minutes on one of dashboard/bot/sync-server/wren — check nodejs-runtime.json / wren-overview.json to see which, and look for a synchronous/blocking call in recently deployed code."
+
       - alert: PublicApiErrorRate
         # public/v1/* is the paid public API surface — an elevated 5xx rate
         # here is customer-visible, not just an internal blip.

@@ -61,6 +61,13 @@
       "url": "/d/pow-logs-explorer",
       "icon": "doc-box",
       "targetBlank": false
+    },
+    {
+      "title": "Server Health (atria1 & atria2)",
+      "type": "link",
+      "url": "/d/infra-server-health",
+      "icon": "dashboard",
+      "targetBlank": false
     }
   ],
   "panels": [
