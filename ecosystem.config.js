@@ -38,10 +38,13 @@ module.exports = {
         APP_ENV: envPrefix,
         // Hardcoded, not `process.env.BOT_HEALTH_PORT || ...` — that fallback
         // depends on whatever shell env PM2's daemon happens to have at
-        // registration time, which flipped this between 41732/41734 across
-        // restarts in practice (broke Prometheus scraping + looked like an
-        // outage). Deterministic per-env value instead.
-        BOT_HEALTH_PORT: envPrefix === 'staging' ? 41735 : 41732
+        // registration time, which flipped this in practice (broke
+        // Prometheus scraping + looked like an outage). Deterministic
+        // per-env value instead — MUST match deploy.sh's BOT_HEALTH_PORT
+        // (prod=41734, staging=41735). Prod is deliberately NOT 41732:
+        // that collides with staging's SYNC_PORT if staging is ever
+        // deployed on the same box (see deploy.sh's own comment on this).
+        BOT_HEALTH_PORT: envPrefix === 'staging' ? 41735 : 41734
       }
     },
     {

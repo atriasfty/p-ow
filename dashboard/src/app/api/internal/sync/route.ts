@@ -101,8 +101,18 @@ export async function POST(req: Request) {
                     }
                 } catch (e: any) {
                     trackSyncCycle(server.id, Date.now() - syncStart, 0, "error", e.message)
-                    // Log but don't stop the whole sync for one server failure
-                    cycleLog.error("sync cycle failed", { err: e, durationMs: Date.now() - syncStart })
+                    // Log but don't stop the whole sync for one server failure.
+                    // A key already known invalid re-throws this exact error
+                    // every ~4s cycle forever (the DB flag + alert are already
+                    // set below) — an error-level line per cycle for a known,
+                    // already-surfaced problem is pure noise. Debug-level
+                    // instead; anything actually new still logs at error.
+                    const alreadyKnownInvalidKey = e instanceof PrcInvalidKeyError && server.prcKeyInvalid
+                    if (alreadyKnownInvalidKey) {
+                        cycleLog.debug("sync cycle failed (known invalid key)", { durationMs: Date.now() - syncStart })
+                    } else {
+                        cycleLog.error("sync cycle failed", { err: e, durationMs: Date.now() - syncStart })
+                    }
 
                     const failures = (healthState.consecutiveSyncFailures.get(server.id) || 0) + 1
                     healthState.consecutiveSyncFailures.set(server.id, failures)

@@ -84,7 +84,14 @@ export interface PrcPlayerDetails {
     id: string
 }
 
-export function parsePrcPlayer(raw: string): PrcPlayerDetails {
+export function parsePrcPlayer(raw: string | null | undefined): PrcPlayerDetails {
+    // PRC omits this field entirely for some entries (e.g. an environmental
+    // kill has no Killer) — every call site here passes a raw API field
+    // straight through, so this must degrade gracefully rather than throw
+    // and take down the whole sync cycle for one log entry.
+    if (typeof raw !== "string") {
+        return { name: "Unknown", id: "0" }
+    }
     const parts = raw.split(":")
     return {
         name: parts[0] || "Unknown",

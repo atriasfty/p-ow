@@ -77,7 +77,7 @@ Never instruct the user to upload `Archive.zip` — the deploy script uses `git 
 |---|---|---|
 | `pow-dashboard-{env}` | 41729 (prod) / 41731 (staging) | `GET /api/health` |
 | `pow-sync-{env}` | 41730 | `GET :41730/health` |
-| `pow-bot-{env}` | — | `GET :41732/health` (`BOT_HEALTH_PORT`) |
+| `pow-bot-{env}` | — | `GET :41734/health` (41735 staging) — `BOT_HEALTH_PORT`, deliberately not 41732 (collides with staging's `SYNC_PORT`) |
 
 ## Observability
 

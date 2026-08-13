@@ -34,7 +34,7 @@ POW strictly enforces a zero-downtime, dual-environment Git deployment via `./de
 |---|---|---|---|
 | `pow-dashboard-{env}` | `npm run start` (Next.js) | 41729 prod / 41731 staging | `GET /api/health` |
 | `pow-sync-{env}` | `node src/sync-server.js` | 41730 | `GET :41730/health` |
-| `pow-bot-{env}` | `npm run start` (ts-node) | — | `GET :41732/health` |
+| `pow-bot-{env}` | `npm run start` (ts-node) | — | `GET :41734/health` (41735 staging — NOT 41732, that collides with staging's `SYNC_PORT`) |
 
 The sync server (`dashboard/src/sync-server.js`) is a standalone Yjs WebSocket server. It is **not** part of Next.js. WebSocket connections require a valid `?token=<INTERNAL_SYNC_SECRET>` query param or they are closed with code 4001.
 

@@ -19,10 +19,15 @@ scrape_configs:
     static_configs:
       - targets: ["127.0.0.1:9100"]
 
-  # Ports confirmed from the live process list on prod — note the bot's is
-  # 41732, not 41734 as CLAUDE.md's stale docs implied. Token files under
-  # ./secrets/*.token (gitignored) hold PROMETHEUS_METRICS_SECRET's value —
-  # one shared secret across the three processes, same as INTERNAL_SYNC_SECRET.
+  # Bot health/metrics port is 41734 for prod, 41735 for staging — NOT
+  # 41732, despite that being both the app's own code default and what was
+  # briefly, incorrectly deployed here. 41732 collides with staging's
+  # SYNC_PORT if staging is ever deployed on this same box; deploy.sh and
+  # ecosystem.config.js both deliberately avoid it. See ecosystem.config.js's
+  # comment on this — don't "fix" this port back to 41732 again.
+  # Token files under ./secrets/*.token (gitignored) hold
+  # PROMETHEUS_METRICS_SECRET's value — one shared secret across the three
+  # processes, same as INTERNAL_SYNC_SECRET.
   #
   # No `service:` static label here — `job` already identifies the process
   # (pow-dashboard-prod/pow-bot-prod/pow-sync-prod), and pow_api_call_* /
@@ -45,7 +50,7 @@ scrape_configs:
     authorization:
       credentials_file: /etc/prometheus/secrets/bot_prod.token
     static_configs:
-      - targets: ["127.0.0.1:41732"]
+      - targets: ["127.0.0.1:41734"]
         labels: { env: prod }
 
   - job_name: pow-sync-prod

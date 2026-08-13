@@ -60,7 +60,11 @@ groups:
           description: "Oldest pending bot-queue item is over 2 minutes old — Discord messages/DMs/role changes are delayed."
 
       - alert: PM2RestartLoop
-        expr: increase(pow_pm2_restart_total[10m]) > 3
+        # Scoped to our own app processes — pow_pm2_restart_total also
+        # covers PM2 modules (pm2-logrotate) and unrelated tenants sharing
+        # this box, which restart more often for routine reasons (module
+        # reinstalls, PM2 daemon reloads) and aren't ours to alert on.
+        expr: increase(pow_pm2_restart_total{name=~"pow-.*|wren"}[10m]) > 3
         for: 0m
         labels: { severity: warning }
         annotations:
