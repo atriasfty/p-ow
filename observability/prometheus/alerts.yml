@@ -180,12 +180,11 @@ groups:
   - name: infra-system
     rules:
       - alert: BackupStale
-        # Fed by both scheduled crons AND deploy.sh-triggered snapshots, so
-        # threshold is generous (2 days) to avoid false positives on a quiet
+        # Threshold is generous (2 days) to avoid false positives on a quiet
         # weekend — this is meant to catch "backups have silently stopped
-        # working for a long time" (the postgres_replica/release jobs were
-        # both found stale by weeks when this alert was first built), not
-        # flag every missed cron tick.
+        # working for a long time" (postgres_replica was found stale by 32
+        # days when this alert was first built, from a stale SSH key on
+        # atria1 — fixed 2026-08-14), not flag every missed cron tick.
         expr: (time() - pow_backup_last_file_timestamp_seconds) > 172800
         for: 30m
         labels: { severity: critical }
