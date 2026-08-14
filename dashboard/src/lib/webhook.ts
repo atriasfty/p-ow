@@ -2,6 +2,7 @@ import { prisma } from "./db"
 import { lookup } from "dns/promises"
 import * as net from "net"
 import * as https from "https"
+import { webhookDeliveryDuration, webhookDeliveryFailures } from "./prometheus"
 
 export type WebhookEvent =
     | "PUNISHMENT_CREATED"
@@ -172,7 +173,15 @@ export async function fireWebhook(serverId: string, event: WebhookEvent, embed: 
         if (!embed.footer) embed.footer = { text: "Project Overwatch Webhook Notifications" }
 
         const payload = JSON.stringify({ embeds: [embed] })
-        await postWebhook(parsed, resolved.address, resolved.family, payload)
+        const start = Date.now()
+        try {
+            await postWebhook(parsed, resolved.address, resolved.family, payload)
+            webhookDeliveryDuration.observe({ outcome: "ok" }, (Date.now() - start) / 1000)
+        } catch (e) {
+            webhookDeliveryDuration.observe({ outcome: "error" }, (Date.now() - start) / 1000)
+            webhookDeliveryFailures.inc()
+            throw e
+        }
     } catch (e) {
         console.error(`[WEBHOOK] Failed to fire ${event} for ${serverId}:`, e)
     }

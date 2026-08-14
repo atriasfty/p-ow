@@ -1,4 +1,5 @@
 import { prisma } from "./db"
+import { auditEvents } from "./prometheus"
 
 export type AuditOrigin = "API" | "DASHBOARD"
 
@@ -21,6 +22,7 @@ export async function logAudit(
                 ip
             }
         })
+        auditEvents.inc({ event, origin })
     } catch (e) {
         console.error("Audit log failed:", e)
     }

@@ -1,5 +1,6 @@
 import { PrcServer, PrcPlayer, PrcJoinLog, PrcKillLog, PrcCommandLog, PrcServerV2 } from "./prc-types"
 import { trackApiCall } from "./metrics"
+import { outboundRateLimitHits } from "./prometheus"
 import { getGlobalConfig } from "./config"
 
 // Thrown when PRC has told us a server-key is invalid (403). Distinct from
@@ -153,6 +154,7 @@ export class PrcClient {
             }
 
             if (res.status === 429) {
+                outboundRateLimitHits.inc({ service: "prc" })
                 const retryAfter = parseInt(res.headers.get("Retry-After") || "2")
                 this.updateState({ blockedUntil: Date.now() + (retryAfter * 1000) })
 

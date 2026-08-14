@@ -1,56 +1,245 @@
 {
   "uid": "pow-sync-pipeline",
   "title": "POW Sync Pipeline Health",
-  "tags": ["pow"],
+  "tags": [
+    "pow"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "title": "Sync cycle duration (p50/p95/max) per server",
       "type": "timeseries",
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "histogram_quantile(0.50, sum(rate(pow_sync_cycle_duration_seconds_bucket[5m])) by (le, server_id))", "refId": "A", "legendFormat": "p50 {{server_id}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "histogram_quantile(0.95, sum(rate(pow_sync_cycle_duration_seconds_bucket[5m])) by (le, server_id))", "refId": "B", "legendFormat": "p95 {{server_id}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "max(pow_sync_cycle_duration_seconds_sum) by (server_id) / max(pow_sync_cycle_duration_seconds_count) by (server_id)", "refId": "C", "legendFormat": "avg {{server_id}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(pow_sync_cycle_duration_seconds_bucket[5m])) by (le, server_id))",
+          "refId": "A",
+          "legendFormat": "p50 {{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pow_sync_cycle_duration_seconds_bucket[5m])) by (le, server_id))",
+          "refId": "B",
+          "legendFormat": "p95 {{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "max(pow_sync_cycle_duration_seconds_sum) by (server_id) / max(pow_sync_cycle_duration_seconds_count) by (server_id)",
+          "refId": "C",
+          "legendFormat": "avg {{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 2,
       "title": "New logs ingested per server (5m rate)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "sum(rate(pow_sync_cycle_new_logs_total[5m])) by (server_id)", "refId": "A", "legendFormat": "{{server_id}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_sync_cycle_new_logs_total[5m])) by (server_id)",
+          "refId": "A",
+          "legendFormat": "{{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 3,
       "title": "Sync cycle failures per server",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "sum(increase(pow_sync_cycle_failures_total[5m])) by (server_id)", "refId": "A", "legendFormat": "{{server_id}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars" } }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(pow_sync_cycle_failures_total[5m])) by (server_id)",
+          "refId": "A",
+          "legendFormat": "{{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars"
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 4,
-      "title": "Staleness — seconds since last successful cycle, per server",
+      "title": "Staleness \u2014 seconds since last successful cycle, per server",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "time() - pow_last_sync_timestamp_seconds", "refId": "A", "legendFormat": "{{server_id}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "time() - pow_last_sync_timestamp_seconds",
+          "refId": "A",
+          "legendFormat": "{{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 90, "color": "red" }] },
-          "custom": { "thresholdsStyle": { "mode": "line" } }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Data retention cleanup duration (p95, per server)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 25
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pow_data_cleanup_duration_seconds_bucket[1h])) by (le, server_id))",
+          "refId": "A",
+          "legendFormat": "{{server_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Rows deleted by retention cleanup, by model",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_data_cleanup_rows_deleted_total[1h])) by (model)",
+          "refId": "A",
+          "legendFormat": "{{model}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
         },
         "overrides": []
       }

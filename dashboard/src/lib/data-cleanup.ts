@@ -1,4 +1,5 @@
 import { prisma } from "./db"
+import { dataCleanupDuration, dataCleanupRowsDeleted } from "./prometheus"
 
 const PUNISHMENT_MIN_RETENTION_DAYS = 730 // 2 years, all plans
 
@@ -16,7 +17,8 @@ export async function runDataCleanup(serverId: string, retentionDays: number): P
 
     console.log(`[CLEANUP] Server ${serverId}: deleting records older than ${retentionDays} days (before ${cutoff.toISOString()}), punishments older than ${punishmentRetentionDays} days`)
 
-    await Promise.all([
+    const start = Date.now()
+    const [log, playerLocation, vehicleLog, shift, punishment, modCall, emergencyCall] = await Promise.all([
         prisma.log.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.playerLocation.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.vehicleLog.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
@@ -25,6 +27,14 @@ export async function runDataCleanup(serverId: string, retentionDays: number): P
         prisma.modCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
         prisma.emergencyCall.deleteMany({ where: { serverId, createdAt: { lt: cutoff } } }),
     ])
+    dataCleanupDuration.observe({ server_id: serverId }, (Date.now() - start) / 1000)
+    for (const [model, result] of [
+        ["Log", log], ["PlayerLocation", playerLocation], ["VehicleLog", vehicleLog],
+        ["Shift", shift], ["Punishment", punishment], ["ModCall", modCall],
+        ["EmergencyCall", emergencyCall],
+    ] as const) {
+        if (result.count > 0) dataCleanupRowsDeleted.inc({ model }, result.count)
+    }
 
     console.log(`[CLEANUP] Server ${serverId}: cleanup complete`)
 }

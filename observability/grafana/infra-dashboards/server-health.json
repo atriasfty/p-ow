@@ -545,6 +545,154 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 14,
+      "title": "Systemd failed units / fail2ban banned IPs",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 44
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_systemd_failed_units",
+          "refId": "A",
+          "legendFormat": "{{host}} failed units",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(pow_fail2ban_banned_ips) by (host, jail)",
+          "refId": "B",
+          "legendFormat": "{{host}} {{jail}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 15,
+      "title": "Tailscale daemon status (1 = Running)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 44
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_tailscale_up",
+          "refId": "A",
+          "legendFormat": "{{host}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "max": 1,
+          "min": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "title": "Docker disk usage by type (total vs reclaimable)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(pow_docker_disk_usage_bytes{kind=\"total\"}) by (host, type)",
+          "refId": "A",
+          "legendFormat": "{{host}} {{type}} total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(pow_docker_disk_usage_bytes{kind=\"reclaimable\"}) by (host, type)",
+          "refId": "B",
+          "legendFormat": "{{host}} {{type}} reclaimable",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 17,
+      "title": "Backup freshness (time since last successful backup file)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "time() - pow_backup_last_file_timestamp_seconds",
+          "refId": "A",
+          "legendFormat": "{{backup_job}} on {{host}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     }
   ]
 }

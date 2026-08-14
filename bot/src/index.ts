@@ -13,7 +13,7 @@ import { startAutoRoleSync } from "./services/role-sync"
 import { startServerCleanupJob } from "./services/server-cleanup"
 import { deployCommands } from "./deploy-commands"
 import { sendAlert } from "./lib/alerting"
-import { register, gatewayStatus, queuePending, queueOldestAgeSeconds } from "./lib/prometheus"
+import { register, gatewayStatus, queuePending, queueOldestAgeSeconds, commandDuration, commandErrors } from "./lib/prometheus"
 import crypto from "crypto"
 
 // --- Process-level crash reporting ---
@@ -156,6 +156,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 
     if (!interaction.isChatInputCommand()) return
 
+    const __cmdStart = Date.now()
     try {
         switch (interaction.commandName) {
             case "loa":
@@ -183,7 +184,10 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
             default:
                 break
         }
+        commandDuration.observe({ command: interaction.commandName }, (Date.now() - __cmdStart) / 1000)
     } catch (e) {
+        commandDuration.observe({ command: interaction.commandName }, (Date.now() - __cmdStart) / 1000)
+        commandErrors.inc({ command: interaction.commandName })
         console.error("Command error:", e)
         if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: "There was an error executing this command!", flags: [MessageFlags.Ephemeral] })

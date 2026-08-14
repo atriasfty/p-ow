@@ -23,6 +23,12 @@ interface PowMetrics {
     prcKeyInvalidServers: client.Gauge
     automationExecutions: client.Counter<"type" | "outcome">
     automationDuration: client.Histogram<"type">
+    outboundRateLimitHits: client.Counter<"service">
+    dataCleanupDuration: client.Histogram<"server_id">
+    dataCleanupRowsDeleted: client.Counter<"model">
+    webhookDeliveryDuration: client.Histogram<"outcome">
+    webhookDeliveryFailures: client.Counter
+    auditEvents: client.Counter<"event" | "origin">
     alertSendFailures: client.Counter<"channel">
 }
 
@@ -126,6 +132,43 @@ function build(): PowMetrics {
             labelNames: ["channel"],
             registers: [register],
         }),
+        outboundRateLimitHits: new client.Counter({
+            name: "pow_outbound_ratelimit_hits_total",
+            help: "429 responses from outbound API calls (PRC, Rotector) — both already back off/retry internally on this, but that was previously invisible",
+            labelNames: ["service"],
+            registers: [register],
+        }),
+        dataCleanupDuration: new client.Histogram({
+            name: "pow_data_cleanup_duration_seconds",
+            help: "Per-server data retention cleanup run duration (data-cleanup.ts)",
+            labelNames: ["server_id"],
+            buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+            registers: [register],
+        }),
+        dataCleanupRowsDeleted: new client.Counter({
+            name: "pow_data_cleanup_rows_deleted_total",
+            help: "Rows deleted per model by the retention cleanup job",
+            labelNames: ["model"],
+            registers: [register],
+        }),
+        webhookDeliveryDuration: new client.Histogram({
+            name: "pow_webhook_delivery_duration_seconds",
+            help: "Outbound automation webhook (user-configured URL) delivery duration",
+            labelNames: ["outcome"],
+            buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10],
+            registers: [register],
+        }),
+        webhookDeliveryFailures: new client.Counter({
+            name: "pow_webhook_delivery_failures_total",
+            help: "Outbound automation webhook deliveries that failed",
+            registers: [register],
+        }),
+        auditEvents: new client.Counter({
+            name: "pow_audit_events_total",
+            help: "Audit log entries written (audit.ts logAudit calls)",
+            labelNames: ["event", "origin"],
+            registers: [register],
+        }),
     }
 }
 
@@ -147,4 +190,10 @@ export const {
     automationExecutions,
     automationDuration,
     alertSendFailures,
+    outboundRateLimitHits,
+    dataCleanupDuration,
+    dataCleanupRowsDeleted,
+    webhookDeliveryDuration,
+    webhookDeliveryFailures,
+    auditEvents,
 } = metrics

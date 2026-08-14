@@ -1,5 +1,6 @@
 import { prisma } from "./db"
 import { trackApiCall } from "./metrics"
+import { outboundRateLimitHits } from "./prometheus"
 import { isFeatureEnabled } from "./feature-flags"
 
 // Rotector third-party safety-signal integration.
@@ -162,6 +163,7 @@ async function doFetchBatch(ids: string[], retryCount = 0): Promise<Map<string, 
         updateRateLimitFromHeaders(res)
 
         if (res.status === 429) {
+            outboundRateLimitHits.inc({ service: "rotector" })
             const retryAfter = parseInt(res.headers.get("Retry-After") || "10", 10)
             rateLimit.blockedUntil = Date.now() + (retryAfter * 1000)
             if (retryCount < MAX_RETRIES) {

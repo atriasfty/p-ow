@@ -1,0 +1,297 @@
+{
+  "uid": "wren-voice",
+  "title": "Wren Voice Pipeline",
+  "description": "Wake-word detection (OpenWakeWord), STT (Parakeet via OpenRouter), TTS (Kokoro via OpenRouter), and voice-minute quota gating \u2014 previously completely uninstrumented despite being a substantial feature (discord/voice/manager.js).",
+  "tags": [
+    "wren"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Active voice sessions",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_voice_active_sessions",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Wake-word detections (1h)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "increase(wren_voice_wakeword_detections_total[1h])",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 3,
+      "title": "Voice quota blocks (1h)",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "increase(wren_voice_quota_blocked_total[1h]) OR vector(0)",
+          "refId": "A",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "yellow"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "id": 4,
+      "title": "Wake-word detections / quota blocks over time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(wren_voice_wakeword_detections_total[15m])",
+          "refId": "A",
+          "legendFormat": "detections/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(rate(wren_voice_quota_blocked_total[15m])) by (tier)",
+          "refId": "B",
+          "legendFormat": "blocked {{tier}}/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "STT (speech-to-text) p95 duration / error rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(wren_voice_stt_duration_seconds_bucket[15m]))",
+          "refId": "A",
+          "legendFormat": "p95 duration",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(wren_voice_stt_errors_total[15m])",
+          "refId": "B",
+          "legendFormat": "errors/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "TTS (text-to-speech) p95 duration / error rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(wren_voice_tts_duration_seconds_bucket[15m]))",
+          "refId": "A",
+          "legendFormat": "p95 duration",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(wren_voice_tts_errors_total[15m])",
+          "refId": "B",
+          "legendFormat": "errors/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Active voice sessions over time",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_voice_active_sessions",
+          "refId": "A",
+          "legendFormat": "active sessions",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

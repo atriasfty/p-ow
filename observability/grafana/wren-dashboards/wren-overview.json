@@ -534,6 +534,430 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 15,
+      "title": "Process CPU usage",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(wren_process_cpu_seconds_total[5m])",
+          "refId": "A",
+          "legendFormat": "wren",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 16,
+      "title": "Open file descriptors",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 45
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_process_open_fds",
+          "refId": "A",
+          "legendFormat": "used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "wren_process_max_fds",
+          "refId": "B",
+          "legendFormat": "max",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 17,
+      "title": "External memory / active handles",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 53
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_nodejs_external_memory_bytes",
+          "refId": "A",
+          "legendFormat": "external memory",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "wren_nodejs_active_handles_total",
+          "refId": "B",
+          "legendFormat": "active handles",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "wren_nodejs_active_requests_total",
+          "refId": "C",
+          "legendFormat": "active requests",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 18,
+      "title": "Garbage collection duration (avg, by GC kind)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 53
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_nodejs_gc_duration_seconds_sum[5m])) by (kind) / sum(rate(wren_nodejs_gc_duration_seconds_count[5m])) by (kind)",
+          "refId": "A",
+          "legendFormat": "{{kind}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 19,
+      "title": "RAG retrieval duration (p95) / empty-result rate",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 61
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_rag_retrieval_duration_seconds_bucket[10m])) by (le))",
+          "refId": "A",
+          "legendFormat": "p95 duration",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(wren_rag_retrieval_empty_total[10m])",
+          "refId": "B",
+          "legendFormat": "empty results/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(wren_rag_retrieval_errors_total[10m])",
+          "refId": "C",
+          "legendFormat": "errors/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 20,
+      "title": "Quota-blocked chat requests by tier",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 61
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_quota_blocked_total[1h])) by (tier)",
+          "refId": "A",
+          "legendFormat": "{{tier}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 21,
+      "title": "External API latency (p95) by service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 69
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_external_api_duration_seconds_bucket[10m])) by (le, service))",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 22,
+      "title": "External API error rate by service",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 69
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_external_api_duration_seconds_count{status=\"error\"}[10m])) by (service)",
+          "refId": "A",
+          "legendFormat": "{{service}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 23,
+      "title": "MCP server: active connections / auth failures",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 77
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "wren_mcp_connections_active",
+          "refId": "A",
+          "legendFormat": "active connections",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(wren_mcp_auth_failures_total[15m])",
+          "refId": "B",
+          "legendFormat": "auth failures/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 24,
+      "title": "Ingestion runs: duration (p95) by outcome / chunks processed",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 77
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(wren_ingest_duration_seconds_bucket[1h])) by (le, outcome))",
+          "refId": "A",
+          "legendFormat": "p95 {{outcome}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(wren_ingest_chunks_total[1h])",
+          "refId": "B",
+          "legendFormat": "chunks/s",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 25,
+      "title": "Memory feature usage / guild join-leave events",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 85
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(wren_memory_ops_total[1h])) by (op)",
+          "refId": "A",
+          "legendFormat": "memory {{op}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(rate(wren_guild_events_total[1h])) by (event)",
+          "refId": "B",
+          "legendFormat": "guild {{event}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }

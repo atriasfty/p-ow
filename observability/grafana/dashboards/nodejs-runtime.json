@@ -1,80 +1,494 @@
 {
   "uid": "pow-nodejs-runtime",
   "title": "POW Node.js Runtime",
-  "description": "Event loop lag, heap, and handle counts per process — catches memory leaks and event-loop blocking before they show up as user-facing slowness.",
-  "tags": ["pow"],
+  "description": "Event loop lag, heap, and handle counts per process \u2014 catches memory leaks and event-loop blocking before they show up as user-facing slowness.",
+  "tags": [
+    "pow"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "title": "Event loop lag (p99)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "pow_dashboard_nodejs_eventloop_lag_p99_seconds", "refId": "A", "legendFormat": "dashboard", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_nodejs_eventloop_lag_p99_seconds", "refId": "B", "legendFormat": "bot", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_sync_nodejs_eventloop_lag_p99_seconds", "refId": "C", "legendFormat": "sync-server", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "pow_dashboard_nodejs_eventloop_lag_p99_seconds",
+          "refId": "A",
+          "legendFormat": "dashboard",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_nodejs_eventloop_lag_p99_seconds",
+          "refId": "B",
+          "legendFormat": "bot",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_nodejs_eventloop_lag_p99_seconds",
+          "refId": "C",
+          "legendFormat": "sync-server",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 0.1, "color": "yellow" }, { "value": 0.5, "color": "red" }] }, "custom": { "thresholdsStyle": { "mode": "line" } } }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.1,
+                "color": "yellow"
+              },
+              {
+                "value": 0.5,
+                "color": "red"
+              }
+            ]
+          },
+          "custom": {
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          }
+        },
+        "overrides": []
+      }
     },
     {
       "id": 2,
       "title": "Heap used",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "pow_dashboard_nodejs_heap_size_used_bytes", "refId": "A", "legendFormat": "dashboard used", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_dashboard_nodejs_heap_size_total_bytes", "refId": "B", "legendFormat": "dashboard total", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_nodejs_heap_size_used_bytes", "refId": "C", "legendFormat": "bot used", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_nodejs_heap_size_total_bytes", "refId": "D", "legendFormat": "bot total", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_sync_nodejs_heap_size_used_bytes", "refId": "E", "legendFormat": "sync-server used", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_sync_nodejs_heap_size_total_bytes", "refId": "F", "legendFormat": "sync-server total", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "pow_dashboard_nodejs_heap_size_used_bytes",
+          "refId": "A",
+          "legendFormat": "dashboard used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_dashboard_nodejs_heap_size_total_bytes",
+          "refId": "B",
+          "legendFormat": "dashboard total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_nodejs_heap_size_used_bytes",
+          "refId": "C",
+          "legendFormat": "bot used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_nodejs_heap_size_total_bytes",
+          "refId": "D",
+          "legendFormat": "bot total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_nodejs_heap_size_used_bytes",
+          "refId": "E",
+          "legendFormat": "sync-server used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_nodejs_heap_size_total_bytes",
+          "refId": "F",
+          "legendFormat": "sync-server total",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 3,
       "title": "Active handles (a slow, steady climb here usually means a leak)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "pow_dashboard_nodejs_active_handles_total", "refId": "A", "legendFormat": "dashboard", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_nodejs_active_handles_total", "refId": "B", "legendFormat": "bot", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_sync_nodejs_active_handles_total", "refId": "C", "legendFormat": "sync-server", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "pow_dashboard_nodejs_active_handles_total",
+          "refId": "A",
+          "legendFormat": "dashboard",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_nodejs_active_handles_total",
+          "refId": "B",
+          "legendFormat": "bot",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_nodejs_active_handles_total",
+          "refId": "C",
+          "legendFormat": "sync-server",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 4,
       "title": "Garbage collection duration (avg, by GC kind)",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "sum(rate(pow_dashboard_nodejs_gc_duration_seconds_sum[5m])) by (kind) / sum(rate(pow_dashboard_nodejs_gc_duration_seconds_count[5m])) by (kind)", "refId": "A", "legendFormat": "dashboard {{kind}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "sum(rate(pow_bot_nodejs_gc_duration_seconds_sum[5m])) by (kind) / sum(rate(pow_bot_nodejs_gc_duration_seconds_count[5m])) by (kind)", "refId": "B", "legendFormat": "bot {{kind}}", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "sum(rate(pow_dashboard_nodejs_gc_duration_seconds_sum[5m])) by (kind) / sum(rate(pow_dashboard_nodejs_gc_duration_seconds_count[5m])) by (kind)",
+          "refId": "A",
+          "legendFormat": "dashboard {{kind}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(rate(pow_bot_nodejs_gc_duration_seconds_sum[5m])) by (kind) / sum(rate(pow_bot_nodejs_gc_duration_seconds_count[5m])) by (kind)",
+          "refId": "B",
+          "legendFormat": "bot {{kind}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "sum(rate(pow_sync_nodejs_gc_duration_seconds_sum[5m])) by (kind) / sum(rate(pow_sync_nodejs_gc_duration_seconds_count[5m])) by (kind)",
+          "refId": "C",
+          "legendFormat": "sync-server {{kind}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 5,
       "title": "Process RSS memory",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "pow_dashboard_process_resident_memory_bytes", "refId": "A", "legendFormat": "dashboard", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_process_resident_memory_bytes", "refId": "B", "legendFormat": "bot", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_sync_process_resident_memory_bytes", "refId": "C", "legendFormat": "sync-server", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "pow_dashboard_process_resident_memory_bytes",
+          "refId": "A",
+          "legendFormat": "dashboard",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_process_resident_memory_bytes",
+          "refId": "B",
+          "legendFormat": "bot",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_process_resident_memory_bytes",
+          "refId": "C",
+          "legendFormat": "sync-server",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Process CPU usage",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "rate(pow_dashboard_process_cpu_seconds_total[5m])",
+          "refId": "A",
+          "legendFormat": "dashboard",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(pow_bot_process_cpu_seconds_total[5m])",
+          "refId": "B",
+          "legendFormat": "bot",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "rate(pow_sync_process_cpu_seconds_total[5m])",
+          "refId": "C",
+          "legendFormat": "sync-server",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Open file descriptors",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_dashboard_process_open_fds",
+          "refId": "A",
+          "legendFormat": "dashboard used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_dashboard_process_max_fds",
+          "refId": "B",
+          "legendFormat": "dashboard max",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_process_open_fds",
+          "refId": "C",
+          "legendFormat": "bot used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_process_max_fds",
+          "refId": "D",
+          "legendFormat": "bot max",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_process_open_fds",
+          "refId": "E",
+          "legendFormat": "sync-server used",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_process_max_fds",
+          "refId": "F",
+          "legendFormat": "sync-server max",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "External memory (non-V8 heap, e.g. Buffers)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_dashboard_nodejs_external_memory_bytes",
+          "refId": "A",
+          "legendFormat": "dashboard",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_nodejs_external_memory_bytes",
+          "refId": "B",
+          "legendFormat": "bot",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_sync_nodejs_external_memory_bytes",
+          "refId": "C",
+          "legendFormat": "sync-server",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      }
     }
   ]
 }

@@ -34,3 +34,18 @@ export const alertSendFailures = new client.Counter({
     help: "Discord webhook alert deliveries that failed (fetch threw or returned non-2xx)",
     registers: [register],
 })
+
+export const commandDuration = new client.Histogram({
+    name: "pow_bot_command_duration_seconds",
+    help: "Slash command handler duration by command name",
+    labelNames: ["command"],
+    buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20],
+    registers: [register],
+})
+
+export const commandErrors = new client.Counter({
+    name: "pow_bot_command_errors_total",
+    help: "Slash command handler errors by command name",
+    labelNames: ["command"],
+    registers: [register],
+})

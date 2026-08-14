@@ -176,3 +176,73 @@ groups:
         annotations:
           summary: "{{ $labels.job }} (observability stack component) is down"
           description: "Prometheus target {{ $labels.job }} has been unreachable for 5+ minutes. Part of the observability stack itself is degraded — logs, dashboards, or alert routing may be affected."
+
+  - name: infra-system
+    rules:
+      - alert: BackupStale
+        # Fed by both scheduled crons AND deploy.sh-triggered snapshots, so
+        # threshold is generous (2 days) to avoid false positives on a quiet
+        # weekend — this is meant to catch "backups have silently stopped
+        # working for a long time" (the postgres_replica/release jobs were
+        # both found stale by weeks when this alert was first built), not
+        # flag every missed cron tick.
+        expr: (time() - pow_backup_last_file_timestamp_seconds) > 172800
+        for: 30m
+        labels: { severity: critical }
+        annotations:
+          summary: "Backup job \"{{ $labels.backup_job }}\" on {{ $labels.host }} hasn't produced a fresh file in 2+ days"
+          description: "pow_backup_last_file_timestamp_seconds for backup_job={{ $labels.backup_job }} host={{ $labels.host }} is over 48h old (0 means no matching file was ever found). Check the source cron job's logs directly — a silently-broken backup is worse than no monitoring at all."
+
+      - alert: SystemdUnitFailed
+        expr: pow_systemd_failed_units > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.host }}: {{ $value }} systemd unit(s) in failed state"
+          description: "systemctl --failed has reported at least one failed unit on {{ $labels.host }} for 10+ minutes. Run `systemctl --failed` on that host to see which."
+
+      - alert: TailscaleDown
+        # Critical, not warning — atria1's ENTIRE node_exporter scrape (and
+        # everything on the Server Health dashboard for that host) depends on
+        # this daemon staying up. If this fires, HostNodeExporterDown will
+        # likely follow shortly after for the same host.
+        expr: pow_tailscale_up == 0
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Tailscale daemon down on {{ $labels.host }}"
+          description: "{{ $labels.host }}'s Tailscale backend has not reported BackendState=Running for 5+ minutes. If this is atria1, its node_exporter scrape from atria2 will likely fail next."
+
+      - alert: Fail2banBanSpike
+        expr: increase(pow_fail2ban_banned_ips[15m]) > 10
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.host }}/{{ $labels.jail }}: ban spike (+{{ $value }} in 15m)"
+          description: "fail2ban banned more than 10 new IPs in 15 minutes in jail {{ $labels.jail }} on {{ $labels.host }} — possible active credential-stuffing/brute-force attempt."
+
+  - name: infra-app-probes
+    rules:
+      - alert: VoiceSttTtsErrorRate
+        expr: rate(wren_voice_stt_errors_total[15m]) > 0.05 or rate(wren_voice_tts_errors_total[15m]) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Wren voice pipeline (STT/TTS) error rate elevated"
+          description: "Speech-to-text or text-to-speech calls have been failing at over 0.05/s for 5+ minutes — check OpenRouter status for the Parakeet/Kokoro models."
+
+      - alert: WebhookDeliveryFailing
+        expr: increase(pow_webhook_delivery_failures_total[30m]) > 5
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "Outbound automation webhook deliveries failing"
+          description: "More than 5 webhook delivery failures in the last 30 minutes — server-configured automation webhooks aren't reaching their destination."
+
+      - alert: McpAuthFailureSpike
+        expr: increase(wren_mcp_auth_failures_total[15m]) > 20
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: "Wren external MCP endpoint: auth failure spike"
+          description: "Over 20 MCP auth failures in 15 minutes — possible token brute-forcing against the external MCP server endpoint."

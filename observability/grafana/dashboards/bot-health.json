@@ -1,93 +1,456 @@
 {
   "uid": "pow-bot-health",
   "title": "POW Bot Health",
-  "tags": ["pow"],
+  "tags": [
+    "pow"
+  ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "title": "Gateway status (0 = READY)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 5, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_bot_gateway_status", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_bot_gateway_status",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 2,
       "title": "Queue pending",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 5, "x": 5, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_bot_queue_pending", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 50, "color": "yellow" }, { "value": 200, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 5,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_bot_queue_pending",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 50,
+                "color": "yellow"
+              },
+              {
+                "value": 200,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 3,
       "title": "Oldest queue item age",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 5, "x": 10, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_bot_queue_oldest_age_seconds", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 120, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 10,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_bot_queue_oldest_age_seconds",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 120,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 4,
       "title": "Process memory (RSS)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 5, "x": 15, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_bot_process_resident_memory_bytes", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "value", "graphMode": "none" }
+      "gridPos": {
+        "h": 5,
+        "w": 5,
+        "x": 15,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_bot_process_resident_memory_bytes",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none"
+      }
     },
     {
       "id": 8,
       "title": "Restarts (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "description": "From observability/scripts/pm2-restart-count.sh",
-      "targets": [{ "expr": "increase(pow_pm2_restart_total{name=\"pow-bot-prod\"}[24h])", "refId": "A", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [{ "value": null, "color": "green" }, { "value": 1, "color": "yellow" }, { "value": 3, "color": "red" }] } }, "overrides": [] },
-      "options": { "textMode": "value", "colorMode": "background", "graphMode": "none" }
+      "targets": [
+        {
+          "expr": "increase(pow_pm2_restart_total{name=\"pow-bot-prod\"}[24h])",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 1,
+                "color": "yellow"
+              },
+              {
+                "value": 3,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none"
+      }
     },
     {
       "id": 5,
       "title": "Gateway status over time",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
-      "targets": [{ "expr": "pow_bot_gateway_status", "refId": "A", "legendFormat": "gateway status", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "pow_bot_gateway_status",
+          "refId": "A",
+          "legendFormat": "gateway status",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 6,
       "title": "Queue depth and oldest item age",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "pow-prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
       "targets": [
-        { "expr": "pow_bot_queue_pending", "refId": "A", "legendFormat": "pending", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } },
-        { "expr": "pow_bot_queue_oldest_age_seconds", "refId": "B", "legendFormat": "oldest age (s)", "datasource": { "type": "prometheus", "uid": "pow-prometheus" } }
+        {
+          "expr": "pow_bot_queue_pending",
+          "refId": "A",
+          "legendFormat": "pending",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        },
+        {
+          "expr": "pow_bot_queue_oldest_age_seconds",
+          "refId": "B",
+          "legendFormat": "oldest age (s)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     },
     {
       "id": 7,
       "title": "Bot logs (warn/error)",
       "type": "logs",
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
-      "datasource": { "type": "loki", "uid": "pow-loki" },
-      "targets": [{ "expr": "{job=\"pow\", service=\"bot\"} |~ `(?i)error|warn|fatal`", "refId": "A", "datasource": { "type": "loki", "uid": "pow-loki" } }],
-      "options": { "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true }
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "pow-loki"
+      },
+      "targets": [
+        {
+          "expr": "{job=\"pow\", service=\"bot\"} |~ `(?i)error|warn|fatal`",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "pow-loki"
+          }
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      }
+    },
+    {
+      "id": 9,
+      "title": "Slash command rate by command",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_bot_command_duration_seconds_count[15m])) by (command)",
+          "refId": "A",
+          "legendFormat": "{{command}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "title": "Slash command p95 duration by command",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(pow_bot_command_duration_seconds_bucket[15m])) by (le, command))",
+          "refId": "A",
+          "legendFormat": "{{command}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "title": "Slash command errors by command",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "pow-prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(pow_bot_command_errors_total[15m])) by (command)",
+          "refId": "A",
+          "legendFormat": "{{command}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "pow-prometheus"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      }
     }
   ]
 }
