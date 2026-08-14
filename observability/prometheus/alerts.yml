@@ -220,6 +220,43 @@ groups:
           summary: "{{ $labels.host }}/{{ $labels.jail }}: ban spike (+{{ $value }} in 15m)"
           description: "fail2ban banned more than 10 new IPs in 15 minutes in jail {{ $labels.jail }} on {{ $labels.host }} — possible active credential-stuffing/brute-force attempt."
 
+      - alert: HostCpuHigh
+        expr: (100 - (avg by (host) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 90
+        for: 15m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.host }}: CPU busy >90%"
+          description: "Average CPU utilization across all cores on {{ $labels.host }} has been over 90% for 15+ minutes. Check for a runaway process (top/htop), a stuck sync/automation loop, or a noisy-neighbor tenant on this shared box."
+
+      - alert: HostSwapThrashing
+        # Rate of pages actively moving in+out, not just static swap usage —
+        # this is the "the box is in real trouble right now" signal. atria1
+        # already sits around 60% swap used at baseline (tight RAM, see
+        # host-resources.json), so a static-usage threshold alone would be
+        # noisy; sustained swap I/O is what actually indicates thrashing.
+        expr: (rate(node_vmstat_pswpin[5m]) + rate(node_vmstat_pswpout[5m])) > 200
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.host }}: swap thrashing"
+          description: "Pages have been swapped in+out at over 200/s sustained for 10+ minutes on {{ $labels.host }} — active memory pressure, not just static swap usage. Check `free -h` and `ps aux --sort=-%mem | head`."
+
+      - alert: HostSwapPressure
+        expr: (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) > 0.9
+        for: 30m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.host }}: swap >90% full"
+          description: "Swap on {{ $labels.host }} has been over 90% used for 30+ minutes — little headroom left before an OOM-killer scenario. Evaluates to false (never fires) on hosts with no swap configured."
+
+      - alert: HostDiskIoSaturation
+        expr: rate(node_disk_io_time_seconds_total{device!~"sr[0-9]+|loop[0-9]+"}[5m]) > 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $labels.host }}: disk {{ $labels.device }} saturated"
+          description: "Block device {{ $labels.device }} on {{ $labels.host }} has been busy over 90% of the time for 10+ minutes — disk throughput is a bottleneck. Often correlates with HostSwapThrashing on a memory-tight box."
+
   - name: infra-app-probes
     rules:
       - alert: VoiceSttTtsErrorRate
