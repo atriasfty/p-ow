@@ -54,9 +54,11 @@ export function sendAlert(opts: {
                 inline: true,
             }))
 
+        // Only critical alerts page @everyone — warning/info sit in the
+        // channel unread-but-visible instead of interrupting everyone.
         const body = {
-            content: "@everyone",
-            allowed_mentions: { parse: ["everyone"] },
+            content: severity === "critical" ? "@everyone" : undefined,
+            allowed_mentions: { parse: severity === "critical" ? ["everyone" as const] : [] },
             embeds: [
                 {
                     title: `${severity === "critical" ? "🔴" : severity === "warning" ? "🟡" : "🔵"} ${opts.title}`.slice(0, 256),
