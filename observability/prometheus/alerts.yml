@@ -212,14 +212,6 @@ groups:
           summary: "Tailscale daemon down on {{ $labels.host }}"
           description: "{{ $labels.host }}'s Tailscale backend has not reported BackendState=Running for 5+ minutes. If this is atria1, its node_exporter scrape from atria2 will likely fail next."
 
-      - alert: Fail2banBanSpike
-        expr: increase(pow_fail2ban_banned_ips[15m]) > 10
-        for: 0m
-        labels: { severity: warning }
-        annotations:
-          summary: "{{ $labels.host }}/{{ $labels.jail }}: ban spike (+{{ $value }} in 15m)"
-          description: "fail2ban banned more than 10 new IPs in 15 minutes in jail {{ $labels.jail }} on {{ $labels.host }} — possible active credential-stuffing/brute-force attempt."
-
       - alert: HostCpuHigh
         expr: (100 - (avg by (host) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 90
         for: 15m
