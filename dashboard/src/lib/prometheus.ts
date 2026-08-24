@@ -197,3 +197,46 @@ export const {
     webhookDeliveryFailures,
     auditEvents,
 } = metrics
+
+// Metrics carrying a server_id label, i.e. every one that goes stale and
+// alerts forever once its server is deleted (see pruneOrphanedServerMetrics
+// below). Kept as a single list so a metric added here later doesn't have to
+// be separately remembered at every prisma.server.delete() call site.
+const serverLabeledMetrics = [
+    syncCycleDuration,
+    syncCycleNewLogs,
+    syncCycleFailures,
+    lastSyncTimestamp,
+    dataCleanupDuration,
+]
+
+/**
+ * Removes label sets for servers that no longer exist in the DB.
+ *
+ * Deliberately reconciliation-based (diff current metric labels against the
+ * live server list) rather than a `.remove(serverId)` call at each deletion
+ * site: server deletion happens from three places across two separate
+ * processes (this dashboard's danger-zone and superadmin routes, and the
+ * bot process's server-cleanup.ts on its own schedule) — a `bot`-process
+ * delete can't reach into this process's in-memory prom-client registry
+ * directly, and any future deletion path would silently need to remember
+ * the same cleanup call. Comparing against "does this ID still exist" once
+ * per sync cycle covers all of them uniformly.
+ *
+ * Cheap to call every cycle: activeServerIds is a handful of entries and
+ * each metric's .get() only walks its own already-in-memory label set.
+ */
+export async function pruneOrphanedServerMetrics(activeServerIds: Set<string>): Promise<number> {
+    let pruned = 0
+    for (const metric of serverLabeledMetrics) {
+        const data = await metric.get()
+        for (const v of data.values) {
+            const id = v.labels.server_id
+            if (typeof id === "string" && !activeServerIds.has(id)) {
+                metric.remove(id)
+                pruned++
+            }
+        }
+    }
+    return pruned
+}
