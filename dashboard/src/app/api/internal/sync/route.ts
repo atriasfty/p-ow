@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db"
 import { fetchAndSaveLogs } from "@/lib/log-syncer"
 import { trackSyncCycle } from "@/lib/metrics"
+import { pruneOrphanedServerMetrics } from "@/lib/prometheus"
 import { getServerSettings } from "@/lib/server-settings"
 import { maybeRunDataCleanup } from "@/lib/data-cleanup"
 import { sendAlert } from "@/lib/alerting"
@@ -43,6 +44,18 @@ export const POST = withHttpMetrics("internal/sync", async (req: Request) => {
                     apiUrl: { not: "" }
                 }
             })
+
+            // Only on the full-fleet path (never for a single targeted
+            // serverId call, which isn't representative of who else still
+            // exists). Compared against ALL current server IDs, not just
+            // the apiUrl-filtered `servers` above — a server that's merely
+            // between API keys shouldn't get its history pruned, only one
+            // that's actually gone from the DB. See pruneOrphanedServerMetrics
+            // for why this runs here instead of at each delete call site.
+            const allServerIds = await prisma.server.findMany({ select: { id: true } })
+            pruneOrphanedServerMetrics(new Set(allServerIds.map(s => s.id))).catch(e =>
+                console.error("[SYNC] metric prune error:", e)
+            )
         }
 
         const syncResults: { serverId: string; newLogs: number }[] = []
