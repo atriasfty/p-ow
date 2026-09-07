@@ -662,17 +662,10 @@ echo -e "${GREEN}Applications reloaded successfully! Your new version is LIVE.${
 
 # --- 8. Cleanup ---
 echo -e "${YELLOW}[8/8] Cleaning up old releases...${NC}"
-# Find all release directories, sort them by name (timestamp), and keep the newest ones.
-OLD_RELEASES=$(ls -r1 "${RELEASES_DIR}" | tail -n +$((RELEASES_TO_KEEP+1)))
-if [ -n "${OLD_RELEASES}" ]; then
-    for release in ${OLD_RELEASES}; do
-        echo "Deleting old release: ${RELEASES_DIR}/${release}"
-        rm -rf "${RELEASES_DIR}/${release}"
-    done
-    echo -e "${GREEN}Cleanup complete.${NC}"
-else
-    echo "No old releases to clean up."
-fi
+# Cleanup must consider only timestamped release directories, and must never
+# delete either environment's active release. Archives and unrelated directories
+# do not count toward retention.
+node "${FULL_NEW_RELEASE_PATH}/scripts/cleanup-releases.cjs" "${PROJECT_ROOT}" "${RELEASES_TO_KEEP}"
 
 echo -e "${BLUE}==================================================${NC}"
 echo -e "${GREEN}   🚀 DEPLOYMENT COMPLETE! 🚀   ${NC}"
