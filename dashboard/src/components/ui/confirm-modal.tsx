@@ -29,12 +29,18 @@ export function ConfirmModal({
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-[#333] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="confirm-dialog-title"
+                aria-describedby="confirm-dialog-message"
+                className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-[#333] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
                 {/* Header-less Close Button */}
                 <button
                     onClick={onClose}
                     aria-label="Close confirmation dialog"
-                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                    title="Close confirmation dialog"
+                    className="absolute top-4 right-4 p-2 hover:bg-white/5 rounded-lg transition-colors text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a]"
                 >
                     <X className="h-4 w-4" />
                 </button>
@@ -44,10 +50,10 @@ export function ConfirmModal({
                         <div className={`p-3 rounded-xl ${isDestructive ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
                             <AlertTriangle className="h-6 w-6" />
                         </div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">{title}</h3>
+                        <h3 id="confirm-dialog-title" className="text-xl font-bold text-white tracking-tight">{title}</h3>
                     </div>
 
-                    <p className="text-zinc-400 text-sm leading-relaxed">
+                    <p id="confirm-dialog-message" className="text-zinc-400 text-sm leading-relaxed">
                         {description}
                     </p>
 
@@ -55,7 +61,7 @@ export function ConfirmModal({
                         <button
                             onClick={onClose}
                             disabled={isLoading}
-                            className="flex-1 px-5 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-[#333] transition-all font-semibold text-sm border border-transparent hover:border-white/5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            className="flex-1 px-5 py-3 rounded-xl text-zinc-400 hover:text-white hover:bg-[#333] transition-all font-semibold text-sm border border-transparent hover:border-white/5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a]"
                         >
                             {cancelLabel}
                         </button>
