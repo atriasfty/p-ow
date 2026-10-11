@@ -195,7 +195,9 @@ export function ModCallPanel({
                             </div>
                             <button
                                 onClick={handleClose}
-                                className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-500 hover:text-red-400 transition-all active:scale-95"
+                                aria-label="Close mod call"
+                                title="Close mod call"
+                                className="p-3 hover:bg-red-500/10 rounded-xl text-zinc-500 hover:text-red-400 transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                             >
                                 <X className="h-6 w-6" />
                             </button>
@@ -365,7 +367,7 @@ export function ModCallPanel({
                                             <button
                                                 key={f}
                                                 onClick={() => setFilter(f)}
-                                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors ${filter === f
+                                                className={`rounded-lg px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${filter === f
                                                         ? "bg-indigo-500 text-white"
                                                         : "bg-[#1a1a1a] text-zinc-400 hover:text-white"
                                                     }`}
