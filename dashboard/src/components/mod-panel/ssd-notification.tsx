@@ -34,13 +34,15 @@ export function SsdNotification({ serverId }: { serverId: string }) {
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-4">
                             <div className="p-3 rounded-xl bg-red-500/10 text-red-500">
-                                <Power className="h-6 w-6" />
+                                <Power className="h-6 w-6" aria-hidden="true" />
                             </div>
                             <h3 className="text-xl font-bold text-white tracking-tight">Server Shutdown (SSD)</h3>
                         </div>
                         <button
                             onClick={handleDismiss}
-                            className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors"
+                            aria-label="Close notification"
+                            title="Close"
+                            className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                         >
                             <X className="h-5 w-5" />
                         </button>
@@ -62,7 +64,7 @@ export function SsdNotification({ serverId }: { serverId: string }) {
 
                     <button
                         onClick={handleDismiss}
-                        className="w-full px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all transform active:scale-[0.98] bg-red-500 hover:bg-red-600 text-white shadow-red-500/20"
+                        className="w-full px-6 py-3 rounded-xl font-bold text-sm shadow-lg transition-all transform active:scale-[0.98] bg-red-500 hover:bg-red-600 text-white shadow-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a]"
                     >
                         Got it
                     </button>
