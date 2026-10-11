@@ -1,0 +1,3 @@
+## 2024-05-15 - Explicit Focus Rings on Embedded Action Buttons
+**Learning:** Small inline action buttons embedded within data lists (like the punishment item actions) often lack explicit keyboard focus indicators, making them difficult to target for screen reader and keyboard users. Explicitly adding `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500` (or a color matching the action) significantly improves keyboard navigation context.
+**Action:** Ensure all small, inline action buttons inside mapped lists include explicit focus ring styling (`focus-visible:ring-2`) matching their context color.
