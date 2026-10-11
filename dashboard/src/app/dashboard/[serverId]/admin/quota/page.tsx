@@ -63,13 +63,17 @@ export default async function AdminQuotaPage({
         }
     })
 
+    // Pre-compute O(1) Map for lookups instead of O(N*M) Array.find
+    const clerkUsersMap = new Map<string, ClerkUser>()
+    for (const u of clerkUsers) {
+        clerkUsersMap.set(u.id, u)
+        if (u.discordId) clerkUsersMap.set(u.discordId, u)
+        if (u.robloxId) clerkUsersMap.set(u.robloxId, u)
+    }
+
     // Helper to get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = clerkUsersMap.get(userId)
 
         if (user?.robloxUsername) return user.robloxUsername
         if (user?.name || user?.username) return user.name || user.username || userId
@@ -78,11 +82,7 @@ export default async function AdminQuotaPage({
 
     // Helper to get user avatar
     const getUserAvatar = (userId: string): string | null => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = clerkUsersMap.get(userId)
         return user?.image || null
     }
 
@@ -163,18 +163,14 @@ export default async function AdminQuotaPage({
 
     // Helper to find canonical user ID (Clerk ID prefered)
     const getCanonicalId = (id: string) => {
-        const u = clerkUsers.find(u => u.id === id || u.discordId === id || u.robloxId === id)
+        const u = clerkUsersMap.get(id)
         return u ? u.id : id
     }
 
     for (const member of members) {
         // Skip members whose Clerk account no longer exists and have no stored robloxUsername
         // — these are terminated/deleted accounts that would otherwise display a raw ID.
-        const clerkMatch = clerkUsers.find(u =>
-            u.id === member.userId ||
-            u.discordId === member.userId ||
-            u.robloxId === member.userId
-        )
+        const clerkMatch = clerkUsersMap.get(member.userId)
         if (!member.robloxUsername && !clerkMatch) continue
 
         const canonicalId = getCanonicalId(member.userId)
