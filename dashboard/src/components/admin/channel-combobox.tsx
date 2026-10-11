@@ -70,7 +70,9 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="w-full flex items-center justify-between bg-[#222] border border-[#333] hover:border-[#444] rounded-lg px-3 py-2 text-sm text-left transition-colors"
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                className="w-full flex items-center justify-between bg-[#222] border border-[#333] hover:border-[#444] rounded-lg px-3 py-2 text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
                 {value ? (
                     selectedChannel ? (
