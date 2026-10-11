@@ -55,13 +55,23 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-xl bg-[#151515] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
+            <div
+                className="w-full max-w-xl bg-[#151515] border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden scale-100 animate-in zoom-in-95 duration-200"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="super-server-edit-modal-title"
+            >
                 <div className="flex items-center justify-between p-6 border-b border-white/5 bg-[#111]">
                     <div>
-                        <h2 className="text-xl font-bold text-white">Edit Server</h2>
+                        <h2 id="super-server-edit-modal-title" className="text-xl font-bold text-white">Edit Server</h2>
                         <p className="text-xs text-zinc-500 font-mono mt-1">{server.id}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                        aria-label="Close server edit modal"
+                        title="Close"
+                    >
                         <X className="h-5 w-5 text-zinc-500" />
                     </button>
                 </div>

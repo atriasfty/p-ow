@@ -29,7 +29,12 @@ export function ConfirmModal({
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-[#333] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div
+                className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-[#333] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="confirm-modal-title"
+            >
                 {/* Header-less Close Button */}
                 <button
                     onClick={onClose}
@@ -44,7 +49,7 @@ export function ConfirmModal({
                         <div className={`p-3 rounded-xl ${isDestructive ? 'bg-red-500/10 text-red-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
                             <AlertTriangle className="h-6 w-6" />
                         </div>
-                        <h3 className="text-xl font-bold text-white tracking-tight">{title}</h3>
+                        <h3 id="confirm-modal-title" className="text-xl font-bold text-white tracking-tight">{title}</h3>
                     </div>
 
                     <p className="text-zinc-400 text-sm leading-relaxed">
