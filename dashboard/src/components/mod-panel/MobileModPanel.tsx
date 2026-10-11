@@ -46,7 +46,8 @@ export function MobileModPanel({
                     {/* Left: Back button */}
                     <Link
                         href="/dashboard"
-                        className="p-2 rounded-lg hover:bg-white/5 text-zinc-400 z-10"
+                        className="p-2 rounded-lg hover:bg-white/5 text-zinc-400 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
+                        aria-label="Back to dashboard"
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </Link>
@@ -68,7 +69,8 @@ export function MobileModPanel({
                     {hasAdminAccess ? (
                         <Link
                             href={`/dashboard/${serverId}/admin`}
-                            className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 z-10"
+                            className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                            aria-label="Admin settings"
                         >
                             <Settings className="h-5 w-5" />
                         </Link>
