@@ -38,16 +38,39 @@ export default async function AdminQuotaPage({
     const weekOffset = parseInt(weekParam || "0")
     const isCurrentWeek = weekOffset === 0
 
-    // Fetch Clerk users
-    const client = await clerkClient()
-    const usersResponse = await client.users.getUserList({ limit: 100 })
+    // Get server settings for quota configuration
+    const settings = await getServerSettings(serverId)
 
-    const clerkUsers: ClerkUser[] = usersResponse.data.map(user => {
+    // Get all members with their roles
+    const members = await prisma.member.findMany({
+        where: { serverId },
+        include: { role: true }
+    })
+
+    // Fetch Clerk users (only those who are members)
+    const uniqueUserIds = Array.from(new Set(members.map(m => m.userId)))
+    let rawClerkUsers: any[] = []
+
+    if (uniqueUserIds.length > 0) {
+        const client = await clerkClient()
+        // Batch requests if there are more than 100 members to respect Clerk API limits
+        const chunkedIds = []
+        for (let i = 0; i < uniqueUserIds.length; i += 100) {
+            chunkedIds.push(uniqueUserIds.slice(i, i + 100))
+        }
+
+        const responses = await Promise.all(
+            chunkedIds.map(ids => client.users.getUserList({ userId: ids, limit: 100 }))
+        )
+        rawClerkUsers = responses.flatMap(res => res.data)
+    }
+
+    const clerkUsers: ClerkUser[] = rawClerkUsers.map(user => {
         const discordAccount = user.externalAccounts.find(
-            a => (a.provider as string) === "discord" || (a.provider as string) === "oauth_discord"
+            (a: any) => a.provider === "discord" || a.provider === "oauth_discord"
         )
         const robloxAccount = user.externalAccounts.find(
-            a => ["roblox", "oauth_roblox", "oauth_custom_roblox", "custom_roblox"].includes(a.provider as string)
+            (a: any) => ["roblox", "oauth_roblox", "oauth_custom_roblox", "custom_roblox"].includes(a.provider)
         )
 
         return {
@@ -63,14 +86,17 @@ export default async function AdminQuotaPage({
         }
     })
 
+    // Create O(1) lookup map for Clerk users
+    const clerkUserMap = new Map<string, ClerkUser>()
+    for (const u of clerkUsers) {
+        clerkUserMap.set(u.id, u)
+        if (u.discordId) clerkUserMap.set(u.discordId, u)
+        if (u.robloxId) clerkUserMap.set(u.robloxId, u)
+    }
+
     // Helper to get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
-
+        const user = clerkUserMap.get(userId)
         if (user?.robloxUsername) return user.robloxUsername
         if (user?.name || user?.username) return user.name || user.username || userId
         return userId
@@ -78,22 +104,9 @@ export default async function AdminQuotaPage({
 
     // Helper to get user avatar
     const getUserAvatar = (userId: string): string | null => {
-        const user = clerkUsers.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = clerkUserMap.get(userId)
         return user?.image || null
     }
-
-    // Get server settings for quota configuration
-    const settings = await getServerSettings(serverId)
-
-    // Get all members with their roles
-    const members = await prisma.member.findMany({
-        where: { serverId },
-        include: { role: true }
-    })
 
     // Calculate period start using server-configured week start day and timezone
     // Uses the same algorithm as milestones.ts to stay consistent
@@ -163,18 +176,14 @@ export default async function AdminQuotaPage({
 
     // Helper to find canonical user ID (Clerk ID prefered)
     const getCanonicalId = (id: string) => {
-        const u = clerkUsers.find(u => u.id === id || u.discordId === id || u.robloxId === id)
+        const u = clerkUserMap.get(id)
         return u ? u.id : id
     }
 
     for (const member of members) {
         // Skip members whose Clerk account no longer exists and have no stored robloxUsername
         // — these are terminated/deleted accounts that would otherwise display a raw ID.
-        const clerkMatch = clerkUsers.find(u =>
-            u.id === member.userId ||
-            u.discordId === member.userId ||
-            u.robloxId === member.userId
-        )
+        const clerkMatch = clerkUserMap.get(member.userId)
         if (!member.robloxUsername && !clerkMatch) continue
 
         const canonicalId = getCanonicalId(member.userId)
