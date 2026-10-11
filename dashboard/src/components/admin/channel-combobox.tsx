@@ -70,7 +70,9 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="w-full flex items-center justify-between bg-[#222] border border-[#333] hover:border-[#444] rounded-lg px-3 py-2 text-sm text-left transition-colors"
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                className="w-full flex items-center justify-between bg-[#222] border border-[#333] hover:border-[#444] rounded-lg px-3 py-2 text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
             >
                 {value ? (
                     selectedChannel ? (
@@ -102,7 +104,7 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
                         </div>
                     </div>
 
-                    <div className="max-h-60 overflow-y-auto">
+                    <div className="max-h-60 overflow-y-auto" role="listbox">
                         {loading ? (
                             <div className="p-4 flex justify-center text-zinc-500">
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -114,11 +116,13 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
                                 <button
                                     key={channel.id}
                                     type="button"
+                                    role="option"
+                                    aria-selected={value === channel.id}
                                     onClick={() => {
                                         onChange(channel.id)
                                         setOpen(false)
                                     }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors ${value === channel.id ? 'bg-white/5' : ''}`}
+                                    className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:bg-white/10 ${value === channel.id ? 'bg-white/5' : ''}`}
                                 >
                                     <span className="flex items-center gap-2">
                                         <Hash className="w-3 h-3 text-zinc-500" />
