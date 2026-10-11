@@ -82,14 +82,18 @@ export async function handleIngameCommand(interaction: ChatInputCommandInteracti
         const client = new PrcClient(member.server.apiUrl)
         await client.executeCommand(cmd)
 
-        // Log to Discord if a channel is configured
+        // Log to Discord if a channel is configured.
+        // Strip Discord markdown/mention chars from user-controlled strings to prevent
+        // @everyone pings, embed injection, or code-span breakout via backticks.
         if (member.server.commandLogChannelId) {
             try {
                 const logChannel = await interaction.client.channels.fetch(member.server.commandLogChannelId)
                 if (logChannel && logChannel.isTextBased()) {
-                    const moderatorName = getRobloxUsername(member, interaction.user.username)
+                    const stripDiscord = (s: string) => s.replace(/[`*_~|@#<>[\]]/g, "").slice(0, 100)
+                    const moderatorName = stripDiscord(getRobloxUsername(member, interaction.user.username))
+                    const safeCommand = cmd.replace(/`/g, "'").slice(0, 500)
                     await (logChannel as any).send({
-                        content: `**[Command Log - Discord]** \`${moderatorName}\` ran: \`${cmd}\``
+                        content: `**[Command Log - Discord]** \`${moderatorName}\` ran: \`${safeCommand}\``
                     })
                 }
             } catch (e) {
