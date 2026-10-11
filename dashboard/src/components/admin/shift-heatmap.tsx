@@ -40,14 +40,18 @@ export function ShiftHeatmap({ serverId, userId, userName }: ShiftHeatmapProps) 
     const days = useMemo(() => {
         const result = []
         const today = new Date()
+
+        // ⚡ Bolt: Pre-compute map for O(1) lookups instead of O(N) array finds inside 365-iteration loop
+        const dataMap = new Map(data.map(item => [item.date, item.value]))
+
         for (let i = 364; i >= 0; i--) {
             const d = new Date(today)
             d.setDate(d.getDate() - i)
             const dateStr = d.toISOString().split("T")[0]
-            const match = data.find(item => item.date === dateStr)
+
             result.push({
                 date: dateStr,
-                value: match ? match.value : 0,
+                value: dataMap.get(dateStr) ?? 0,
                 dayOfWeek: d.getDay()
             })
         }
