@@ -70,7 +70,7 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
                         <button
                             onClick={() => handleExport('members')}
                             disabled={!hasExportAccess || downloading === 'members'}
-                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#222]"
                         >
                             {downloading === 'members' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             Export CSV
@@ -85,7 +85,7 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
                         <button
                             onClick={() => handleExport('shifts')}
                             disabled={!hasExportAccess || downloading === 'shifts'}
-                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#222]"
                         >
                             {downloading === 'shifts' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             Export CSV
@@ -100,7 +100,7 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
                         <button
                             onClick={() => handleExport('roles')}
                             disabled={!hasExportAccess || downloading === 'roles'}
-                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#222]"
                         >
                             {downloading === 'roles' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             Export CSV
@@ -115,7 +115,7 @@ export function DataExportsPanel({ serverId, hasExportAccess }: { serverId: stri
                         <button
                             onClick={() => handleExport('punishments')}
                             disabled={!hasExportAccess || downloading === 'punishments'}
-                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#222]"
                         >
                             {downloading === 'punishments' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                             Export CSV
