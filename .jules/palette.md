@@ -1,0 +1,3 @@
+## 2024-11-20 - Icon-Only Modal Action Buttons Accessibility
+**Learning:** Found a recurring pattern in custom modals (like `map-modal`, `calls-modal`, and `mod-call-panel`) where action buttons (Zoom, Close, Refresh) were completely missing `aria-label`s, `title` attributes, and clear keyboard focus states, making them invisible to screen readers and difficult to navigate via keyboard.
+**Action:** Always ensure icon-only utility buttons within modal headers/controls include `focus-visible:outline-none`, `focus-visible:ring-2`, `aria-label`, and `title` attributes to establish accessible boundaries and explicit action intent.
