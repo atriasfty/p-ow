@@ -61,8 +61,13 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
                         <h2 className="text-xl font-bold text-white">Edit Server</h2>
                         <p className="text-xs text-zinc-500 font-mono mt-1">{server.id}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                        <X className="h-5 w-5 text-zinc-500" />
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white/5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
+                        aria-label="Close dialog"
+                        title="Close dialog"
+                    >
+                        <X className="h-5 w-5 text-zinc-500" aria-hidden="true" />
                     </button>
                 </div>
 
@@ -126,18 +131,18 @@ export function SuperServerEditModal({ server, isOpen, onClose, onUpdate }: Supe
                 <div className="p-6 border-t border-white/5 bg-[#111] flex gap-3">
                     <Button
                         variant="outline"
-                        className="flex-1 border-zinc-800 hover:bg-zinc-800 text-zinc-400"
+                        className="flex-1 border-zinc-800 hover:bg-zinc-800 text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
                         onClick={onClose}
                         disabled={loading}
                     >
                         Cancel
                     </Button>
                     <Button
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-500"
+                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111]"
                         onClick={handleSave}
                         disabled={loading}
                     >
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="h-4 w-4 mr-2" /> Save Changes</>}
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <><Save className="h-4 w-4 mr-2" aria-hidden="true" /> Save Changes</>}
                     </Button>
                 </div>
             </div>
