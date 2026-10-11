@@ -46,30 +46,38 @@ export function CallsModal({ serverId, onClose }: { serverId: string, onClose: (
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="w-full max-w-4xl max-h-[80vh] bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col">
+            <div
+                className="w-full max-w-4xl max-h-[80vh] bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl overflow-hidden flex flex-col"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="calls-modal-title"
+            >
                 <div className="p-6 border-b border-[#222] flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                            <Phone className="h-5 w-5 text-indigo-400" />
+                            <Phone className="h-5 w-5 text-indigo-400" aria-hidden="true" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-white">Active Calls</h3>
+                            <h3 id="calls-modal-title" className="font-bold text-white">Active Calls</h3>
                             <p className="text-xs text-zinc-500 mt-0.5">Moderator &amp; Emergency Calls</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleRefresh}
-                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors"
-                            title="Refresh"
+                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            title="Refresh active calls"
+                            aria-label="Refresh active calls"
                         >
-                            <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            title="Close calls modal"
+                            aria-label="Close calls modal"
                         >
-                            <X className="h-5 w-5" />
+                            <X className="h-5 w-5" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
