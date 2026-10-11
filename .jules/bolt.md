@@ -1,0 +1,3 @@
+## 2024-05-03 - Avoid O(N*M) Array.find() Inside Data-Mapping Iterations
+**Learning:** Performing multiple membership checks against arrays using `Array.prototype.find()` inside mapping loops (e.g., mapping external Clerk user properties to database records) creates O(N*M) complexity, creating significant bottlenecks when fetching server-specific members or external API stats.
+**Action:** When performing lookups inside render loops or data-mapping iterations, pre-compute an O(1) lookup Map keyed by the necessary identifiers outside the loop (using `new Map(array.map(item => [item.id, item]))`). This inherently preserves nullability safety while reducing complexity to O(N+M).
