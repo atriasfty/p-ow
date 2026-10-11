@@ -1031,7 +1031,12 @@ function EditFormInner({
                                         className="flex-1 bg-transparent text-lg font-semibold text-white outline-none min-w-[200px]"
                                     />
                                     {form.sections.length > 1 && (
-                                        <button onClick={() => deleteSection(section.id)} className="p-2 text-zinc-500 hover:text-red-400">
+                                        <button
+                                            onClick={() => deleteSection(section.id)}
+                                            className="p-2 text-zinc-500 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded"
+                                            aria-label="Delete section"
+                                            title="Delete section"
+                                        >
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     )}
@@ -1173,11 +1178,18 @@ function QuestionCard({
                 </div>
                 <button
                     onClick={() => setShowConditions(!showConditions)}
-                    className={`p-2 rounded ${showConditions ? "bg-indigo-600 text-white" : "text-zinc-500 hover:text-white"}`}
+                    className={`p-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 ${showConditions ? "bg-indigo-600 text-white" : "text-zinc-500 hover:text-white"}`}
+                    aria-label="Settings"
+                    title="Settings"
                 >
                     <Settings2 className="h-4 w-4" />
                 </button>
-                <button onClick={onDelete} className="p-2 text-zinc-500 hover:text-red-400">
+                <button
+                    onClick={onDelete}
+                    className="p-2 text-zinc-500 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded"
+                    aria-label="Delete question"
+                    title="Delete question"
+                >
                     <Trash2 className="h-4 w-4" />
                 </button>
             </div>
@@ -1192,12 +1204,17 @@ function QuestionCard({
                                 onChange={(val) => updateOption(i, val)}
                                 className="flex-1 bg-[#1a1a1a] px-3 py-1.5 rounded text-sm text-white outline-none"
                             />
-                            <button onClick={() => removeOption(i)} className="text-zinc-600 hover:text-red-400">
+                            <button
+                                onClick={() => removeOption(i)}
+                                className="text-zinc-600 hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded"
+                                aria-label={"Remove option " + opt}
+                                title={"Remove option " + opt}
+                            >
                                 <Trash2 className="h-3 w-3" />
                             </button>
                         </div>
                     ))}
-                    <button onClick={addOption} className="flex items-center gap-1 text-sm text-zinc-500 hover:text-white">
+                    <button onClick={addOption} className="flex items-center gap-1 text-sm text-zinc-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded">
                         <Plus className="h-3 w-3" /> Add option
                     </button>
                 </div>

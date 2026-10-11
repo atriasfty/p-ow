@@ -153,7 +153,13 @@ function TagInput({ value, onChange, placeholder }: { value: string[]; onChange:
                 {value.map(tag => (
                     <span key={tag} className="flex items-center gap-1 px-2 py-0.5 bg-zinc-800 rounded text-xs text-zinc-200">
                         {tag}
-                        <button type="button" onClick={() => onChange(value.filter(t => t !== tag))}>
+                        <button
+                            type="button"
+                            onClick={() => onChange(value.filter(t => t !== tag))}
+                            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 rounded"
+                            aria-label={"Remove tag " + tag}
+                            title={"Remove tag " + tag}
+                        >
                             <X className="h-3 w-3 text-zinc-500 hover:text-white" />
                         </button>
                     </span>
