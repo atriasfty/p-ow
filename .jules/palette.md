@@ -1,0 +1,3 @@
+## 2024-05-20 - Confirm Modal Accessibility
+**Learning:** Custom dialog/modal containers must include semantic roles like `role="alertdialog"`, `aria-modal="true"`, and proper label associations (`aria-labelledby`, `aria-describedby`). Close buttons need a `title` tooltip and explicit focus styling with a dark offset color like `focus-visible:ring-offset-zinc-900` for visibility against dark backgrounds. Decorative icons need `aria-hidden="true"`.
+**Action:** Always add ARIA roles, label associations, `title` attributes, dark ring offsets for buttons in dark modals, and `aria-hidden` for decorative icons.
