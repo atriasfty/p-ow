@@ -1,0 +1,3 @@
+## 2024-07-22 - Accessible Modal Implementation
+**Learning:** Custom dialog and modal implementations in the React component tree were missing semantic roles (like `role="dialog"` or `role="alertdialog"`), proper DOM bindings (`aria-labelledby`), and explicit keyboard focus visibility (especially offset colors against dark themes).
+**Action:** Always apply `aria-modal="true"`, semantic roles, `aria-labelledby`, and explicitly define `focus-visible:ring-offset-zinc-900` for action buttons within dark-themed custom modals to ensure screen readers and keyboard users can effectively navigate them.
