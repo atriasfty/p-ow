@@ -1,0 +1,3 @@
+## 2024-05-24 - Custom Modal Accessibility
+**Learning:** Custom modals (like the Active Calls modal) lack native dialog behavior and thus require manual implementation of semantic roles (role="dialog"), aria-modal="true", and aria-labelledby mapping to ensure proper screen reader context. Icon-only utility buttons within them require explicit aria-labels, titles, and focus-visible styling (like focus-visible:ring-2) for keyboard accessibility.
+**Action:** Always map aria-labelledby to the title ID, add role="dialog", and apply explicit focus-visible rings to utility buttons in custom modal implementations.
