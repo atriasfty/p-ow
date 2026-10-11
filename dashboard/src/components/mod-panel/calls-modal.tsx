@@ -67,7 +67,8 @@ export function CallsModal({ serverId, onClose }: { serverId: string, onClose: (
                         </button>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
+                            aria-label="Close active calls modal"
+                            className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
                         >
                             <X className="h-5 w-5" />
                         </button>
