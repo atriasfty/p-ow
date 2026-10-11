@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing ARIA Labels and Focus States on Icon-Only Modal Controls
+**Learning:** Icon-only utility buttons within modal headers (such as Map zoom controls or Calls modal refresh/close buttons) are frequently missing accessible names (`aria-label`/`title`) and lack explicit keyboard focus indicators (`focus-visible:ring-2`). Without these, screen readers announce them as "button" and keyboard users cannot tell when they are focused.
+**Action:** Always ensure that icon-only action buttons use `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-500]` for keyboard navigation, and include descriptive `aria-label` and `title` properties.
