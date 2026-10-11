@@ -111,22 +111,26 @@ export class RaidDetectorService {
             userCommands[log.playerId].push(log);
         }
 
-        // Check frequency per user
+        // Check frequency per user using O(N) sliding window
         for (const userId in userCommands) {
-            const commands = userCommands[userId].sort((a, b) => b.prcTimestamp - a.prcTimestamp);
+            // Sort ascending by timestamp for sliding window
+            const commands = userCommands[userId].sort((a, b) => a.prcTimestamp - b.prcTimestamp);
 
-            for (let i = 0; i < commands.length; i++) {
-                const windowStart = commands[i].prcTimestamp;
-                const windowCommands = commands.filter(c =>
-                    c.prcTimestamp <= windowStart &&
-                    c.prcTimestamp > windowStart - this.highFreqWindowSeconds
-                );
+            let left = 0;
 
-                if (windowCommands.length > this.highFreqThreshold) {
+            for (let right = 0; right < commands.length; right++) {
+                // Shrink window from the left if commands fall outside the time window
+                while (commands[right].prcTimestamp - commands[left].prcTimestamp >= this.highFreqWindowSeconds) {
+                    left++;
+                }
+
+                // The number of commands in the current window is (right - left + 1)
+                if (right - left + 1 > this.highFreqThreshold) {
+                    const windowCommands = commands.slice(left, right + 1);
                     highFreqDetections.push({
                         type: "HIGH_FREQUENCY",
                         userId: userId,
-                        userName: commands[i].playerName || "Unknown",
+                        userName: commands[right].playerName || "Unknown",
                         details: `High frequency detected: ${windowCommands.length} commands in ${this.highFreqWindowSeconds} seconds`,
                         pattern: windowCommands.map(c => c.command).join(", ")
                     });
