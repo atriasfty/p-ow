@@ -113,21 +113,24 @@ export class RaidDetectorService {
 
         // Check frequency per user
         for (const userId in userCommands) {
-            const commands = userCommands[userId].sort((a, b) => b.prcTimestamp - a.prcTimestamp);
+            // Sort ascending by timestamp for a sliding window approach
+            const commands = userCommands[userId].sort((a, b) => a.prcTimestamp - b.prcTimestamp);
+            let left = 0;
 
-            for (let i = 0; i < commands.length; i++) {
-                const windowStart = commands[i].prcTimestamp;
-                const windowCommands = commands.filter(c =>
-                    c.prcTimestamp <= windowStart &&
-                    c.prcTimestamp > windowStart - this.highFreqWindowSeconds
-                );
+            for (let right = 0; right < commands.length; right++) {
+                // Shrink window if it exceeds the timeframe
+                while (commands[right].prcTimestamp - commands[left].prcTimestamp > this.highFreqWindowSeconds) {
+                    left++;
+                }
 
-                if (windowCommands.length > this.highFreqThreshold) {
+                const windowSize = right - left + 1;
+                if (windowSize > this.highFreqThreshold) {
+                    const windowCommands = commands.slice(left, right + 1);
                     highFreqDetections.push({
                         type: "HIGH_FREQUENCY",
                         userId: userId,
-                        userName: commands[i].playerName || "Unknown",
-                        details: `High frequency detected: ${windowCommands.length} commands in ${this.highFreqWindowSeconds} seconds`,
+                        userName: commands[right].playerName || "Unknown",
+                        details: `High frequency detected: ${windowSize} commands in ${this.highFreqWindowSeconds} seconds`,
                         pattern: windowCommands.map(c => c.command).join(", ")
                     });
                     break; // Only one detection per user per batch
