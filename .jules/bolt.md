@@ -1,0 +1,3 @@
+## 2024-07-11 - Database Queries - Fetching latest record per user
+**Learning:** When fetching the latest record per user in Prisma, avoiding the `groupBy` followed by `findMany` with a large dynamically generated `OR` array is crucial for performance. It is much better to execute a single `findMany` using `distinct: ["userId"]` combined with `orderBy`. Crucially, when using PostgreSQL, the field used in `distinct` MUST be the first element in the `orderBy` array to avoid ConnectorErrors (e.g., `orderBy: [{ userId: "asc" }, { startTime: "desc" }]`).
+**Action:** Use `distinct` and `orderBy` to retrieve the latest record for each user rather than doing `groupBy` and passing a potentially huge `OR` list to `findMany`.
