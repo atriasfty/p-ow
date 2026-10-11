@@ -60,6 +60,7 @@ export function CallsModal({ serverId, onClose }: { serverId: string, onClose: (
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleRefresh}
+                            aria-label="Refresh calls"
                             className="p-2 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors"
                             title="Refresh"
                         >
@@ -67,6 +68,7 @@ export function CallsModal({ serverId, onClose }: { serverId: string, onClose: (
                         </button>
                         <button
                             onClick={onClose}
+                            aria-label="Close calls modal"
                             className="p-2 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-zinc-300 transition-colors"
                         >
                             <X className="h-5 w-5" />
