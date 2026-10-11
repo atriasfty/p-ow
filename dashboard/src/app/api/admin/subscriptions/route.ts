@@ -51,6 +51,10 @@ export async function POST(req: Request) {
     if (!verifyCsrf(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
     try {
+        if (!verifyCsrf(req)) {
+            return new NextResponse("Forbidden", { status: 403 })
+        }
+
         const { userId } = await auth()
         if (!userId || !isSuperAdmin({ id: userId } as any)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
