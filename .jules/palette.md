@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility Standards Check
+**Learning:** Found several components lacking proper ARIA attributes and keyboard focus styles for a11y, primarily in the custom `ChannelCombobox` implementation.
+**Action:** Custom combobox components require standard ARIA attributes (`role="combobox"`, `aria-expanded`, `aria-haspopup`, `aria-controls`, `role="listbox"`, `role="option"`, `aria-selected`) and proper keyboard focus states (`focus-visible:ring-2`, `focus-visible:outline-none`) to ensure screen reader users and keyboard navigators can successfully interact with dropdown menus. Modals also frequently lack `aria-label` or `title` on icon-only close buttons.

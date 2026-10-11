@@ -69,8 +69,12 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
         <div className="relative" ref={containerRef}>
             <button
                 type="button"
+                role="combobox"
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls="channel-listbox"
                 onClick={() => setOpen(!open)}
-                className="w-full flex items-center justify-between bg-[#222] border border-[#333] hover:border-[#444] rounded-lg px-3 py-2 text-sm text-left transition-colors"
+                className="w-full flex items-center justify-between bg-[#222] border border-[#333] hover:border-[#444] rounded-lg px-3 py-2 text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
             >
                 {value ? (
                     selectedChannel ? (
@@ -88,7 +92,11 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
             </button>
 
             {open && (
-                <div className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl overflow-hidden">
+                <div
+                    id="channel-listbox"
+                    role="listbox"
+                    className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-xl overflow-hidden"
+                >
                     <div className="p-2 border-b border-[#2a2a2a]">
                         <div className="flex items-center gap-2 bg-[#222] rounded px-2 py-1.5">
                             <Search className="h-3 w-3 text-zinc-500" />
@@ -114,11 +122,13 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
                                 <button
                                     key={channel.id}
                                     type="button"
+                                    role="option"
+                                    aria-selected={value === channel.id}
                                     onClick={() => {
                                         onChange(channel.id)
                                         setOpen(false)
                                     }}
-                                    className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors ${value === channel.id ? 'bg-white/5' : ''}`}
+                                    className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors focus-visible:outline-none focus-visible:bg-white/10 ${value === channel.id ? 'bg-white/5' : ''}`}
                                 >
                                     <span className="flex items-center gap-2">
                                         <Hash className="w-3 h-3 text-zinc-500" />
@@ -136,7 +146,7 @@ export function ChannelCombobox({ serverId, value, onChange, placeholder = "Sele
                                 onChange(null)
                                 setOpen(false)
                             }}
-                            className="w-full text-left px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-t border-[#2a2a2a]"
+                            className="w-full text-left px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-t border-[#2a2a2a] focus-visible:outline-none focus-visible:bg-white/10"
                         >
                             Clear Selection
                         </button>
