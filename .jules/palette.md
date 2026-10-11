@@ -1,0 +1,3 @@
+## 2024-05-19 - Custom Combobox and Modal Accessibility
+**Learning:** Custom interactive components like comboboxes replacing native selects lack built-in screen reader context and keyboard navigability. Similarly, icon-only modal buttons without explicit ARIA labels and focus styling are completely opaque to assistive technologies and hard to navigate via keyboard.
+**Action:** When building custom dropdowns, always apply `role="combobox"`, `aria-expanded`, and `aria-haspopup="listbox"` to the trigger, and `role="listbox"`/`role="option"` with `aria-selected` to the dropdown items. Ensure all interactive elements, including icon-only close buttons, have `aria-label`, `title`, and explicit `focus-visible:outline-none focus-visible:ring-2` styling.
