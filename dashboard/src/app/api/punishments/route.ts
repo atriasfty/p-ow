@@ -74,13 +74,14 @@ export async function GET(req: Request) {
 
         // 5. Build Map: ModeratorID -> { name, avatar }
         const modMap = new Map()
+        const userMap = new Map((users as any[]).map(u => [u.id, u]))
 
         for (const modId of modIds) {
             let user = null
             const clerkId = modId.startsWith("user_") ? modId : discordToMemberMap.get(modId)
 
             if (clerkId) {
-                user = (users as any[]).find(u => u.id === clerkId)
+                user = userMap.get(clerkId)
             }
 
             if (user) {
