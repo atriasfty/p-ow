@@ -1,0 +1,3 @@
+## 2024-05-25 - Icon-Only Button Accessibility in Notifications
+**Learning:** Found an icon-only dismiss button in the SsdNotification component lacking both accessible text (aria-label / title) and explicit keyboard focus indicators against its dark background. The primary modal button also lacked keyboard focus indicators.
+**Action:** Always ensure icon-only utility buttons within custom modals include descriptive aria-labels, title tooltips, and explicit focus-visible:outline-none focus-visible:ring-2 styling with appropriate ring-offset for dark backgrounds to support screen readers and keyboard navigation.
