@@ -373,7 +373,7 @@ export function MobileToolbox({
                                     onChange={(e) => setPermLogData({ ...permLogData, permission: e.target.value })}
                                     placeholder="e.g., Roadwork"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
                             <div>
@@ -384,7 +384,7 @@ export function MobileToolbox({
                                     onChange={(e) => setPermLogData({ ...permLogData, usernames: e.target.value })}
                                     placeholder="e.g., ciankellya, user123"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
                             <div>
@@ -395,7 +395,7 @@ export function MobileToolbox({
                                     onChange={(e) => setPermLogData({ ...permLogData, time: e.target.value })}
                                     placeholder="e.g., Permanent or 30m"
                                     required
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                                 />
                             </div>
 
@@ -450,7 +450,7 @@ export function MobileToolbox({
                                         value={startDate}
                                         onChange={(e) => setStartDate(e.target.value)}
                                         required
-                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                     />
                                 </div>
                                 <div>
@@ -461,7 +461,7 @@ export function MobileToolbox({
                                         onChange={(e) => setEndDate(e.target.value)}
                                         required
                                         min={startDate}
-                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500"
+                                        className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
                                     />
                                 </div>
                             </div>
@@ -474,7 +474,7 @@ export function MobileToolbox({
                                     required
                                     rows={3}
                                     placeholder="Why you need time off..."
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 resize-none"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 resize-none"
                                 />
                             </div>
 
@@ -529,7 +529,7 @@ export function MobileToolbox({
                                     onChange={(e) => setCommandInput(e.target.value)}
                                     placeholder=":h [message] or any command..."
                                     autoFocus
-                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                                    className="w-full bg-[#222] border border-[#333] rounded-lg px-4 py-3 text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                 />
                             </div>
 
@@ -584,7 +584,7 @@ export function MobileToolbox({
                                     value={staffRequestReason}
                                     onChange={(e) => setStaffRequestReason(e.target.value)}
                                     placeholder="Why you need assistance..."
-                                    className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-red-500/50 min-h-[100px] resize-none"
+                                    className="w-full bg-[#222] border border-[#333] rounded-xl px-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-red-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 transition-colors min-h-[100px] resize-none"
                                     required
                                     autoFocus
                                 />
