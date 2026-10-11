@@ -84,11 +84,12 @@ export async function POST(req: Request) {
 
         const guildMember = await guildMemberRes.json()
         const userDiscordRoles: string[] = guildMember.roles || []
+        const userDiscordRolesSet = new Set(userDiscordRoles)
 
         // =====================================
         // 1. CHECK FOR TERMINATED ROLE - REMOVE FROM SERVER
         // =====================================
-        if (server.terminatedRoleId && userDiscordRoles.includes(server.terminatedRoleId)) {
+        if (server.terminatedRoleId && userDiscordRolesSet.has(server.terminatedRoleId)) {
             try {
                 // Remove member from this server's member list
                 await prisma.member.deleteMany({
@@ -109,7 +110,7 @@ export async function POST(req: Request) {
         // =====================================
         // 2. CHECK FOR SUSPENDED ROLE - BLOCK ACCESS
         // =====================================
-        if (server.suspendedRoleId && userDiscordRoles.includes(server.suspendedRoleId)) {
+        if (server.suspendedRoleId && userDiscordRolesSet.has(server.suspendedRoleId)) {
             return NextResponse.json({
                 suspended: true,
                 message: "Your account is suspended."
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
 
         for (const panelRole of panelRoles) {
             if (!panelRole.discordRoleId) continue
-            if (!userDiscordRoles.includes(panelRole.discordRoleId)) continue
+            if (!userDiscordRolesSet.has(panelRole.discordRoleId)) continue
             const position = rolePositionMap.get(panelRole.discordRoleId) ?? -1
             if (position > bestPosition) {
                 bestPosition = position
@@ -233,7 +234,7 @@ export async function POST(req: Request) {
         // =====================================
         // 5. CHECK FOR STAFF ROLE - VIEWER ACCESS
         // =====================================
-        if (server.staffRoleId && userDiscordRoles.includes(server.staffRoleId)) {
+        if (server.staffRoleId && userDiscordRolesSet.has(server.staffRoleId)) {
             return NextResponse.json({
                 success: true,
                 assigned: false,
