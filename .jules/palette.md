@@ -1,0 +1,3 @@
+## 2024-07-25 - ConfirmModal Accessibility Improvements
+**Learning:** Custom dialogs built with basic HTML div tags need specific ARIA properties (roles, aria-modal, and linked titles/descriptions) so screen readers can announce them as dialogs rather than normal page flow. Also, close buttons should have the title attribute along with the aria-label attribute, and standard action buttons need focus offset on dark backgrounds so their focus rings are clearly visible.
+**Action:** When creating or modifying a custom dialog modal component, always explicitly add semantic roles, `aria-modal="true"`, `aria-labelledby`, and `aria-describedby` properties. Make sure all buttons have clear, visible focus states and proper labels.
