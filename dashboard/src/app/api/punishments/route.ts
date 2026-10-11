@@ -62,17 +62,28 @@ export async function GET(req: Request) {
             })
         }
 
-        // 4. Fetch User Details from Clerk
+        // 4. Fetch User Details from Clerk (Batched for performance & bypass limits)
         const client = await clerkClient()
         let users: any[] = []
         try {
-            const userList = await client.users.getUserList({ userId: clerkIds })
-            users = userList.data
+            const chunkSize = 100 // Clerk max limit
+            const chunks = []
+            for (let i = 0; i < clerkIds.length; i += chunkSize) {
+                chunks.push(clerkIds.slice(i, i + chunkSize))
+            }
+
+            // O(N) concurrent chunk fetching instead of sequential awaits
+            const responses = await Promise.all(
+                chunks.map(chunk => client.users.getUserList({ userId: chunk, limit: chunkSize }))
+            )
+            users = responses.flatMap(r => r.data)
         } catch (e) {
             console.error("Clerk fetch error", e)
         }
 
         // 5. Build Map: ModeratorID -> { name, avatar }
+        // Pre-compute user map for O(1) lookup to prevent O(N*M) complexity in the loop below
+        const clerkUserMap = new Map(users.map(u => [u.id, u]))
         const modMap = new Map()
 
         for (const modId of modIds) {
@@ -80,7 +91,7 @@ export async function GET(req: Request) {
             const clerkId = modId.startsWith("user_") ? modId : discordToMemberMap.get(modId)
 
             if (clerkId) {
-                user = (users as any[]).find(u => u.id === clerkId)
+                user = clerkUserMap.get(clerkId)
             }
 
             if (user) {
