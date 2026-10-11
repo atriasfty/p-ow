@@ -10,7 +10,8 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url)
     const username = searchParams.get("username") || searchParams.get("query")
-    const requestId = Math.random().toString(36).substring(7)
+    // Use cryptographically secure random generation for identifiers
+    const requestId = crypto.randomUUID()
 
     console.log(`[${requestId}] GET /api/roblox/user - username: ${username}`)
 
