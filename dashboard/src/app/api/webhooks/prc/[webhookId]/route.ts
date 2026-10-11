@@ -65,10 +65,13 @@ export async function POST(
         const payload = JSON.parse(rawBody)
         const events = payload.events || []
 
+        // ⚡ Bolt: Push all database creation promises to an array and await concurrently to avoid N+1 I/O blocking
+        const dbPromises: Promise<any>[] = []
+
         for (const event of events) {
             if (event.event === "CustomCommand") {
                 // Log custom command (starting with ;)
-                await prisma.log.create({
+                dbPromises.push(prisma.log.create({
                     data: {
                         serverId: server.id,
                         type: "command",
@@ -78,10 +81,10 @@ export async function POST(
                         arguments: event.data.argument,
                         prcTimestamp: event.timestamp
                     }
-                })
+                }))
             } else if (event.event === "EmergencyCallStarted") {
                 // Log emergency call
-                await prisma.emergencyCall.create({
+                dbPromises.push(prisma.emergencyCall.create({
                     data: {
                         serverId: server.id,
                         team: event.data.team,
@@ -94,10 +97,10 @@ export async function POST(
                         positionDescriptor: event.data.positionDescriptor,
                         timestamp: event.timestamp
                     }
-                })
+                }))
             } else if (event.event === "ModCallStarted") {
                 // Log mod call
-                await prisma.modCall.create({
+                dbPromises.push(prisma.modCall.create({
                     data: {
                         serverId: server.id,
                         callerId: String(event.data.caller),
@@ -108,11 +111,13 @@ export async function POST(
                         positionZ: (event.data.position && event.data.position.length >= 2) ? event.data.position[1] : 0,
                         timestamp: event.timestamp
                     }
-                })
+                }))
             } else if (event.event === "WebhookProbe") {
                 console.info(`[WEBHOOK] Probe received for server ${server.id}`)
             }
         }
+
+        await Promise.all(dbPromises)
 
         return new NextResponse("OK", { status: 200 })
 
