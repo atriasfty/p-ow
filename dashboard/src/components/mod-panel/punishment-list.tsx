@@ -271,7 +271,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                 <h3 className="font-bold text-white">Punishments</h3>
                 <button
                     onClick={() => setShowFilter(f => !f)}
-                    className={`p-1 rounded transition-colors ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
+                    className={`p-1 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${showFilter ? "text-indigo-400 bg-indigo-500/10" : "text-zinc-500 hover:text-zinc-300"}`}
                     title="Toggle filters"
                 >
                     <Filter className="h-4 w-4" />
@@ -335,7 +335,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                             e.stopPropagation()
                                                             setOpenMenu(openMenu === p.id ? null : p.id)
                                                         }}
-                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors"
+                                                        className="p-1 rounded hover:bg-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
                                                         aria-label={`Manage punishment for ${user?.name || p.userId}`}
                                                         title={`Manage punishment for ${user?.name || p.userId}`}
                                                     >
@@ -349,7 +349,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                     setEditReason(p.reason || "")
                                                                     setOpenMenu(null)
                                                                 }}
-                                                                className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700 flex items-center gap-2"
+                                                                className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-700 focus-visible:bg-zinc-700 focus-visible:outline-none flex items-center gap-2"
                                                                 aria-label={`Edit reason for ${user?.name || p.userId}`}
                                                             >
                                                                 <Pencil className="h-3 w-3" /> Edit Reason
@@ -364,7 +364,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                         })
                                                                         setOpenMenu(null)
                                                                     }}
-                                                                    className="w-full px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-zinc-700 flex items-center gap-2"
+                                                                    className="w-full px-3 py-1.5 text-left text-xs text-emerald-400 hover:bg-zinc-700 focus-visible:bg-zinc-700 focus-visible:outline-none flex items-center gap-2"
                                                                     aria-label={`Complete ban bolo for ${user?.name || p.userId}`}
                                                                 >
                                                                     <CheckCircle2 className="h-3 w-3" /> Complete
@@ -379,7 +379,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                                     })
                                                                     setOpenMenu(null)
                                                                 }}
-                                                                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-zinc-700 flex items-center gap-2"
+                                                                className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-zinc-700 focus-visible:bg-zinc-700 focus-visible:outline-none flex items-center gap-2"
                                                                 aria-label={`Delete punishment for ${user?.name || p.userId}`}
                                                             >
                                                                 <Trash2 className="h-3 w-3" /> Delete
@@ -419,7 +419,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 <button
                                                     onClick={() => handleEdit(p.id)}
                                                     disabled={loading === p.id}
-                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30"
+                                                    className="p-1 rounded bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                                                     aria-label={`Save reason for ${user?.name || p.userId}`}
                                                     title={loading === p.id ? "Saving..." : "Save reason"}
                                                 >
@@ -427,7 +427,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                                 </button>
                                                 <button
                                                     onClick={() => setEditingId(null)}
-                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30"
+                                                    className="p-1 rounded bg-red-500/20 text-red-500 hover:bg-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                                                     aria-label="Cancel editing reason"
                                                     title="Cancel"
                                                 >
@@ -502,7 +502,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                         <div className="p-6 border-t border-[#222] flex gap-3 justify-end">
                             <button
                                 onClick={() => setConfirmModal(null)}
-                                className="px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-medium transition-colors"
+                                className="px-4 py-2 rounded-lg bg-zinc-700 hover:bg-zinc-600 text-white font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a]"
                             >
                                 Cancel
                             </button>
@@ -512,7 +512,7 @@ export function PunishmentList({ serverId, initialPunishments }: { serverId: str
                                     : handleComplete(confirmModal.id)
                                 }
                                 disabled={loading === confirmModal.id}
-                                className={`px-4 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-2 disabled:opacity-50 ${confirmModal.type === "delete"
+                                className={`px-4 py-2 rounded-lg text-white font-medium transition-colors flex items-center gap-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#1a1a1a] ${confirmModal.type === "delete"
                                     ? "bg-red-500 hover:bg-red-600"
                                     : "bg-emerald-500 hover:bg-emerald-600"
                                     }`}
