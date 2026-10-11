@@ -27,10 +27,16 @@ export async function GET(req: Request) {
     try {
         const client = new PrcClient(server.apiUrl)
 
-        const [serverData, players] = await Promise.all([
-            client.getServer().catch(() => null),
-            client.getPlayers().catch(() => [])
-        ])
+        // ⚡ Bolt: Wrap external PRC calls in a timeout to prevent hanging if the game server is offline
+        const [serverData, players] = await Promise.race([
+            Promise.all([
+                client.getServer().catch(() => null),
+                client.getPlayers().catch(() => [])
+            ]),
+            new Promise<[any, any[]]>((_, reject) =>
+                setTimeout(() => reject(new Error("Timeout")), 2500)
+            )
+        ]).catch(() => [null, []])
 
         // Count staff in-game (players with permissions)
         const staffInGame = players.filter((p: any) => {
