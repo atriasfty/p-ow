@@ -2,7 +2,7 @@
 
 import { apiFetch } from "@/lib/api-fetch"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Check, X, Clock, Loader2, User, Calendar, Trash2, AlertTriangle } from "lucide-react"
 
 interface LeaveOfAbsence {
@@ -59,13 +59,20 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
         setUsers(initialUsers)
     }, [initialUsers])
 
+    // Pre-compute O(1) lookup map for fast user lookups during rendering
+    const userMap = useMemo(() => {
+        const map = new Map<string, ClerkUser>()
+        for (const u of users) {
+            map.set(u.id, u)
+            if (u.discordId) map.set(u.discordId, u)
+            if (u.robloxId) map.set(u.robloxId, u)
+        }
+        return map
+    }, [users])
+
     // Get Roblox username for a userId
     const getRobloxUsername = (userId: string): string => {
-        const user = users.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = userMap.get(userId)
 
         if (user?.robloxUsername) {
             return user.robloxUsername
@@ -78,11 +85,7 @@ export function LoaList({ serverId, pending: initialPending, active: initialActi
 
     // Get user avatar
     const getUserAvatar = (userId: string): string | null => {
-        const user = users.find(u =>
-            u.id === userId ||
-            u.discordId === userId ||
-            u.robloxId === userId
-        )
+        const user = userMap.get(userId)
         return user?.image || null
     }
 
