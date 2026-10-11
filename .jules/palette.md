@@ -1,0 +1,3 @@
+## 2024-05-18 - Confirm Modal Accessibility
+**Learning:** Generic, custom-built modal containers used for warnings or destructive actions often lack native screen reader context. Screen readers might just read button labels without announcing the title or description that provides necessary context for the action.
+**Action:** When working on custom alert or confirm dialogs, always apply `role="alertdialog"`, `aria-modal="true"`, and explicitly map the title and description elements using `aria-labelledby` and `aria-describedby`. Additionally, explicitly style focus rings (`focus-visible:ring-offset-2`) so they remain clearly visible against dark modal backgrounds.
