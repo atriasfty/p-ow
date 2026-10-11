@@ -1,0 +1,3 @@
+## 2024-07-26 - Accessible Dialog Modals
+**Learning:** Custom dialog and modal containers require explicit semantic roles (dialog or alertdialog), aria-modal="true", and proper ID linkages (aria-labelledby and aria-describedby) to their child title/description elements to be comprehensible to screen readers. Additionally, dark-themed modals require explicit focus-visible:ring-offset-zinc-900 styling on primary buttons so that keyboard navigation focus rings are visible against the dark background.
+**Action:** Ensure all custom popups/dialogs use semantic ARIA roles, link their descriptive content via IDs, hide decorative icons with aria-hidden="true", and use high-contrast focus rings tailored to the component background color.
