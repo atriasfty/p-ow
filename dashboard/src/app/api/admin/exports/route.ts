@@ -45,10 +45,21 @@ export async function GET(req: Request) {
             // Get Discord/Roblox usernames from Clerk (excluding emails/PII)
             const clerk = await clerkClient()
             const userIds: string[] = members.map((m: any) => m.userId)
-            // Fetch in batches if necessary, but assume small enough for standard Clerk call
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
 
-            const userMap = new Map(clerkUsers.data.map((u: any) => {
+            // Batch lookups to prevent Clerk API limits (max 100 per request)
+            const clerkUserData: any[] = []
+            const chunks: string[][] = []
+            for (let i = 0; i < userIds.length; i += 100) {
+                const batch = userIds.slice(i, i + 100)
+                if (batch.length > 0) chunks.push(batch)
+            }
+
+            const results = await Promise.all(
+                chunks.map(batch => clerk.users.getUserList({ userId: batch, limit: 100 }))
+            )
+            results.forEach(res => clerkUserData.push(...res.data))
+
+            const userMap = new Map(clerkUserData.map((u: any) => {
                 const robloxAccount = u.externalAccounts.find((a: any) =>
                     a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                 )
@@ -75,9 +86,21 @@ export async function GET(req: Request) {
 
             const clerk = await clerkClient()
             const userIds: string[] = Array.from(new Set(shifts.map((s: any) => s.userId)))
-            const clerkUsers = await clerk.users.getUserList({ userId: userIds, limit: 100 })
 
-            const userMap = new Map(clerkUsers.data.map((u: any) => {
+            // Batch lookups to prevent Clerk API limits (max 100 per request)
+            const clerkUserData: any[] = []
+            const chunks: string[][] = []
+            for (let i = 0; i < userIds.length; i += 100) {
+                const batch = userIds.slice(i, i + 100)
+                if (batch.length > 0) chunks.push(batch)
+            }
+
+            const results = await Promise.all(
+                chunks.map(batch => clerk.users.getUserList({ userId: batch, limit: 100 }))
+            )
+            results.forEach(res => clerkUserData.push(...res.data))
+
+            const userMap = new Map(clerkUserData.map((u: any) => {
                 const robloxAccount = u.externalAccounts.find((a: any) =>
                     a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
                 )
@@ -128,14 +151,25 @@ export async function GET(req: Request) {
             ].filter(id => id && !identityMap.has(id))))
 
             if (missingIds.length > 0) {
-                const clerkUsers = await clerk.users.getUserList({ userId: missingIds, limit: 100 })
-                clerkUsers.data.forEach((u: any) => {
-                    const robloxAccount = u.externalAccounts.find((a: any) =>
-                        a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
-                    )
-                    if (robloxAccount?.username) {
-                        identityMap.set(u.id, robloxAccount.username)
-                    }
+                const chunks: string[][] = []
+                for (let i = 0; i < missingIds.length; i += 100) {
+                    const batch = missingIds.slice(i, i + 100)
+                    if (batch.length > 0) chunks.push(batch)
+                }
+
+                const results = await Promise.all(
+                    chunks.map(batch => clerk.users.getUserList({ userId: batch, limit: 100 }))
+                )
+
+                results.forEach(clerkUsers => {
+                    clerkUsers.data.forEach((u: any) => {
+                        const robloxAccount = u.externalAccounts.find((a: any) =>
+                            a.provider === "roblox" || a.provider.startsWith("oauth_custom_roblox")
+                        )
+                        if (robloxAccount?.username) {
+                            identityMap.set(u.id, robloxAccount.username)
+                        }
+                    })
                 })
             }
 
