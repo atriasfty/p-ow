@@ -1,0 +1,3 @@
+## 2024-10-24 - Database Optimization: Fetching Latest Records
+**Learning:** Using `groupBy` followed by a `findMany` with a dynamically generated `OR` array to get the "latest" record per user is a significant performance anti-pattern. The `OR` array can grow massive and cause inefficient database scanning.
+**Action:** Replace this pattern with a single `findMany` query utilizing `distinct: ['userId']` and `orderBy`. When using PostgreSQL, the field used in `distinct` MUST be the first element in the `orderBy` array to avoid ConnectorErrors (e.g., `orderBy: [{ userId: 'asc' }, { startTime: 'desc' }]`).
