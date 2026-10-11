@@ -1,0 +1,3 @@
+## 2024-07-01 - Avoid groupBy with large OR arrays
+**Learning:** When fetching the latest record per user in Prisma, using `groupBy` followed by `findMany` with a large dynamically generated `OR` array is highly inefficient. A single `findMany` using `distinct: ['userId']` combined with `orderBy: [{ userId: 'asc' }, { startTime: 'desc' }]` is much faster. Crucially, when using PostgreSQL, the distinct field must be the first element in the orderBy array to avoid ConnectorErrors.
+**Action:** Use `distinct` with ordered arrays when fetching latest per-group records instead of splitting into multiple queries.
