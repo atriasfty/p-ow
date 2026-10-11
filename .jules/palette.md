@@ -1,0 +1,3 @@
+## 2023-10-25 - Custom Dialog Accessibility
+**Learning:** Custom UI dialogs require semantic roles (`role="alertdialog"`, `aria-modal="true"`) and proper ID mappings (`aria-labelledby`, `aria-describedby`) to be properly announced by screen readers. Furthermore, secondary actions (like Cancel buttons) in dark-themed modals need explicit offset styles (`focus-visible:ring-offset-[#1a1a1a]`) so their focus rings don't disappear against the dark background.
+**Action:** Always add dialog roles, map title/description IDs, and ensure secondary actions have visible focus offsets in dark-themed components.
