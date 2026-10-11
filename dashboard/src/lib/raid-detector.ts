@@ -115,18 +115,26 @@ export class RaidDetectorService {
         for (const userId in userCommands) {
             const commands = userCommands[userId].sort((a, b) => b.prcTimestamp - a.prcTimestamp);
 
-            for (let i = 0; i < commands.length; i++) {
-                const windowStart = commands[i].prcTimestamp;
-                const windowCommands = commands.filter(c =>
-                    c.prcTimestamp <= windowStart &&
-                    c.prcTimestamp > windowStart - this.highFreqWindowSeconds
-                );
+            let right = 0;
+            for (let left = 0; left < commands.length; left++) {
+                const windowStart = commands[left].prcTimestamp;
 
-                if (windowCommands.length > this.highFreqThreshold) {
+                while (right < commands.length && commands[right].prcTimestamp > windowStart - this.highFreqWindowSeconds) {
+                    right++;
+                }
+
+                let start = left;
+                while (start > 0 && commands[start - 1].prcTimestamp === windowStart) {
+                    start--;
+                }
+
+                const count = right - start;
+                if (count > this.highFreqThreshold) {
+                    const windowCommands = commands.slice(start, right);
                     highFreqDetections.push({
                         type: "HIGH_FREQUENCY",
                         userId: userId,
-                        userName: commands[i].playerName || "Unknown",
+                        userName: commands[left].playerName || "Unknown",
                         details: `High frequency detected: ${windowCommands.length} commands in ${this.highFreqWindowSeconds} seconds`,
                         pattern: windowCommands.map(c => c.command).join(", ")
                     });

@@ -1,0 +1,3 @@
+## 2024-05-30 - Two-pointer performance improvement
+**Learning:** Sliding window implementations searching through temporal arrays using a nested O(n) filter or find method can degrade to O(N*M). By maintaining a two-pointer sliding window, we keep the complexity strictly to O(N). When the time range limits shift sequentially downwards while searching through the dataset sorted descending by time, the right pointer will only move towards the end of the array, meaning we avoid rescanning data.
+**Action:** When finding patterns based on temporal closeness (e.g. rate-limiting, raid detection), utilize two-pointer sliding windows on sorted collections to strictly bound operations to O(N) rather than nested arrays scans.
